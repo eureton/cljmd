@@ -191,5 +191,31 @@
 
     (testing "intraword"
       (is (= (-> "foo**bar**" strong-emphasis :content)
-             "bar")))))
+             "bar"))))
+
+  (testing "opening with __"
+    (testing "minimal"
+      (is (= (-> "__foo bar__" strong-emphasis :content)
+             "foo bar")))
+
+    (testing "complex"
+      (is (= (-> "__foo, __bar__, baz__" strong-emphasis :content)
+             "foo, __bar__, baz")))
+
+    (testing "followed by whitespace => not strong emphasis"
+      (are [s] (nil? (strong-emphasis s))
+           "__ foo bar__"
+           "__\nfoo bar__"))
+
+    (testing "preceded by alphanumeric, followed by punctuation => not strong emphasis"
+      (is (nil? (strong-emphasis "a__\"foo\"__"))))
+
+    (testing "intraword"
+      (are [s] (nil? (strong-emphasis s))
+           "foo__bar__"
+           "5__6__78"))
+
+    (testing "left-flank, right-flank, preceded by punctuation => strong emphasis"
+      (is (= (-> "foo-__(bar)__" emphasis :content)
+             "(bar)")))))
 

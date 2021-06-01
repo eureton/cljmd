@@ -211,15 +211,41 @@ OK  The beginning and the end of the line count as Unicode whitespace.
   (when-some [[_ star-content lobar-content] (re-find emphasis-re string)]
     {:content (or star-content lobar-content)}))
 
-(def strong-emphasis-re
+(def star-strong-emphasis-re
   (re-pattern (str (left-flanking-emphasis-delimeter-run-re \* 2)
                    #"(\p{Print}*)"
                    (right-flanking-emphasis-delimeter-run-re \* 2))))
 
+(def lobar-open-strong-emphasis-re
+  (let [left-re (left-flanking-emphasis-delimeter-run-re \_ 2)
+        right-re (right-flanking-emphasis-delimeter-run-re \_ 2)
+        punctuated-right-re (re-pattern (str #"\p{IsPunctuation}" right-re))]
+    (re-pattern (str "(?<=" left-re ")"
+                     "(?:"
+                       "(?<!" right-re ")|(?<=" punctuated-right-re ")"
+                     ")"))))
+
+(def lobar-close-strong-emphasis-re
+  (let [left-re (left-flanking-emphasis-delimeter-run-re \_ 2)
+        right-re (right-flanking-emphasis-delimeter-run-re \_ 2)
+        punctuated-left-re (re-pattern (str left-re #"\p{IsPunctuation}"))]
+    (re-pattern (str "(?=" right-re ")"
+                     "(?:"
+                       "(?!" left-re ")|(?=" punctuated-left-re ")"
+                     ")"))))
+
+(def lobar-strong-emphasis-re
+  (re-pattern (str lobar-open-strong-emphasis-re
+                   #"(\p{Print}*)"
+                   lobar-close-strong-emphasis-re)))
+
+(def strong-emphasis-re
+  (re-pattern (str "(?:" star-strong-emphasis-re "|" lobar-strong-emphasis-re ")")))
+
 (defn strong-emphasis
   [string]
-  (when-some [[_ content] (re-find strong-emphasis-re string)]
-    {:content content}))
+  (when-some [[_ star-content lobar-content] (re-find strong-emphasis-re string)]
+    {:content (or star-content lobar-content)}))
 
 (comment
   (re-find lobar-open-emphasis-re "_bar")
@@ -232,6 +258,9 @@ OK  The beginning and the end of the line count as Unicode whitespace.
   (emphasis "foo*bar*")
   (emphasis "*abc*")
   (strong-emphasis "**abc**")
+  (re-find star-strong-emphasis-re "**foo, **bar**, baz**")
+  (re-find lobar-strong-emphasis-re "__foo, __bar__, baz__")
+  (strong-emphasis "__foo, __bar__, baz__")
   (let [; left yes, right no
         s01 "***abc"
         s02 "*abc"
