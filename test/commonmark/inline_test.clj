@@ -128,19 +128,12 @@
     (testing "intraword"
       (are [s] (nil? (emphasis s))
            "foo_bar_"
-           "5_6_78"))))
+           "5_6_78"))
 
-; TODO
-(comment "
-   Here _ does not generate emphasis, because the first delimiter run is right-flanking and the second
-   left-flanking:
+    (testing "left-flank, right-flank => not emphasis"
+      (is (nil? (emphasis "aa_\"bb\"_cc"))))
 
-aa_ "bb"_cc
-<p>aa_&quot;bb&quot;_cc</p>
+    (testing "left-flank, right-flank, preceded by punctuation => emphasis"
+      (is (= (-> "foo-_(bar)_" emphasis :content)
+             "(bar)")))))
 
-   This is emphasis, even though the opening delimiter is both left- and right-flanking, because it is preceded by
-   punctuation:
-
-foo-_ (bar)_
-<p>foo-<em> (bar)</em></p>
-")

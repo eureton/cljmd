@@ -148,7 +148,7 @@ OK  The beginning and the end of the line count as Unicode whitespace.
 
 (defn emphasis-delimeter-re
   [character length]
-  (let [escaped (string/escape "*" {\* "\\*"})]
+  (let [escaped (string/escape (str character) {\* "\\*"})]
     (re-pattern (str "(?<!" escaped ")"
                      escaped "{" length "}"
                      "(?!" escaped ")"))))
@@ -175,10 +175,36 @@ OK  The beginning and the end of the line count as Unicode whitespace.
                            #"(?=\p{IsWhite_Space}|\p{IsPunctuation}|$)"))]
     (re-pattern (str "(?:" no-punctuation "|" punctuation ")"))))
 
-(def emphasis-re
+(def star-emphasis-re
   (re-pattern (str (left-flanking-emphasis-delimeter-run-re \* 1)
                    #"(\p{Print}*)"
                    (right-flanking-emphasis-delimeter-run-re \* 1))))
+
+(def lobar-open-emphasis-re
+  (let [left-re (left-flanking-emphasis-delimeter-run-re \_ 1)
+        right-re (right-flanking-emphasis-delimeter-run-re \_ 1)
+        punctuated-right-re (re-pattern (str #"\p{IsPunctuation}" right-re))]
+    (re-pattern (str "(?<=" left-re ")"
+                     "(?:"
+                       "(?<!" right-re ")|(?<=" punctuated-right-re ")"
+                     ")"))))
+
+(def lobar-close-emphasis-re
+  (let [left-re (left-flanking-emphasis-delimeter-run-re \_ 1)
+        right-re (right-flanking-emphasis-delimeter-run-re \_ 1)
+        punctuated-left-re (re-pattern (str left-re #"\p{IsPunctuation}"))]
+    (re-pattern (str "(?=" right-re ")"
+                     "(?:"
+                       "(?!" left-re ")|(?=" punctuated-left-re ")"
+                     ")"))))
+
+(def lobar-emphasis-re
+  (re-pattern (str lobar-open-emphasis-re
+                   #"(\p{Print}*)"
+                   lobar-close-emphasis-re)))
+
+(def emphasis-re
+  (re-pattern (str "(?:" star-emphasis-re "|" lobar-emphasis-re ")")))
 
 (def strong-emphasis-re
   (re-pattern (str (left-flanking-emphasis-delimeter-run-re \* 2)
@@ -187,8 +213,8 @@ OK  The beginning and the end of the line count as Unicode whitespace.
 
 (defn emphasis
   [string]
-  (when-some [[_ content] (re-find emphasis-re string)]
-    {:content content}))
+  (when-some [[_ star-content lobar-content] (re-find emphasis-re string)]
+    {:content (or star-content lobar-content)}))
 
 (defn strong-emphasis
   [string]
@@ -196,10 +222,16 @@ OK  The beginning and the end of the line count as Unicode whitespace.
     {:content content}))
 
 (comment
+  (re-find lobar-open-emphasis-re "_bar")
+  (re-find lobar-close-emphasis-re "bar_")
+  (re-find star-emphasis-re "*xyz*")
+  (re-find lobar-emphasis-re "_xyz_")
+  (re-find emphasis-re "_xyz_")
+  (emphasis "_bar_")
+  (emphasis "foo_bar_")
   (emphasis "foo*bar*")
-  (emphasis "foo*bar*" "*abc*")
+  (emphasis "*abc*")
   (strong-emphasis "**abc**")
-  (re-find emphasis-re "_abc_")
   (let [; left yes, right no
         s01 "***abc"
         s02 "*abc"
