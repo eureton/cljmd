@@ -216,6 +216,29 @@
            "5__6__78"))
 
     (testing "left-flank, right-flank, preceded by punctuation => strong emphasis"
-      (is (= (-> "foo-__(bar)__" emphasis :content)
-             "(bar)")))))
+      (is (= (-> "foo-__(bar)__" strong-emphasis :content)
+             "(bar)"))))
+
+  (testing "closing with **"
+    (testing "closing and opening delimiter don't match => not emphasis"
+      (is (nil? (strong-emphasis "__foo**"))))
+
+    (testing "preceded by whitespace => not emphasis"
+      (are [s] (nil? (strong-emphasis s))
+           "**foo bar **"
+           "**foo bar\n**"))
+
+    (testing "preceded by punctuation, followed by alphanumeric => not emphasis"
+      (is (nil? (strong-emphasis "**(**foo)"))))
+
+    (testing "preceded by punctuation, followed by whitespace"
+      (are [s c] (= (-> s strong-emphasis :content))
+           "*(**foo**)*" "foo"
+           "**Gomphocarpus (*Gomphocarpus physocarpus*, syn.\n*Asclepias physocarpa*)**"
+           "Gomphocarpus (*Gomphocarpus physocarpus*, syn.\n*Asclepias physocarpa*)"
+           "**foo \"*bar*\" foo**" "foo \"*bar*\" foo"))
+
+    (testing "intraword"
+      (is (= (-> "**foo**bar" strong-emphasis :content)
+             "foo")))))
 
