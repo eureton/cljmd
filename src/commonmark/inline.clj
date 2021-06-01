@@ -222,39 +222,3 @@ OK  The beginning and the end of the line count as Unicode whitespace.
   (when-some [[_ star-content lobar-content] (re-find strong-emphasis-re string)]
     {:content (or star-content lobar-content)}))
 
-(comment
-  (re-find lobar-open-emphasis-re "_bar")
-  (re-find lobar-close-emphasis-re "bar_")
-  (re-find star-emphasis-re "*xyz*")
-  (re-find lobar-emphasis-re "_xyz_")
-  (re-find emphasis-re "_xyz_")
-  (emphasis "_bar_")
-  (emphasis "foo_bar_")
-  (emphasis "foo*bar*")
-  (emphasis "*abc*")
-  (strong-emphasis "**abc**")
-  (re-find star-strong-emphasis-re "**foo, **bar**, baz**")
-  (re-find lobar-strong-emphasis-re "__foo, __bar__, baz__")
-  (strong-emphasis "__foo, __bar__, baz__")
-  (let [; left yes, right no
-        s01 "***abc"
-        s02 "*abc"
-        s03 "**\"abc \""
-        s04 "*\"abc \""
-        s05 "_\"abc \""
-        s06 "_abc"
-        ; left no, right yes
-        s07 "abc***"
-        s08 "abc_"
-        s09 "\"abc \"**"
-        s10 "\"abc \"_"
-        ; left yes, right yes
-        s11 "abc***def"
-        s12 "\"abc \"_\"def \""
-        ; left no, right no
-        s13 "abc *** def"
-        s14 "a _ b"]
-    (map #(vector (re-find left-flanking-emphasis-delimeter-run-re %)
-                  (re-find right-flanking-emphasis-delimeter-run-re %)) [s01 s02 s03 s04 s05 s06
-                                                                         s07 s08 s09 s10 s11 s12
-                                                                         s13 s14])))

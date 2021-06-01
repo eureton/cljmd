@@ -73,6 +73,49 @@
          "`foo"
          "`foo``bar``")))
 
+(deftest delimeter-run-test
+  (let [e* (emphasis-delimeter-re \* 1)
+        e_ (emphasis-delimeter-re \_ 1)
+        s* (emphasis-delimeter-re \* 2)
+        s_ (emphasis-delimeter-re \_ 2)
+        le* (left-flanking-emphasis-delimeter-run-re e*)
+        le_ (left-flanking-emphasis-delimeter-run-re e_)
+        ls* (left-flanking-emphasis-delimeter-run-re s*)
+        ls_ (left-flanking-emphasis-delimeter-run-re s_)
+        re* (right-flanking-emphasis-delimeter-run-re e*)
+        re_ (right-flanking-emphasis-delimeter-run-re e_)
+        rs* (right-flanking-emphasis-delimeter-run-re s*)
+        rs_ (right-flanking-emphasis-delimeter-run-re s_)
+        match? (fn [s re] (->> s (re-find re) some?))]
+    (testing "left-flanking"
+      (are [s le*? le_? ls*? ls_? re*? re_? rs*? rs_?]
+           (and (= (match? s le*) le*?)
+                (= (match? s le_) le_?)
+                (= (match? s ls*) ls*?)
+                (= (match? s ls_) ls_?)
+                (= (match? s re*) re*?)
+                (= (match? s re_) re_?)
+                (= (match? s rs*) rs*?)
+                (= (match? s rs_) rs_?))
+           ; left yes, right no
+;          "***abc"             true false  true false false false false false
+           "*abc"               true false false false false false false false
+           "**\"abc \""        false false  true false false false false false
+           "*\"abc \""          true false false false false false false false
+           "_\"abc \""         false  true false false false false false false
+           "_abc"              false  true false false false false false false
+           ; left no, right yes
+;          "abc***"            false false false false  true false false false
+           "abc_"              false false false false false  true false false
+           "\"abc \"**"        false false false false false false  true false
+           "\"abc \"_"         false false false false false  true false false
+           ; left yes, right yes
+;          "abc***def"
+;          "\"abc \"_\"def \""
+           ; left no, right no
+           "abc *** def"       false false false false false false false false
+           "a _ b"             false false false false false false false false))))
+
 (deftest emphasis-test
   (testing "opening with *"
     (testing "minimal"
