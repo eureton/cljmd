@@ -135,5 +135,45 @@
 
     (testing "left-flank, right-flank, preceded by punctuation => emphasis"
       (is (= (-> "foo-_(bar)_" emphasis :content)
+             "(bar)"))))
+
+  (testing "closing with *"
+    (testing "closing and opening delimiter don't match => not emphasis"
+      (is (nil? (emphasis "_foo*"))))
+
+    (testing "preceded by whitespace => not emphasis"
+      (are [s] (nil? (emphasis s))
+           "*foo bar *"
+           "*foo bar\n*"))
+
+    (testing "preceded by punctuation, followed by alphanumeric => not emphasis"
+      (is (nil? (emphasis "*(*foo)"))))
+
+    (testing "preceded by punctuation, followed by whitespace"
+      (is (= (-> "*(*foo*)*" emphasis :content)
+             "(*foo*)")))
+
+    (testing "intraword"
+      (is (= (-> "*foo*bar" emphasis :content)
+             "foo"))))
+
+  (testing "closing with _"
+    (testing "preceded by whitespace => not emphasis"
+      (is (nil? (emphasis "_foo bar _"))))
+
+    (testing "preceded by punctuation, followed by alphanumeric => not emphasis"
+      (is (nil? (emphasis "_(_foo)"))))
+
+    (testing "preceded by punctuation, followed by whitespace"
+      (is (= (-> "_(_foo_)_" emphasis :content)
+             "(_foo_)")))
+
+    (testing "intraword => not emphasis"
+      (are [s] (nil? (emphasis s))
+           "_foo_bar"
+           "foo_bar_baz"))
+
+    (testing "left-flank, right-flank, followed by punctuation => emphasis"
+      (is (= (-> "_(bar)_." emphasis :content)
              "(bar)")))))
 
