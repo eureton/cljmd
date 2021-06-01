@@ -206,15 +206,15 @@ OK  The beginning and the end of the line count as Unicode whitespace.
 (def emphasis-re
   (re-pattern (str "(?:" star-emphasis-re "|" lobar-emphasis-re ")")))
 
-(def strong-emphasis-re
-  (re-pattern (str (left-flanking-emphasis-delimeter-run-re \* 2)
-                   #"(\p{Print}*)"
-                   (right-flanking-emphasis-delimeter-run-re \* 2))))
-
 (defn emphasis
   [string]
   (when-some [[_ star-content lobar-content] (re-find emphasis-re string)]
     {:content (or star-content lobar-content)}))
+
+(def strong-emphasis-re
+  (re-pattern (str (left-flanking-emphasis-delimeter-run-re \* 2)
+                   #"(\p{Print}*)"
+                   (right-flanking-emphasis-delimeter-run-re \* 2))))
 
 (defn strong-emphasis
   [string]

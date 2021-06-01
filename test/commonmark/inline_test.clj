@@ -177,3 +177,19 @@
       (is (= (-> "_(bar)_." emphasis :content)
              "(bar)")))))
 
+(deftest strong-emphasis-test
+  (testing "opening with **"
+    (testing "minimal"
+      (is (= (-> "**foo bar**" strong-emphasis :content)
+             "foo bar")))
+
+    (testing "followed by whitespace => not strong emphasis"
+      (is (nil? (strong-emphasis "** foo bar**"))))
+
+    (testing "preceded by alphanumeric, followed by punctuation => not strong emphasis"
+      (is (nil? (strong-emphasis "a**\"foo\"**"))))
+
+    (testing "intraword"
+      (is (= (-> "foo**bar**" strong-emphasis :content)
+             "bar")))))
+
