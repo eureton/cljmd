@@ -240,5 +240,30 @@
 
     (testing "intraword"
       (is (= (-> "**foo**bar" strong-emphasis :content)
-             "foo")))))
+             "foo"))))
+
+  (testing "closing with __"
+    (testing "preceded by whitespace => not emphasis"
+      (are [s] (nil? (strong-emphasis s))
+           "__foo bar __"
+           "__foo bar\n__"))
+
+    (testing "preceded by punctuation, followed by alphanumeric => not emphasis"
+      (is (nil? (strong-emphasis "__(__foo)"))))
+
+    (testing "preceded by punctuation, followed by whitespace"
+      (are [s c] (= (-> s strong-emphasis :content))
+           "_(__foo__)_" "foo"
+           "__foo \"_bar_\" foo__" "foo \"_bar_\" foo"))
+
+    (testing "intraword => not strong emphasis"
+      (is (nil? (-> "__foo__bar" strong-emphasis :content))))
+
+    (testing "intraword"
+      (is (= (-> "__foo__bar__baz__" strong-emphasis :content)
+             "foo__bar__baz")))
+
+    (testing "left-flank, right-flank, followed by punctuation => strong emphasis"
+      (is (= (-> "__(bar)__." strong-emphasis :content)
+             "(bar)")))))
 
