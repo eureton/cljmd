@@ -115,6 +115,16 @@
           (is (= (map second result)
                  [["abc"] ["```" "123" "```"] ["xyz"]])))))
 
+    (testing "no closing fence => contains all till end of input"
+      (let [result (parse "```\nabc\nxyz")]
+        (testing "tags"
+          (is (= (map first result)
+                 [:ofcblk])))
+
+        (testing "lines"
+          (is (= (map second result)
+                 [["```" "abc" "xyz"]])))))
+
     (testing "associativity"
       (let [s1 "```\nabc"
             s2 "```\n123\n```"

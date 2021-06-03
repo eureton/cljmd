@@ -77,13 +77,13 @@ OK       each followed optionally by any number of spaces or tabs, forms a thema
 
 (comment "Indented code blocks
 
-    An indented code block is composed of
-    one or more indented chunks
-    separated by blank lines.
+OK  An indented code block is composed of
+OK  one or more indented chunks
+OK  separated by blank lines.
 
-    An indented chunk is a
-         sequence of non-blank lines,
-         each indented four or more spaces.
+OK  An indented chunk is a
+OK       sequence of non-blank lines,
+OK       each indented four or more spaces.
 
 OK  The contents of the code block are the literal contents of the lines,
 OK       including trailing line endings,
@@ -116,9 +116,9 @@ OK  The line with the opening code fence may optionally contain some text follow
 OK  this is trimmed of leading and trailing whitespace and called the info string.
 OK  If the info string comes after a backtick fence, it may not contain any backtick characters.
 
-    The content of the code block consists of all subsequent lines,
-    until a closing code fence of the same type as the code block began with (backticks or tildes),
-    and with at least as many backticks or tildes as the opening code fence.
+OK  The content of the code block consists of all subsequent lines,
+OK  until a closing code fence of the same type as the code block began with (backticks or tildes),
+OK  and with at least as many backticks or tildes as the opening code fence.
 
     If the leading code fence is indented N spaces,
          then up to N spaces of indentation are removed from each line of the content (if present).
@@ -133,7 +133,8 @@ OK  which are ignored.
     the code block contains all of the lines after the opening code fence until the end of the containing block (or
     document).
 
-    A fenced code block may interrupt a paragraph, and does not require a blank line either before or after.
+OK  A fenced code block may interrupt a paragraph,
+OK  and does not require a blank line either before or after.
 
     The content of a code fence is treated as literal text, not parsed as inlines.")
 
