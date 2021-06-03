@@ -8,6 +8,19 @@
   [[(-> line block/tagger :tag)
     [line]]])
 
+(defn fuse-left
+  "Concatenate tagmaps x and y with the exception of their adjoining entries.
+   The latter are merged into a single entry, under the tag of the x side."
+  [x y]
+  (let [x-block (last x)
+        y-block (first y)
+        mid (some-> x-block
+                    (update 1 #(apply conj %1 %2) (second y-block))
+                    vector)]
+    (concat (butlast x)
+            mid
+            (rest y))))
+
 (def zero
   "Identity element of the add binary operation."
   [])
@@ -24,10 +37,11 @@
          fence-pair? (block/fenced-code-block-pair? (-> x-entry second first)
                                                     (-> y-entry second first))
          result (cond
-                  (= [:p :stxh] [x-tag y-tag]) [:p :stxh]
-                  fence-pair?                  :fcblk-pair
-                  (= x-tag y-tag)              :same
-                  :else                        [x-tag :_])]
+                  (= [:p :stxh] [x-tag y-tag])  [:p :stxh]
+                  (= [:p :icblk] [x-tag y-tag]) [:p :icblk]
+                  fence-pair?                   :fcblk-pair
+                  (= x-tag y-tag)               :same
+                  :else                         [x-tag :_])]
      result)))
 
 (defmulti add
@@ -52,12 +66,7 @@
 
 (defmethod add [:ofcblk :_]
   [x y]
-  (let [x-block (last x)
-        y-block (first y)
-        new-x-block (update x-block 1 #(apply conj %1 %2) (second y-block))]
-    (concat (butlast x)
-            [new-x-block]
-            (rest y))))
+  (fuse-left x y))
 
 (defmethod add [:p :stxh]
   [x y]
@@ -67,16 +76,13 @@
                (update 1 #(apply conj %1 %2) (second (first y))))]
           (rest y)))
 
+(defmethod add [:p :icblk]
+  [x y]
+  (fuse-left x y))
+
 (defmethod add :same
   [x y]
-  (let [x-block (last x)
-        y-block (first y)
-        mid (some-> x-block
-                    (update 1 #(apply conj %1 %2) (second y-block))
-                    vector)]
-    (concat (butlast x)
-            mid
-            (rest y))))
+  (fuse-left x y))
 
 (defmethod add :default
   ([] zero)

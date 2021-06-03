@@ -51,7 +51,8 @@ OK  and a level 2 heading if - characters are used.
     The contents of the heading are the result of parsing the preceding lines of text as CommonMark inline content.
 
 OK  In general, a setext heading need not be preceded or followed by a blank line.
-    However, it cannot interrupt a paragraph, so when a setext heading comes after a paragraph, a blank line is needed between them.")
+OK  However, it cannot interrupt a paragraph, so when a setext heading comes after a paragraph,
+OK  a blank line is needed between them.")
 
 (def setext-heading-underline-re #"^ {0,3}(=+|-+) *$")
 
@@ -90,9 +91,9 @@ OK       minus four spaces of indentation.
 
 OK  An indented code block has no info string.
 
-    An indented code block cannot interrupt a paragraph, so there must be a blank line between a paragraph and a
-    following indented code block. (A blank line is not needed, however, between a code block and a following
-    paragraph.)")
+OK  An indented code block cannot interrupt a paragraph,
+OK  so there must be a blank line between a paragraph and a following indented code block.
+OK  A blank line is not needed, however, between a code block and a following paragraph.")
 
 (def indented-chunk-line-re #"^(?:\t| {4})(.*)$")
 

@@ -103,5 +103,30 @@
   (testing "fenced code block"
     (testing "minimal"
       (is (= (parse "```\r\nxyz\r\n```")
-             [[:ofcblk ["```" "xyz" "```"]]])))))
+             [[:ofcblk ["```" "xyz" "```"]]]))))
+
+  (testing "indented code block"
+    (testing "minimal"
+      (is (= (parse "    abc")
+             [[:icblk ["    abc"]]])))
+
+    (testing "multiple lines"
+      (is (= (parse "    abc\r\n    xyz\r\n")
+             [[:icblk ["    abc" "    xyz"]]])))
+
+    (testing "cannot interrupt paragraph"
+      (are [s ls] (= (parse s)
+                     [[:p ls]])
+           "abc\r\n    xyz\r\n"    ["abc" "    xyz"]
+           "abc\r\n    xyz\r\n123" ["abc" "    xyz" "123"]))
+
+    (testing "paragraph may follow without blank"
+      (let [result (parse "    xyz\r\nabc")]
+        (testing "tags"
+          (is (= (map first result)
+                 [:icblk :p])))
+
+        (testing "lines"
+          (is (= (map second result)
+                 [["    xyz"] ["abc"]])))))))
 
