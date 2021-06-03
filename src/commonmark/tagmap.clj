@@ -8,18 +8,35 @@
   [[(-> line block/tagger :tag)
     [line]]])
 
-(defn fuse-left
+(defn fuse
   "Concatenate tagmaps x and y with the exception of their adjoining entries.
-   The latter are merged into a single entry, under the tag of the x side."
-  [x y]
+   The latter are merged into a single entry, according to direction.
+     * if direction equals :rtol
+       y-side lines are appended to x-side lines under the x-side tag
+     * if direction equals :ltor
+       x-side lines are appended to y-side lines under the y-side tag"
+  [x y direction]
   (let [x-block (last x)
         y-block (first y)
-        mid (some-> x-block
-                    (update 1 #(apply conj %1 %2) (second y-block))
+        [destination source] (case direction
+                               :ltor [y-block x-block]
+                               :rtol [x-block y-block])
+        mid (some-> destination
+                    (update 1 #(apply conj %1 %2) (second source))
                     vector)]
     (concat (butlast x)
             mid
             (rest y))))
+
+(defn fuse-left
+  "Same as (fuse x y :rtol)"
+  [x y]
+  (fuse x y :rtol))
+
+(defn fuse-right
+  "Same as (fuse x y :ltor)"
+  [x y]
+  (fuse x y :ltor))
 
 (def zero
   "Identity element of the add binary operation."
@@ -37,11 +54,13 @@
          fence-pair? (block/fenced-code-block-pair? (-> x-entry second first)
                                                     (-> y-entry second first))
          result (cond
-                  (= [:p :stxh] [x-tag y-tag])  [:p :stxh]
-                  (= [:p :icblk] [x-tag y-tag]) [:p :icblk]
-                  fence-pair?                   :fcblk-pair
-                  (= x-tag y-tag)               :same
-                  :else                         [x-tag :_])]
+                  (= [:p :stxh] [x-tag y-tag])      [:p :stxh]
+                  (= [:p :icblk] [x-tag y-tag])     [:p :icblk]
+                  (= [:blank :icblk] [x-tag y-tag]) [:blank :icblk]
+                  (= [:icblk :blank] [x-tag y-tag]) [:icblk :blank]
+                  fence-pair?                       :fcblk-pair
+                  (= x-tag y-tag)                   :same
+                  :else                             [x-tag :_])]
      result)))
 
 (defmulti add
@@ -80,6 +99,14 @@
   [x y]
   (fuse-left x y))
 
+(defmethod add [:blank :icblk]
+  [x y]
+  (fuse-right x y))
+
+(defmethod add [:icblk :blank]
+  [x y]
+  (fuse-left x y))
+
 (defmethod add :same
   [x y]
   (fuse-left x y))
@@ -98,29 +125,4 @@
        string/split-lines
        (map from-line)
        (reduce add)))
-
-(let [ls1 ["``` c++"
-           "class Foo {"
-           "};"]
-      ls2 ["``` "
-           "- one"
-           "- two"]
-      stx [" one two three"
-           " four five six"
-           " ============="]
-      st (->> stx
-              (map from-line)
-              (reduce add)
-              )
-      t1 (->> ls1
-              (map from-line)
-              (reduce add)
-              )
-      t2 (->> ls2
-              (map from-line)
-              (reduce add)
-              )]
-; (add t1 t2)
-  st
-  )
 

@@ -128,5 +128,16 @@
 
         (testing "lines"
           (is (= (map second result)
-                 [["    xyz"] ["abc"]])))))))
+                 [["    xyz"] ["abc"]])))))
+
+    (testing "chunks"
+      (is (= (parse "    xyz\r\n    abc")
+             [[:icblk ["    xyz" "    abc"]]])))
+
+    (testing "chunks separated by blanks"
+      (are [s ls] (= (parse s)
+                     [[:icblk ls]])
+           "    1\n\n    2"          ["    1" "" "    2"]
+           "    1\n\n\n    2"        ["    1" "" "" "    2"]
+           "    1\n\n    2\n\n    3" ["    1" "" "    2" "" "    3"]))))
 
