@@ -103,7 +103,31 @@
   (testing "fenced code block"
     (testing "minimal"
       (is (= (parse "```\r\nxyz\r\n```")
-             [[:ofcblk ["```" "xyz" "```"]]]))))
+             [[:ofcblk ["```" "xyz" "```"]]])))
+
+    (testing "may interrupt paragraph"
+      (let [result (parse "abc\n```\n123\n```\nxyz")]
+        (testing "tags"
+          (is (= (map first result)
+                 [:p :ofcblk :p])))
+
+        (testing "lines"
+          (is (= (map second result)
+                 [["abc"] ["```" "123" "```"] ["xyz"]])))))
+
+    (testing "associativity"
+      (let [s1 "```\nabc"
+            s2 "```\n123\n```"
+            s3 "xyz\n```"
+            [tm1 tm2 tm3] (map parse [s1 s2 s3])
+            result (add tm1 (add tm2 tm3))]
+        (testing "tags"
+          (is (= (map first result)
+                 [:ofcblk :p :ofcblk])))
+
+        (testing "lines"
+          (is (= (map second result)
+                 [["```" "abc" "```"] ["123"] ["```" "xyz" "```"]]))))))
 
   (testing "indented code block"
     (testing "minimal"

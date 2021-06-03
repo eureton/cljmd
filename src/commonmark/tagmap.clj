@@ -85,7 +85,13 @@
 
 (defmethod add [:ofcblk :_]
   [x y]
-  (fuse-left x y))
+  (let [lines (->> x last second)]
+    (if (and (> (count lines) 1)
+             (->> lines
+                  ((juxt first last))
+                  (apply block/fenced-code-block-pair?)))
+      (concat x y)
+      (fuse-left x y))))
 
 (defmethod add [:p :stxh]
   [x y]
