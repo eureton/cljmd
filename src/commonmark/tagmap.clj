@@ -62,7 +62,9 @@
 (defmethod add [:p :stxh]
   [x y]
   (concat (butlast x)
-          [(assoc (last x) 0 :stxh)]
+          [(-> (last x)
+               (assoc 0 :stxh)
+               (update 1 #(apply conj %1 %2) (second (first y))))]
           (rest y)))
 
 (defmethod add :same

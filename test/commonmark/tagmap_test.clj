@@ -37,7 +37,7 @@
     (let [ls1 ["``` c++"
                "class Foo {"
                "};"]
-          ls2 ["``` "
+          ls2 ["```"
                "one"
                "two"]
           result (add (->> ls1 (map from-line) (reduce add))
@@ -50,16 +50,37 @@
         (is (= (map first result)
                [:ofcblk :p])))
 
-      (testing "tags"
+      (testing "lines"
         (is (= (map second result)
-               [(concat ls1 [(first ls2)])
-                (rest ls2)]))))))
+               [["``` c++" "class Foo {" "};" "```"]
+                ["one" "two"]])))))
+
+  (testing "retag first"
+    (let [ls1 ["xyz" "abc"]
+          ls2 ["123" "==="]
+          result (add (->> ls1 (map from-line) (reduce add))
+                      (->> ls2 (map from-line) (reduce add)))]
+      (testing "count"
+        (is (= (count result)
+               1)))
+
+      (testing "tags"
+        (is (= (map first result)
+               [:stxh])))
+
+      (testing "lines"
+        (is (= (map second result)
+               [["xyz" "abc" "123" "==="]]))))))
 
 (deftest parse-test
   (testing "setext heading"
     (testing "minimal"
       (is (= (parse "xyz\r\n===")
-             [[:stxh ["xyz"]]]))))
+             [[:stxh ["xyz" "==="]]])))
+
+    (testing "multiple lines"
+      (is (= (parse "xyz\r\nabc\r\n===")
+             [[:stxh ["xyz" "abc" "==="]]]))))
 
   (testing "fenced code block"
     (testing "minimal"
