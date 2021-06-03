@@ -26,7 +26,8 @@ OK  The heading level is equal to the number of # characters in the opening sequ
 (defn atx-heading
   [line]
   (when-some [[_ opening content] (re-find atx-heading-re line)]
-    {:level (count opening)
+    {:tag :atxh
+     :level (count opening)
      :content (-> content (or "") (string/replace #"\\#" "#"))}))
 
 (comment "Setext headings
@@ -52,6 +53,12 @@ OK       and any number of trailing spaces.
 
 (def setext-heading-underline-re #"^ {0,3}(=+|-+) *$")
 
+(defn setext-heading
+  [line]
+  (when-some [[_ underline] (re-find setext-heading-underline-re line)]
+    {:tag :stxh
+     :level (if (string/starts-with? underline "=") 1 2)}))
+
 (comment "Thematic break
 
 OK  A line consisting of 0-3 spaces of indentation,
@@ -60,8 +67,10 @@ OK       each followed optionally by any number of spaces or tabs, forms a thema
 
 (def thematic-break-re #"^ {0,3}(?:(?:- *){3,}|(?:_ *){3,}|(?:[*] *){3,})\s*$")
 
-(def thematic-break?
-  (comp some? #(re-find thematic-break-re %)))
+(defn thematic-break
+  [line]
+  (when (re-find thematic-break-re line)
+    {:tag :tbr}))
 
 (comment "Indented code blocks
 
@@ -85,8 +94,11 @@ OK  An indented code block has no info string.
 
 (def indented-chunk-line-re #"^(?:\t| {4})(.*)$")
 
-(def indented-chunk-line
-  (comp second #(re-find indented-chunk-line-re %)))
+(defn indented-chunk-line
+  [line]
+  (when-some [[_ content] (re-find indented-chunk-line-re line)]
+    {:tag :icblk
+     :content content}))
 
 
 (comment "Fenced code blocks
@@ -128,7 +140,8 @@ OK  which are ignored.
   [line]
   (when-some [[_ indent _ backtick-fence backtick-info
                tilde-fence tilde-info] (re-find opening-code-fence-re line)]
-    {:indent indent
+    {:tag :ofcblk
+     :indent indent
      :info (or backtick-info tilde-info)
      :fence (or backtick-fence tilde-fence)}))
 
@@ -137,7 +150,8 @@ OK  which are ignored.
 (defn closing-code-fence
   [line]
   (when-some [[_ indent backtick-fence tilde-fence] (re-find closing-code-fence-re line)]
-    {:indent indent
+    {:tag :cfcblk
+     :indent indent
      :fence (or backtick-fence tilde-fence)}))
 
 (comment "Paragraphs
@@ -150,18 +164,20 @@ OK  non-blank lines
     The paragraph’s raw content is formed by concatenating the lines
 OK  and removing initial and final whitespace.")
 
-(def paragraph-line-re #"^\s*(\S+)\s*$")
+(def paragraph-line-re #"^\s*(.*?\S.*?)\s*$")
 
 (defn paragraph-line
   [line]
-  (some->> line
-           (re-find paragraph-line-re)
-           second))
+  (when-some [[_ content] (re-find paragraph-line-re line)]
+    {:tag :p
+     :content content}))
 
 (def blank-line-re #"^$")
 
-(def blank-line?
-  string/blank?)
+(defn blank-line
+  [line]
+  (when (string/blank? line)
+    {:tag :blank}))
 
 (comment "List items
 
@@ -246,5 +262,30 @@ OK  followed by either a . character or a ) character.
                      #(re-find list-item-indented-code-lead-line-re %)
                      #(re-find list-item-blank-lead-line-re %)))
            (drop 1)
-           (zipmap [:indent :marker :space :content])))
+           (concat [:li])
+           (zipmap [:tag :indent :marker :space :content])))
+
+(defn tagger
+  [line]
+  (when line
+    ((some-fn thematic-break
+             atx-heading
+             setext-heading
+             indented-chunk-line
+             opening-code-fence
+             closing-code-fence
+             blank-line
+             list-item-lead-line
+             paragraph-line) line)))
+
+(defn fenced-code-block-pair?
+  "True if lines x and y are matching code block fences, false otherwise."
+  [x y]
+  (let [x (tagger x)
+        y (tagger y)]
+    (and (every? (comp #{:ofcblk :cfcblk} :tag) [x y])
+         (string/blank? (:info y))
+         (->> [y x]
+              (map :fence)
+              (apply string/includes?)))))
 
