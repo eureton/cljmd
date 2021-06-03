@@ -78,6 +78,24 @@
       (is (= (parse "xyz\r\n===")
              [[:stxh ["xyz" "==="]]])))
 
+    (testing "not preceded by blank"
+      (is (= (second (parse "- xyz\r\nabc\r\n==="))
+             [:stxh ["abc" "==="]])))
+
+    (testing "not followed by blank"
+      (is (= (first (parse "abc\r\n===\r\n- xyz"))
+             [:stxh ["abc" "==="]])))
+
+    (testing "separation from paragraph with blank"
+      (let [result (parse "abc\r\n\r\nxyz\r\n===\r\n")]
+        (testing "tags"
+          (is (= (map first result)
+                 [:p :blank :stxh])))
+
+        (testing "lines"
+          (is (= (map second result)
+                 [["abc"] [""] ["xyz" "==="]])))))
+
     (testing "multiple lines"
       (is (= (parse "xyz\r\nabc\r\n===")
              [[:stxh ["xyz" "abc" "==="]]]))))

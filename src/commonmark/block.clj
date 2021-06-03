@@ -31,11 +31,13 @@ OK  The heading level is equal to the number of # characters in the opening sequ
      :content (-> content (or "") (string/replace #"\\#" "#"))}))
 
 (comment "Setext headings
-    A setext heading consists of one or more lines of text, each containing at least one non-whitespace
-    character, with no more than 3 spaces indentation, followed by a setext heading underline. The lines
-    of text must be such that, were they not followed by the setext heading underline, they would be interpreted as
-    a paragraph: they cannot be interpretable as a code fence, ATX heading, block quote, thematic
-    break, list item, or HTML block.
+OK  A setext heading consists of one or more lines of text,
+OK  each containing at least one non-whitespace character,
+OK  with no more than 3 spaces indentation,
+OK  followed by a setext heading underline.
+OK  The lines of text must be such that, were they not followed by the setext heading underline,
+OK  they would be interpreted as a paragraph:
+OK  they cannot be interpretable as a code fence, ATX heading, block quote, thematic break, list item, or HTML block.
 
 OK  A setext heading underline is a sequence of = characters
 OK       or a sequence of - characters,
@@ -44,12 +46,12 @@ OK       and any number of trailing spaces.
 
     If a line containing a single - can be interpreted as an empty list item, it should be interpreted this way.
 
-    The heading is a level 1 heading if = characters are used in the setext heading underline, and a level 2
-    heading if - characters are used. The contents of the heading are the result of parsing the preceding lines of
-    text as CommonMark inline content.
+OK  The heading is a level 1 heading if = characters are used in the setext heading underline,
+OK  and a level 2 heading if - characters are used.
+    The contents of the heading are the result of parsing the preceding lines of text as CommonMark inline content.
 
-    In general, a setext heading need not be preceded or followed by a blank line. However, it cannot interrupt a
-    paragraph, so when a setext heading comes after a paragraph, a blank line is needed between them.")
+OK  In general, a setext heading need not be preceded or followed by a blank line.
+    However, it cannot interrupt a paragraph, so when a setext heading comes after a paragraph, a blank line is needed between them.")
 
 (def setext-heading-underline-re #"^ {0,3}(=+|-+) *$")
 
