@@ -162,8 +162,8 @@ OK  and does not require a blank line either before or after.
 
     A sequence of
 OK  non-blank lines
-    that cannot be interpreted as other kinds of blocks
-    forms a paragraph.
+OK  that cannot be interpreted as other kinds of blocks
+OK  forms a paragraph.
     The contents of the paragraph are the result of parsing the paragraph’s raw content as inlines.
     The paragraph’s raw content is formed by concatenating the lines
 OK  and removing initial and final whitespace.")
@@ -292,4 +292,18 @@ OK  followed by either a . character or a ) character.
          (->> [y x]
               (map :fence)
               (apply string/includes?)))))
+
+(defn belongs-to-list-item?
+  "True if line belongs to LI, assuming:
+     1. LI is a list item, whose first line is origin
+     2. previous is the line which precedes line
+   False otherwise."
+  [line {:keys [previous origin]}]
+  (when-some [{:keys [indent marker space]} (list-item-lead-line origin)]
+    (let [prefix (string/replace (str indent marker space) #"."  " ")
+          trim-re (re-pattern (str "^ {0," (count prefix) "}"))
+          previous (some-> previous
+                           (string/replace trim-re ""))]
+      (or (string/starts-with? line prefix)
+          (every? (comp #{:p} :tag tagger) (remove nil? [line previous]))))))
 

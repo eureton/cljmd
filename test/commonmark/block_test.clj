@@ -192,3 +192,17 @@
          "```" "~~~"
          "~~~"  "```")))
 
+(deftest belongs-to-list-item?-test
+  (testing "adequate leading whitespace"
+    (are [l p] (belongs-to-list-item? l {:origin " 1. abc" :previous p})
+         "    xyz" nil
+         "    xyz" "    opqr"
+         "    xyz" "    # opqr"))
+
+  (testing "inadequate leading whitespace"
+    (are [l p r] (= r (belongs-to-list-item? l {:origin " 1. abc" :previous p}))
+         " xyz" nil          true
+         " xyz" "pqr"        true
+         " xyz" "    pqr"    true
+         " xyz" "    # opqr" false)))
+
