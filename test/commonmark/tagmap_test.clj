@@ -198,11 +198,32 @@
         (is (= (parse (indent "- " "abc\n# xyz"))
                [[:li ["- abc" "  # xyz"]]])))
 
-      (testing "absorb thematic break"
-        (is (= (parse (indent "- " "abc\n---"))
-               [[:li ["- abc" "  ---"]]])))
-
       (testing "absorb blank"
         (is (= (parse "- abc\n\n  xyz")
-               [[:li ["- abc" "" "  xyz"]]]))))))
+               [[:li ["- abc" "" "  xyz"]]])))
+
+      (testing "absorb thematic break"
+        (is (= (parse (indent "- " "abc\n\n---"))
+               [[:li ["- abc" "" "  ---"]]]))))
+
+    (testing "starting with indented code"
+      (testing "minimal"
+        (is (= (parse "-     abc")
+               [[:li ["-     abc"]]])))
+
+      (testing "absorb paragraph"
+        (is (= (parse (indent "- " "    abc\nxyz"))
+               [[:li ["-     abc" "  xyz"]]])))
+
+      (testing "absorb atx heading"
+        (is (= (parse (indent "- " "    abc\n# xyz"))
+               [[:li ["-     abc" "  # xyz"]]])))
+
+      (testing "absorb blank"
+        (is (= (parse (indent "- " "    abc\n\nxyz"))
+               [[:li ["-     abc" "" "  xyz"]]])))
+
+      (testing "absorb thematic break"
+        (is (= (parse (indent "- " "    abc\n\n---"))
+               [[:li ["-     abc" "" "  ---"]]]))))))
 
