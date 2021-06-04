@@ -305,5 +305,6 @@ OK  followed by either a . character or a ) character.
           previous (some-> previous
                            (string/replace trim-re ""))]
       (or (string/starts-with? line prefix)
-          (every? (comp #{:p} :tag tagger) (remove nil? [line previous]))))))
+          (every? (comp #{:p} :tag tagger) (remove nil? [line previous]))
+          (= :blank (->> line tagger :tag))))))
 

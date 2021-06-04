@@ -201,8 +201,9 @@
 
   (testing "inadequate leading whitespace"
     (are [l p r] (= r (belongs-to-list-item? l {:origin " 1. abc" :previous p}))
-         " xyz" nil          true
-         " xyz" "pqr"        true
-         " xyz" "    pqr"    true
-         " xyz" "    # opqr" false)))
+         " xyz" nil         true
+         " xyz" "pqr"       true
+         " xyz" "    pqr"   true
+         " xyz" "    # pqr" false
+         ""     "    pqr"   true)))
 
