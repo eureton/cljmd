@@ -191,6 +191,5 @@
 
     (testing "basic case"
       (is (= (parse (indent "- " "abc\n\n# xyz\n---"))
-             [[:li ["- abc" "" "  # xyz" "  ---"]]]))
-      )))
+             [[:li ["- abc" "" "  # xyz" "  ---"]]])))))
 

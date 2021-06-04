@@ -87,19 +87,7 @@
 
 (defmethod add :fcblk-pair
   [x y]
-  (let [x-block (last x)
-        y-block (first y)
-        the-lines (second y-block)
-        new-x-block (update x-block 1 conj (first the-lines))
-        tail (->> (rest y)
-                  (map second)
-                  (concat (rest the-lines))
-                  flatten
-                  (map from-line)
-                  (reduce add))]
-    (concat (butlast x)
-            [new-x-block]
-            tail)))
+  (fuse-split x y 1))
 
 (defmethod add [:ofcblk :_]
   [x y]
