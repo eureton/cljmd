@@ -190,6 +190,19 @@
              (string/join "\r\n"))))
 
     (testing "basic case"
-      (is (= (parse (indent "- " "abc\n\n# xyz\n---"))
-             [[:li ["- abc" "" "  # xyz" "  ---"]]])))))
+      (testing "absorb paragraph"
+        (is (= (parse (indent "- " "abc\nxyz"))
+               [[:li ["- abc" "  xyz"]]])))
+
+      (testing "absorb atx heading"
+        (is (= (parse (indent "- " "abc\n# xyz"))
+               [[:li ["- abc" "  # xyz"]]])))
+
+      (testing "absorb thematic break"
+        (is (= (parse (indent "- " "abc\n---"))
+               [[:li ["- abc" "  ---"]]])))
+
+      (testing "absorb blank"
+        (is (= (parse "- abc\n\n  xyz")
+               [[:li ["- abc" "" "  xyz"]]]))))))
 
