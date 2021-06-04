@@ -79,7 +79,7 @@
              [[:stxh ["xyz" "==="]]])))
 
     (testing "not preceded by blank"
-      (is (= (second (parse "- xyz\r\nabc\r\n==="))
+      (is (= (second (parse "# xyz\r\nabc\r\n==="))
              [:stxh ["abc" "==="]])))
 
     (testing "not followed by blank"
@@ -173,5 +173,24 @@
                      [[:icblk ls]])
            "    1\n\n    2"          ["    1" "" "    2"]
            "    1\n\n\n    2"        ["    1" "" "" "    2"]
-           "    1\n\n    2\n\n    3" ["    1" "" "    2" "" "    3"]))))
+           "    1\n\n    2\n\n    3" ["    1" "" "    2" "" "    3"])))
+
+  (testing "list item"
+    (defn indent
+      [m s]
+      (let [with-marker #(str m %)
+            ws (-> m count (repeat \space) string/join)
+            with-ws #(cond->> %
+                       (not (string/blank? %)) (str ws))]
+        (->> s
+             string/split-lines
+             ((juxt (comp vector with-marker first)
+                    (comp #(map with-ws %) rest)))
+             (apply concat)
+             (string/join "\r\n"))))
+
+    (testing "basic case"
+      (is (= (parse (indent "- " "abc\n\n# xyz\n---"))
+             [[:li ["- abc" "" "  # xyz" "  ---"]]]))
+      )))
 
