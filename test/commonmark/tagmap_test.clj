@@ -87,7 +87,7 @@
              [:stxh ["abc" "==="]])))
 
     (testing "separation from paragraph with blank"
-      (let [result (parse "abc\r\n\r\nxyz\r\n===\r\n")]
+      (let [result (parse "abc\r\n\r\nxyz\r\n===")]
         (testing "tags"
           (is (= (map first result)
                  [:p :blank :stxh])))
@@ -145,13 +145,13 @@
              [[:icblk ["    abc"]]])))
 
     (testing "multiple lines"
-      (is (= (parse "    abc\r\n    xyz\r\n")
+      (is (= (parse "    abc\r\n    xyz")
              [[:icblk ["    abc" "    xyz"]]])))
 
     (testing "cannot interrupt paragraph"
       (are [s ls] (= (parse s)
                      [[:p ls]])
-           "abc\r\n    xyz\r\n"    ["abc" "    xyz"]
+           "abc\r\n    xyz"        ["abc" "    xyz"]
            "abc\r\n    xyz\r\n123" ["abc" "    xyz" "123"]))
 
     (testing "paragraph may follow without blank"
@@ -197,6 +197,14 @@
       (testing "absorb atx heading"
         (is (= (parse (indent "- " "abc\n# xyz"))
                [[:li ["- abc" "  # xyz"]]])))
+
+      (testing "absorb indented code block"
+        (is (= (parse (indent "- " "abc\n    foo\n    bar"))
+               [[:li ["- abc" "      foo" "      bar"]]])))
+
+      (testing "absorb fenced code block"
+        (is (= (parse (indent "- " "abc\n```\nxyz\n```"))
+               [[:li ["- abc" "  ```" "  xyz" "  ```"]]])))
 
       (testing "absorb blank"
         (is (= (parse "- abc\n\n  xyz")

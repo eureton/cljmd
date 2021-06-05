@@ -144,12 +144,23 @@
   ([x y]
    (concat x y)))
 
+(defn tokenize
+  [string]
+  (let [lines (string/split-lines (str "_" string "_"))]
+    (if (= 1 (count lines))
+      [string]
+      (->> lines
+           ((juxt (comp list #(subs % 1) first)
+                  (comp rest butlast)
+                  (comp list #(subs % 0 (dec (count %))) last)))
+           (reduce concat)))))
+
 (defn parse
   "Parses the given input into a flat list of hashes. Each of these hashes
    represents a top-level block."
   [string]
   (->> string
-       string/split-lines
+       tokenize
        (map from-line)
        (reduce add)))
 
