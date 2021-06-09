@@ -109,6 +109,13 @@
                count)]
     (fuse-split x y n)))
 
+(defmethod add [:bq :_]
+  [x y]
+  (if (block/belongs-to-block-quote? (->> y first second first)
+                                     (->> x last second last))
+    (fuse-left x y)
+    (concat x y)))
+
 (defmethod add [:p :tbr]
   [x y]
   (if (some? (block/setext-heading (->> y first second first)))

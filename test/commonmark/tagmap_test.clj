@@ -378,5 +378,63 @@
 
       (testing "multiline"
         (is (= (parse "> xyz\n> # abc\n> foo")
-               [[:bq ["> xyz" "> # abc" "> foo"]]]))))))
+               [[:bq ["> xyz" "> # abc" "> foo"]]])))
+
+      (testing "empty"
+        (are [s ls] (= (parse s)
+                       [[:bq ls]])
+             ">"           [">"]
+             ">\n>"        [">" ">"]
+             ">\n>\n>"     [">" ">" ">"]
+             "> xyz\n>"    ["> xyz" ">"]
+             ">\n> xyz\n>" [">" "> xyz" ">"]
+             ">\n> xyz"    [">" "> xyz"]))
+
+      (testing "blank line separates"
+        (is (= (parse "> xyz\n\n> abc")
+               [[:bq ["> xyz"]] [:blank [""]] [:bq ["> abc"]]])))
+
+      (testing "can interrupt paragraphs"
+        (is (= (parse "xyz\n> abc")
+               [[:p ["xyz"]] [:bq ["> abc"]]])))
+
+      (testing "no need for blank line before"
+        (is (= (parse "***\n> abc")
+               [[:tbr ["***"]] [:bq ["> abc"]]])))
+
+      (testing "no need for blank line after"
+        (is (= (parse "> abc\n***")
+               [[:bq ["> abc"]] [:tbr ["***"]]]))))
+
+    (testing "laziness"
+      (testing "minimal"
+        (is (= (parse "> xyz\nabc")
+               [[:bq ["> xyz" "abc"]]])))
+
+      (testing "marker omission"
+        (testing "before paragraph continuation text"
+          (are [s ls] (= (parse s)
+                         [[:bq ls]])
+               "> xyz\nabc\n> foo\nbar" ["> xyz" "abc" "> foo" "bar"]
+               "> xyz\n    abc"         ["> xyz" "    abc"]))
+
+        (testing "before non-paragraph-continuation text"
+          (are [s e] (= e (second (parse s)))
+               "> xyz\n---"         [:tbr ["---"]]
+               "> xyz\n- abc"       [:li ["- abc"]]
+               ">     xyz\n    abc" [:icblk ["    abc"]]
+               "> ```\nxyz\n```"    [:p ["xyz"]]
+               "> # xyz\n    abc"   [:icblk ["    abc"]])))
+
+      (testing "whitespace before paragraph continuation text"
+        (are [s] (= (parse (str "> xyz\n" s))
+                    [[:bq ["> xyz" s]]])
+             " abc"
+             "  abc"
+             "   abc"))
+
+      (testing "separation from following paragraph"
+        (are [s r] (= r (parse s))
+             "> abc\n\nxyz"  [[:bq ["> abc"]] [:blank [""]] [:p ["xyz"]]]
+             "> abc\n>\nxyz" [[:bq ["> abc" ">"]] [:p ["xyz"]]])))))
 

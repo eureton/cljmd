@@ -334,6 +334,15 @@ OK  followed by either a . character or a ) character.
              (and (= :li tag)
                   (= :p (:tag (tagger content))))))))
 
+(defn paragraph-continuation-text?
+  [current previous]
+  (let [current-info (tagger current)
+        previous-info (tagger previous)]
+  (and (->> current-info :tag #{:p :icblk})
+       (or (->> previous-info :tag #{:p})
+           (and (->> previous-info :tag #{:li :bq})
+                (paragraph-continuation-text? current (:content previous-info)))))))
+
 (defn belongs-to-list-item?
   "True if current belongs to LI, assuming:
      1. current is the line in question
@@ -349,4 +358,11 @@ OK  followed by either a . character or a ) character.
       (or (string/starts-with? current prefix)
           (lazy-continuation-line? current previous)
           (= :blank (->> current tagger :tag))))))
+
+(defn belongs-to-block-quote?
+  [current previous]
+  (let [current-info (tagger current)
+        previous-info (tagger previous)]
+    (or (->> current-info :tag (= :bq))
+        (paragraph-continuation-text? current previous))))
 
