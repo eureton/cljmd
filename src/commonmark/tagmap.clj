@@ -86,13 +86,17 @@
 
 (defmethod add [:ofcblk :_]
   [x y]
-  (let [lines (->> x last second)]
-    (if (and (> (count lines) 1)
-             (->> lines
-                  ((juxt first last))
-                  (apply block/fenced-code-block-pair?)))
-      (concat x y)
-      (fuse-left x y))))
+  (let [block-lines (->> x last second)
+        pair? (block/fenced-code-block-pair? (first block-lines)
+                                             (-> y first second first))
+        closed? (and (> (count block-lines) 1)
+                     (->> block-lines
+                          ((juxt first last))
+                          (apply block/fenced-code-block-pair?)))]
+    (cond
+      pair?   (fuse-split x y 1)
+      closed? (concat x y)
+      :else   (fuse-left x y))))
 
 (defmethod add [:li :_]
   [x y]
@@ -141,13 +145,10 @@
          y-entry (first y)
          x-tag (first x-entry)
          y-tag (first y-entry)
-         fence-pair? (block/fenced-code-block-pair? (-> x-entry second first)
-                                                    (-> y-entry second first))
          left-handler ((methods add) [x-tag :_])]
      (cond
-       fence-pair?     (fuse-split x y 1)
-       (= x-tag y-tag) (fuse-left x y)
        left-handler    (left-handler x y)
+       (= x-tag y-tag) (fuse-left x y)
        :else           (concat x y)))))
 
 (defn tokenize
