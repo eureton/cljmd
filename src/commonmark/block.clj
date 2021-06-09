@@ -269,18 +269,49 @@ OK  followed by either a . character or a ) character.
            (concat [:li])
            (zipmap [:tag :indent :marker :space :content])))
 
+(comment "Block quotes
+
+    A block quote marker consists of 0-3 spaces of initial indent, plus (a) the character > together with a
+    following space, or (b) a single character > not followed by a space.
+
+    The following rules define block quotes:
+      1. Basic case. If a string of lines Ls constitute a sequence of blocks Bs, then the result of prepending a
+         block quote marker to the beginning of each line in Ls is a block quote containing Bs.
+      2. Laziness. If a string of lines Ls constitute a block quote with contents Bs, then the result of
+         deleting the initial block quote marker from one or more lines in which the next non-whitespace
+         character after the block quote marker is paragraph continuation text is a block quote with
+         Bs as its content. Paragraph continuation text is text that will be parsed as part of the content of a
+         paragraph, but does not occur at the beginning of the paragraph.
+      3. Consecutiveness. A document cannot contain two block quotes in a row unless there is a blank line 
+         between them.
+
+      Nothing else counts as a block quote.")
+
+(def block-quote-marker-re #"( {0,3})>( ?)")
+
+(def block-quote-line-re (re-pattern (str "^" block-quote-marker-re #"(\p{Print}*)$")))
+
+(defn block-quote-line
+  [line]
+  (some->> line
+           (re-find block-quote-line-re)
+           (drop 1)
+           (concat [:bq])
+           (zipmap [:tag :indent :space :content])))
+
 (defn tagger
   [line]
   (when line
     ((some-fn thematic-break
-             atx-heading
-             list-item-lead-line
-             setext-heading
-             indented-chunk-line
-             opening-code-fence
-             closing-code-fence
-             blank-line
-             paragraph-line) line)))
+              atx-heading
+              list-item-lead-line
+              block-quote-line
+              setext-heading
+              indented-chunk-line
+              opening-code-fence
+              closing-code-fence
+              blank-line
+              paragraph-line) line)))
 
 (defn fenced-code-block-pair?
   "True if lines x and y are matching code block fences, false otherwise."

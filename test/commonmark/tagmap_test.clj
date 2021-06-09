@@ -361,5 +361,22 @@
              "-\n  abc\n  # foo\n  ```\n  xyz\n  ```\n      bar"
              " -\n   abc\n   # foo\n   ```\n   xyz\n   ```\n       bar"
              "  -\n    abc\n    # foo\n    ```\n    xyz\n    ```\n        bar"
-             "   -\n     abc\n     # foo\n     ```\n     xyz\n     ```\n         bar")))))
+             "   -\n     abc\n     # foo\n     ```\n     xyz\n     ```\n         bar"))))
+
+  (testing "block quote"
+    (testing "basic case"
+      (testing "minimal"
+        (is (= (parse "> xyz")
+               [[:bq ["> xyz"]]])))
+
+      (testing "indentation"
+        (are [s] (= (parse s)
+                    [[:bq [s]]])
+             " > xyz"
+             "  > xyz"
+             "   > xyz"))
+
+      (testing "multiline"
+        (is (= (parse "> xyz\n> # abc\n> foo")
+               [[:bq ["> xyz" "> # abc" "> foo"]]]))))))
 
