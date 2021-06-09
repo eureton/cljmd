@@ -39,6 +39,17 @@
   [[(-> line block/tagger :tag)
     [line]]])
 
+(defn retag
+  "Returns the tagmap with either its first or its last entry retagged to tag.
+   The entry to be affected is specified by position and may be either :first or
+   :last."
+  [tagmap position tag]
+  (let [positionf (case position
+                    :last last
+                    :first first)]
+    (concat (butlast tagmap)
+            [(assoc (positionf tagmap) 0 tag)])))
+
 (defn shift
   "Recalculates tagmap after removing the first n lines of the first entry."
   [n tagmap]
@@ -115,32 +126,25 @@
 (defmethod add [:p :tbr]
   [x y]
   (if (some? (block/setext-heading (->> y first second first)))
-    (fuse-split (concat (butlast x) [(assoc (last x) 0 :stxh)]) y 1)
+    (fuse-split (retag x :last :stxh) y 1)
     (concat x y)))
 
 (defmethod add [:p :li]
   [x y]
   (if (->> y first second first (re-find block/list-item-blank-lead-line-re) some?)
-    (fuse-split (concat (butlast x) [(assoc (last x) 0 :stxh)]) y 1)
+    (fuse-split (retag x :last :stxh) y 1)
     (concat x y)))
 
 (defmethod add [:p :stxh]
   [x y]
-  (concat (butlast x)
-          [(-> (last x)
-               (assoc 0 :stxh)
-               (update 1 (comp vec concat) (second (first y))))]
-          (rest y)))
+  (fuse-left (retag x :last :stxh) y))
 
 (defmethod add [:stxh :_]
   [x y]
   (let [setext-lines (-> x last second)]
     (if (and (= 1 (count setext-lines))
              (some? (re-find block/list-item-blank-lead-line-re (first setext-lines))))
-      (add (->> x
-                ((juxt butlast
-                       (comp vector #(assoc % 0 :li) last)))
-                (apply concat)) y)
+      (add (retag x :last :li) y)
       (concat x y))))
 
 (defmethod add [:p :icblk]
