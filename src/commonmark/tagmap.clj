@@ -18,6 +18,8 @@
          fence-pair? (block/fenced-code-block-pair? (-> x-entry second first)
                                                     (-> y-entry second first))
          result (cond
+                  (= [:p :tbr] [x-tag y-tag])       [:p :tbr]
+                  (= [:p :li] [x-tag y-tag])        [:p :li]
                   (= [:p :stxh] [x-tag y-tag])      [:p :stxh]
                   (= [:p :icblk] [x-tag y-tag])     [:p :icblk]
                   (= [:blank :icblk] [x-tag y-tag]) [:blank :icblk]
@@ -102,10 +104,9 @@
 (defmethod add [:li :_]
   [x y]
   (let [list-item-lines (->> x last second)
-        list-item-trailer (->> list-item-lines (drop 1) last)
         origin (first list-item-lines)
         lines (->> y first second)
-        previous-lines (concat [list-item-trailer] lines)
+        previous-lines (concat [(last list-item-lines)] lines)
         n (->> (map vector lines previous-lines)
                (take-while (fn [[line previous]]
                              (block/belongs-to-list-item? line
@@ -114,13 +115,36 @@
                count)]
     (fuse-split x y n)))
 
+(defmethod add [:p :tbr]
+  [x y]
+  (if (some? (block/setext-heading (->> y first second first)))
+    (fuse-split (concat (butlast x) [(assoc (last x) 0 :stxh)]) y 1)
+    (concat x y)))
+
+(defmethod add [:p :li]
+  [x y]
+  (if (->> y first second first (re-find block/list-item-blank-lead-line-re) some?)
+    (fuse-split (concat (butlast x) [(assoc (last x) 0 :stxh)]) y 1)
+    (concat x y)))
+
 (defmethod add [:p :stxh]
   [x y]
   (concat (butlast x)
           [(-> (last x)
                (assoc 0 :stxh)
-               (update 1 #(apply conj %1 %2) (second (first y))))]
+               (update 1 (comp vec concat) (second (first y))))]
           (rest y)))
+
+(defmethod add [:stxh :_]
+  [x y]
+  (let [setext-lines (-> x last second)]
+    (if (and (= 1 (count setext-lines))
+             (some? (re-find block/list-item-blank-lead-line-re (first setext-lines))))
+      (add (->> x
+                ((juxt butlast
+                       (comp vector #(assoc % 0 :li) last)))
+                (apply concat)) y)
+      (concat x y))))
 
 (defmethod add [:p :icblk]
   [x y]
@@ -155,6 +179,16 @@
                   (comp list #(subs % 0 (dec (count %))) last)))
            (reduce concat)))))
 
+(defmulti promote first)
+
+(defmethod promote :pre-stxh
+  [[_ lines]]
+  [:li lines])
+
+(defmethod promote :default
+  [entry]
+  entry)
+
 (defn parse
   "Parses the given input into a flat list of hashes. Each of these hashes
    represents a top-level block."
@@ -162,5 +196,6 @@
   (->> string
        tokenize
        (map from-line)
-       (reduce add)))
+       (reduce add)
+       (map promote)))
 

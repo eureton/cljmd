@@ -75,12 +75,38 @@
 (deftest parse-test
   (testing "setext heading"
     (testing "minimal"
-      (is (= (parse "xyz\r\n===")
-             [[:stxh ["xyz" "==="]]])))
+      (are [s ul] (= (parse s)
+                     [[:stxh ["xyz" ul]]])
+           "xyz\n===" "==="
+           "xyz\n---" "---"))
+
+    (testing "underline length"
+      (are [s ul] (= (parse s)
+                     [[:stxh ["xyz" ul]]])
+           "xyz\n=" "="
+           "xyz\n==" "=="
+           "xyz\n===" "==="
+           "xyz\n====" "===="
+           "xyz\n=====" "====="
+           "xyz\n======" "======"
+           "xyz\n=======" "======="
+           "xyz\n========" "========"
+           "xyz\n-" "-"
+           "xyz\n--" "--"
+           "xyz\n---" "---"
+           "xyz\n----" "----"
+           "xyz\n-----" "-----"
+           "xyz\n------" "------"
+           "xyz\n-------" "-------"
+           "xyz\n--------" "--------"))
 
     (testing "not preceded by blank"
       (is (= (second (parse "# xyz\r\nabc\r\n==="))
              [:stxh ["abc" "==="]])))
+
+    (testing "multiline"
+      (is (= (first (parse "xyz\nabc\n==="))
+             [:stxh ["xyz" "abc" "==="]])))
 
     (testing "not followed by blank"
       (is (= (first (parse "abc\r\n===\r\n- xyz"))
@@ -99,6 +125,29 @@
     (testing "multiple lines"
       (is (= (parse "xyz\r\nabc\r\n===")
              [[:stxh ["xyz" "abc" "==="]]]))))
+
+  (testing "thematic break"
+    (testing "minimal"
+      (is (= (parse "---")
+             [[:tbr ["---"]]])))
+
+    (testing "followed by block"
+      (are [s e] (= (parse s)
+                    [[:tbr ["---"]] e])
+           "---\nxyz"    [:p ["xyz"]]
+           "---\n# xyz"  [:atxh ["# xyz"]]
+           "---\nxyz\n-" [:stxh ["xyz" "-"]]
+           "---\n- xyz"  [:li ["- xyz"]]
+           "---\n"       [:blank [""]]))
+
+    (testing "preceded by paragraph"
+      (testing "using -"
+        (is (= (parse "xyz\n---")
+               [[:stxh ["xyz" "---"]]])))
+
+      (testing "using _"
+        (is (= (parse "xyz\n___")
+               [[:p ["xyz"]] [:tbr ["___"]]])))))
 
   (testing "fenced code block"
     (testing "minimal"
@@ -227,11 +276,46 @@
         (is (= (parse (indent "- " "    abc\n# xyz"))
                [[:li ["-     abc" "  # xyz"]]])))
 
+      (testing "absorb fenced code block"
+        (is (= (parse (indent "- " "    abc\n```\nxyz\n```"))
+               [[:li ["-     abc" "  ```" "  xyz" "  ```"]]])))
+
       (testing "absorb blank"
         (is (= (parse (indent "- " "    abc\n\nxyz"))
                [[:li ["-     abc" "" "  xyz"]]])))
 
       (testing "absorb thematic break"
         (is (= (parse (indent "- " "    abc\n\n---"))
-               [[:li ["-     abc" "" "  ---"]]]))))))
+               [[:li ["-     abc" "" "  ---"]]]))))
+
+    (testing "starting with blank line"
+      (testing "minimal"
+        (is (= (parse "-")
+               [[:li ["-"]]])))
+
+      (testing "absorb paragraph"
+        (is (= (parse "-\n  abc")
+               [[:li ["-" "  abc"]]])))
+
+      (testing "absorb atx heading"
+        (is (= (parse (indent "- " "    abc\n# xyz"))
+               [[:li ["-     abc" "  # xyz"]]])))
+
+      (testing "absorb fenced code block"
+        (is (= (parse (indent "- " "    abc\n```\nxyz\n```"))
+               [[:li ["-     abc" "  ```" "  xyz" "  ```"]]])))
+
+      (testing "absorb blank"
+        (is (= (parse (indent "- " "    abc\n\nxyz"))
+               [[:li ["-     abc" "" "  xyz"]]])))
+
+      (testing "absorb thematic break"
+        (is (= (parse (indent "- " "    abc\n\n---"))
+               [[:li ["-     abc" "" "  ---"]]])))
+
+      (testing "don't absorb unindented"
+        (are [s] (= (first (parse s))
+                    [:li ["-"]])
+             "-\nabc"
+             "-\n abc")))))
 
