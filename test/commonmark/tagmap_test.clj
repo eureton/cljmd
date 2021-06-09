@@ -265,7 +265,15 @@
              "- abc\n\n  xyz"       1
              "- abc\n\n\n  xyz"     2
              "- abc\n\n\n\n  xyz"   3
-             "- abc\n\n\n\n\n  xyz" 4)))
+             "- abc\n\n\n\n\n  xyz" 4))
+
+      (testing "indentation"
+        (are [s] (= (parse s)
+                      [[:li (string/split-lines s)]])
+             "- abc\n\n  # foo\n  xyz\n  ```\n  opq\n  ```\n      bar"
+             " - abc\n\n   # foo\n   xyz\n   ```\n   opq\n   ```\n       bar"
+             "  - abc\n\n    # foo\n    xyz\n    ```\n    opq\n    ```\n        bar"
+             "   - abc\n\n     # foo\n     xyz\n     ```\n     opq\n     ```\n         bar")))
 
     (testing "starting with indented code"
       (testing "minimal"
@@ -298,7 +306,15 @@
              "-     abc\n\n  xyz"       1
              "-     abc\n\n\n  xyz"     2
              "-     abc\n\n\n\n  xyz"   3
-             "-     abc\n\n\n\n\n  xyz" 4)))
+             "-     abc\n\n\n\n\n  xyz" 4))
+
+      (testing "indentation"
+        (are [s] (= (parse s)
+                    [[:li (string/split-lines s)]])
+             "-     abc\n\n  # foo\n  xyz\n  ```\n  opq\n  ```"
+             " -     abc\n\n   # foo\n   xyz\n   ```\n   opq\n   ```"
+             "  -     abc\n\n    # foo\n    xyz\n    ```\n    opq\n    ```"
+             "   -     abc\n\n     # foo\n     xyz\n     ```\n     opq\n     ```")))
 
     (testing "starting with blank line"
       (testing "minimal"
@@ -337,5 +353,13 @@
              "-\n  abc\n\n  xyz"       1
              "-\n  abc\n\n\n  xyz"     2
              "-\n  abc\n\n\n\n  xyz"   3
-             "-\n  abc\n\n\n\n\n  xyz" 4)))))
+             "-\n  abc\n\n\n\n\n  xyz" 4))
+
+      (testing "indentation"
+        (are [s] (= (parse s)
+                      [[:li (string/split-lines s)]])
+             "-\n  abc\n  # foo\n  ```\n  xyz\n  ```\n      bar"
+             " -\n   abc\n   # foo\n   ```\n   xyz\n   ```\n       bar"
+             "  -\n    abc\n    # foo\n    ```\n    xyz\n    ```\n        bar"
+             "   -\n     abc\n     # foo\n     ```\n     xyz\n     ```\n         bar")))))
 
