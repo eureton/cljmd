@@ -219,21 +219,21 @@
 
 (deftest belongs-to-list-item?-test
   (testing "adequate leading whitespace"
-    (are [l p] (belongs-to-list-item? l {:origin " 1. abc" :previous p})
+    (are [l p] (belongs-to-list-item? l p " 1. abc")
          "    xyz" " 1. abc"
          "    xyz" "    opqr"
          "    xyz" "    # opqr"
          "    xyz" ""))
 
   (testing "origin not a line item => nil"
-    (are [l p] (nil? (belongs-to-list-item? l {:origin "abc" :previous p}))
+    (are [l p] (nil? (belongs-to-list-item? l p "abc"))
          "  xyz" "- abc"
          "  xyz" "  abc"
          "  xyz" "  # abc"
          "  xyz" ""))
 
   (testing "inadequate leading whitespace"
-    (are [l p r] (= r (belongs-to-list-item? l {:origin " 1. abc" :previous p}))
+    (are [l p r] (= r (belongs-to-list-item? l p " 1. abc"))
          " xyz" "pqr"       true
          " xyz" "    pqr"   true
          " xyz" "    # pqr" false
@@ -242,7 +242,7 @@
          " xyz" ""          false))
 
   (testing "lazy continuation line after blank origin"
-    (are [l r] (= r (belongs-to-list-item? l {:origin "-" :previous "-"}))
+    (are [l r] (= r (belongs-to-list-item? l "-" "-"))
          "  xyz" true
          " xyz"  false
          "xyz"   false)))

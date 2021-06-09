@@ -309,7 +309,7 @@ OK  followed by either a . character or a ) character.
      2. previous is the line preceding current
      3. LI is a list item, whose first line is origin
    False otherwise."
-  [current {:keys [previous origin]}]
+  [current previous origin]
   (when-some [{:keys [indent marker space]
                :or {space " "}} (list-item-lead-line origin)]
     (let [prefix (string/replace (str indent marker space) #"."  " ")

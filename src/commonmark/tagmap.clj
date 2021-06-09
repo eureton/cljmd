@@ -108,10 +108,7 @@
         lines (->> y first second)
         previous-lines (concat [(last list-item-lines)] lines)
         n (->> (map vector lines previous-lines)
-               (take-while (fn [[line previous]]
-                             (block/belongs-to-list-item? line
-                                                          {:previous previous
-                                                           :origin origin})))
+               (take-while #(apply block/belongs-to-list-item? (conj % origin)))
                count)]
     (fuse-split x y n)))
 
