@@ -161,16 +161,6 @@
                   (comp list #(subs % 0 (dec (count %))) last)))
            (reduce concat)))))
 
-(defmulti promote first)
-
-(defmethod promote :pre-stxh
-  [[_ lines]]
-  [:li lines])
-
-(defmethod promote :default
-  [entry]
-  entry)
-
 (defn parse
   "Parses the given input into a flat list of hashes. Each of these hashes
    represents a top-level block."
@@ -178,6 +168,5 @@
   (->> string
        tokenize
        (map from-line)
-       (reduce add)
-       (map promote)))
+       (reduce add)))
 
