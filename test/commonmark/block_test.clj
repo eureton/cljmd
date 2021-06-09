@@ -192,18 +192,58 @@
          "```" "~~~"
          "~~~"  "```")))
 
+(deftest lazy-continuation-line?-test
+  (testing "paragraph"
+    (are [c p r] (= r (lazy-continuation-line? c p))
+         "xyz" "foo"   true
+         "xyz" "- foo" true
+         "xyz" "# foo" false
+         "xyz" "-"     false
+         "xyz" ""      false))
+
+  (testing "blank"
+    (are [c p] (false? (lazy-continuation-line? c p))
+         ""    "foo"
+         ""    "- foo"
+         ""    "# foo"
+         ""    "-"
+         ""    ""))
+
+  (testing "non-blank, non-paragraph"
+    (are [c p] (false? (lazy-continuation-line? c p))
+         "# !" "foo"
+         "# !" "- foo"
+         "# !" "# foo"
+         "# !" "-"
+         "# !" "")))
+
 (deftest belongs-to-list-item?-test
   (testing "adequate leading whitespace"
     (are [l p] (belongs-to-list-item? l {:origin " 1. abc" :previous p})
-         "    xyz" nil
+         "    xyz" " 1. abc"
          "    xyz" "    opqr"
-         "    xyz" "    # opqr"))
+         "    xyz" "    # opqr"
+         "    xyz" ""))
+
+  (testing "origin not a line item => nil"
+    (are [l p] (nil? (belongs-to-list-item? l {:origin "abc" :previous p}))
+         "  xyz" "- abc"
+         "  xyz" "  abc"
+         "  xyz" "  # abc"
+         "  xyz" ""))
 
   (testing "inadequate leading whitespace"
     (are [l p r] (= r (belongs-to-list-item? l {:origin " 1. abc" :previous p}))
-         " xyz" nil         true
          " xyz" "pqr"       true
          " xyz" "    pqr"   true
          " xyz" "    # pqr" false
-         ""     "    pqr"   true)))
+         ""     "    pqr"   true
+         "xyz"  "        !" false
+         " xyz" ""          false))
+
+  (testing "lazy continuation line after blank origin"
+    (are [l r] (= r (belongs-to-list-item? l {:origin "-" :previous "-"}))
+         "  xyz" true
+         " xyz"  false
+         "xyz"   false)))
 

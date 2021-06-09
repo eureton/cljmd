@@ -274,12 +274,12 @@ OK  followed by either a . character or a ) character.
   (when line
     ((some-fn thematic-break
              atx-heading
+             list-item-lead-line
              setext-heading
              indented-chunk-line
              opening-code-fence
              closing-code-fence
              blank-line
-             list-item-lead-line
              paragraph-line) line)))
 
 (defn fenced-code-block-pair?
@@ -293,18 +293,29 @@ OK  followed by either a . character or a ) character.
               (map :fence)
               (apply string/includes?)))))
 
+(defn lazy-continuation-line?
+  "Returns non-nil if current is a lazy continuation line of previous."
+  [current previous]
+  (let [{:keys [tag content]
+         :or {content ""}} (tagger previous)]
+    (and (= :p (:tag (tagger current)))
+         (or (= :p tag)
+             (and (= :li tag)
+                  (= :p (:tag (tagger content))))))))
+
 (defn belongs-to-list-item?
-  "True if line belongs to LI, assuming:
-     1. LI is a list item, whose first line is origin
-     2. previous is the line which precedes line
+  "True if current belongs to LI, assuming:
+     1. current is the line in question
+     2. previous is the line preceding current
+     3. LI is a list item, whose first line is origin
    False otherwise."
-  [line {:keys [previous origin]}]
-  (when-some [{:keys [indent marker space]} (list-item-lead-line origin)]
+  [current {:keys [previous origin]}]
+  (when-some [{:keys [indent marker space]
+               :or {space " "}} (list-item-lead-line origin)]
     (let [prefix (string/replace (str indent marker space) #"."  " ")
           trim-re (re-pattern (str "^ {0," (count prefix) "}"))
-          previous (some-> previous
-                           (string/replace trim-re ""))]
-      (or (string/starts-with? line prefix)
-          (every? (comp #{:p} :tag tagger) (remove nil? [line previous]))
-          (= :blank (->> line tagger :tag))))))
+          previous (string/replace previous trim-re "")]
+      (or (string/starts-with? current prefix)
+          (lazy-continuation-line? current previous)
+          (= :blank (->> current tagger :tag))))))
 
