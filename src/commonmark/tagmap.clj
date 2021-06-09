@@ -140,14 +140,6 @@
   [x y]
   (fuse-left (retag x :last :stxh) y))
 
-(defmethod add [:stxh :_]
-  [x y]
-  (let [setext-lines (-> x last second)]
-    (if (and (= 1 (count setext-lines))
-             (some? (re-find block/list-item-blank-lead-line-re (first setext-lines))))
-      (add (retag x :last :li) y)
-      (concat x y))))
-
 (defmethod add [:p :icblk]
   [x y]
   (fuse-left x y))
