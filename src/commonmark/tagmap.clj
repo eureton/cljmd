@@ -95,7 +95,8 @@
    entry of x, recalculates the remainder of y and concatenates the results."
   [x y n]
   (concat (butlast x)
-          (fuse-left [(last x)] [(update (first y) 1 #(take n %))])
+          (fuse-left [(last x)]
+                     [(update (first y) 1 #(take n %))])
           (shift n y)))
 
 (defmethod add :fcblk-pair
