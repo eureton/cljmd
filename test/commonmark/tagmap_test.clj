@@ -255,13 +255,17 @@
         (is (= (parse (indent "- " "abc\n```\nxyz\n```"))
                [[:li ["- abc" "  ```" "  xyz" "  ```"]]])))
 
-      (testing "absorb blank"
-        (is (= (parse "- abc\n\n  xyz")
-               [[:li ["- abc" "" "  xyz"]]])))
-
       (testing "absorb thematic break"
         (is (= (parse (indent "- " "abc\n\n---"))
-               [[:li ["- abc" "" "  ---"]]]))))
+               [[:li ["- abc" "" "  ---"]]])))
+
+      (testing "blanks"
+        (are [s n] (= (parse s)
+                      [[:li (concat ["- abc"] (repeat n "") ["  xyz"])]])
+             "- abc\n\n  xyz"       1
+             "- abc\n\n\n  xyz"     2
+             "- abc\n\n\n\n  xyz"   3
+             "- abc\n\n\n\n\n  xyz" 4)))
 
     (testing "starting with indented code"
       (testing "minimal"
@@ -286,7 +290,15 @@
 
       (testing "absorb thematic break"
         (is (= (parse (indent "- " "    abc\n\n---"))
-               [[:li ["-     abc" "" "  ---"]]]))))
+               [[:li ["-     abc" "" "  ---"]]])))
+
+      (testing "blanks"
+        (are [s n] (= (parse s)
+                      [[:li (concat ["-     abc"] (repeat n "") ["  xyz"])]])
+             "-     abc\n\n  xyz"       1
+             "-     abc\n\n\n  xyz"     2
+             "-     abc\n\n\n\n  xyz"   3
+             "-     abc\n\n\n\n\n  xyz" 4)))
 
     (testing "starting with blank line"
       (testing "minimal"
@@ -317,5 +329,13 @@
         (are [s] (= (first (parse s))
                     [:li ["-"]])
              "-\nabc"
-             "-\n abc")))))
+             "-\n abc"))
+
+      (testing "blanks"
+        (are [s n] (= (parse s)
+                      [[:li (concat ["-" "  abc"] (repeat n "") ["  xyz"])]])
+             "-\n  abc\n\n  xyz"       1
+             "-\n  abc\n\n\n  xyz"     2
+             "-\n  abc\n\n\n\n  xyz"   3
+             "-\n  abc\n\n\n\n\n  xyz" 4)))))
 
