@@ -11,23 +11,8 @@
   ([] :default)
   ([x] :default)
   ([x y]
-   (let [x-entry (last x)
-         y-entry (first y)
-         x-tag (first x-entry)
-         y-tag (first y-entry)
-         fence-pair? (block/fenced-code-block-pair? (-> x-entry second first)
-                                                    (-> y-entry second first))
-         result (cond
-                  (= [:p :tbr] [x-tag y-tag])       [:p :tbr]
-                  (= [:p :li] [x-tag y-tag])        [:p :li]
-                  (= [:p :stxh] [x-tag y-tag])      [:p :stxh]
-                  (= [:p :icblk] [x-tag y-tag])     [:p :icblk]
-                  (= [:blank :icblk] [x-tag y-tag]) [:blank :icblk]
-                  (= [:icblk :blank] [x-tag y-tag]) [:icblk :blank]
-                  fence-pair?                       :fcblk-pair
-                  (= x-tag y-tag)                   :same
-                  :else                             [x-tag :_])]
-     result)))
+   [(->> x last first)
+    (->> y first first)]))
 
 (defmulti add
   "Binary operation on tagmaps. Serves to compose tagmaps."
@@ -99,10 +84,6 @@
                      [(update (first y) 1 #(take n %))])
           (shift n y)))
 
-(defmethod add :fcblk-pair
-  [x y]
-  (fuse-split x y 1))
-
 (defmethod add [:ofcblk :_]
   [x y]
   (let [lines (->> x last second)]
@@ -152,15 +133,22 @@
   [x y]
   (fuse-left x y))
 
-(defmethod add :same
-  [x y]
-  (fuse-left x y))
-
 (defmethod add :default
   ([] zero)
   ([x] x)
   ([x y]
-   (concat x y)))
+   (let [x-entry (last x)
+         y-entry (first y)
+         x-tag (first x-entry)
+         y-tag (first y-entry)
+         fence-pair? (block/fenced-code-block-pair? (-> x-entry second first)
+                                                    (-> y-entry second first))
+         left-handler ((methods add) [x-tag :_])]
+     (cond
+       fence-pair?     (fuse-split x y 1)
+       (= x-tag y-tag) (fuse-left x y)
+       left-handler    (left-handler x y)
+       :else           (concat x y)))))
 
 (defn tokenize
   [string]
