@@ -346,7 +346,8 @@ OK  followed by either a . character or a ) character.
                (and (= :icblk previous-tag)
                     (paragraph-continuation-text? head tail))
                (and (#{:li :bq} previous-tag)
-                    (paragraph-continuation-text? current (concat [content] tail))))))))
+                    (paragraph-continuation-text? current
+                                                  (concat [content] tail))))))))
 
 (defn belongs-to-list-item?
   "True if current belongs to LI, assuming:
