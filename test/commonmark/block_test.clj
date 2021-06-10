@@ -247,3 +247,66 @@
          " xyz"  false
          "xyz"   false)))
 
+(deftest paragraph-continuation-text?-test
+  (testing "degenerate case => false"
+    (is (false? (paragraph-continuation-text? "abc" []))))
+
+  (testing "previous is indented code block"
+    (testing "from paragraph"
+      (are [c p] (paragraph-continuation-text? c p)
+           "abc" ["xyz"]
+           "abc" ["    xyz" "qpr"]
+           "abc" ["    xyz" "    qpr" "123"]))
+
+    (testing "from indented code block"
+      (are [c p] (paragraph-continuation-text? c p)
+           "    abc" ["xyz"]
+           "    abc" ["    xyz" "qpr"]
+           "    abc" ["    xyz" "    qpr" "123"])))
+
+  (testing "previous is block-quoted indented code block"
+    (testing "from paragraph"
+      (are [c p] (paragraph-continuation-text? c p)
+           "abc" ["xyz"]
+           "abc" [">     xyz" "qpr"]
+           "abc" [">     xyz" ">     qpr" "123"]))
+
+    (testing "from indented code block"
+      (are [c p] (paragraph-continuation-text? c p)
+           "    abc" ["xyz"]
+           "    abc" [">     xyz" "qpr"]
+           "    abc" [">     xyz" ">     qpr" "123"])))
+
+  (testing "both quoted and non-quoted indented code blocks"
+    (is (paragraph-continuation-text? "abc" ["    qpr" ">     xyz" "    123" "> top"])))
+
+  (testing "no previous line contains paragraph => false"
+    (testing "previous is indented code block"
+      (testing "from paragraph"
+        (are [c p] (false? (paragraph-continuation-text? c p))
+             "abc" ["    xyz"]
+             "abc" ["    xyz" "    qpr"]
+             "abc" ["    xyz" "    qpr" "    123"]))
+
+      (testing "from indented code block"
+        (are [c p] (false? (paragraph-continuation-text? c p))
+             "    abc" ["    xyz"]
+             "    abc" ["    xyz" "    qpr"]
+             "    abc" ["    xyz" "    qpr" "    123"])))
+
+    (testing "previous is block-quoted indented code block"
+      (testing "from paragraph"
+        (are [c p] (false? (paragraph-continuation-text? c p))
+             "abc" ["    xyz"]
+             "abc" [">     xyz" "    qpr"]
+             "abc" [">     xyz" ">     qpr" "    123"]))
+
+      (testing "from indented code block"
+        (are [c p] (false? (paragraph-continuation-text? c p))
+             "    abc" ["    xyz"]
+             "    abc" [">     xyz" "    qpr"]
+             "    abc" [">     xyz" ">     qpr" "    123"])))
+
+    (testing "both quoted and non-quoted indented code blocks"
+      (is (false? (paragraph-continuation-text? "abc" ["    qpr" ">     xyz" "    123" ">     top"]))))))
+

@@ -436,5 +436,22 @@
       (testing "separation from following paragraph"
         (are [s r] (= r (parse s))
              "> abc\n\nxyz"  [[:bq ["> abc"]] [:blank [""]] [:p ["xyz"]]]
-             "> abc\n>\nxyz" [[:bq ["> abc" ">"]] [:p ["xyz"]]])))))
+             "> abc\n>\nxyz" [[:bq ["> abc" ">"]] [:p ["xyz"]]])))
+
+    (testing "paragraph continuation text"
+      (testing "not lazy"
+        (are [s ls] (= (parse s)
+                       [[:bq ls]])
+             "> xyz\nabc"                       ["> xyz" "abc"]
+             "> xyz\n    abc"                   ["> xyz" "    abc"]
+             "> xyz\n>     abc\npqr"            ["> xyz" ">     abc" "pqr"]
+             "> xyz\n>     abc\n>     pqr\n123" ["> xyz" ">     abc" ">     pqr" "123"]))
+
+      (testing "lazy"
+        (are [s ls] (= (parse s)
+                       [[:bq ls]])
+             "> xyz\nabc"                   ["> xyz" "abc"]
+             "> xyz\n    abc"               ["> xyz" "    abc"]
+             "> xyz\n    abc\npqr"          ["> xyz" "    abc" "pqr"]
+             "> xyz\n    abc\n    pqr\n123" ["> xyz" "    abc" "    pqr" "123"])))))
 

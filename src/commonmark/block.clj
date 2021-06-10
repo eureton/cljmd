@@ -336,12 +336,17 @@ OK  followed by either a . character or a ) character.
 
 (defn paragraph-continuation-text?
   [current previous]
-  (let [current-info (tagger current)
-        previous-info (tagger previous)]
-  (and (->> current-info :tag #{:p :icblk})
-       (or (->> previous-info :tag #{:p})
-           (and (->> previous-info :tag #{:li :bq})
-                (paragraph-continuation-text? current (:content previous-info)))))))
+  (let [current-tag (->> current tagger :tag)
+        head (first previous)
+        tail (rest previous)
+        {previous-tag :tag :keys [content]} (tagger head)]
+    (boolean
+      (and (#{:p :icblk} current-tag)
+           (or (= :p previous-tag)
+               (and (= :icblk previous-tag)
+                    (paragraph-continuation-text? head tail))
+               (and (#{:li :bq} previous-tag)
+                    (paragraph-continuation-text? current (concat [content] tail))))))))
 
 (defn belongs-to-list-item?
   "True if current belongs to LI, assuming:
@@ -361,8 +366,6 @@ OK  followed by either a . character or a ) character.
 
 (defn belongs-to-block-quote?
   [current previous]
-  (let [current-info (tagger current)
-        previous-info (tagger previous)]
-    (or (->> current-info :tag (= :bq))
-        (paragraph-continuation-text? current previous))))
+  (or (->> current tagger :tag (= :bq))
+      (paragraph-continuation-text? current previous)))
 

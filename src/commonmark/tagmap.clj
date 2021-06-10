@@ -112,7 +112,7 @@
 (defmethod add [:bq :_]
   [x y]
   (if (block/belongs-to-block-quote? (->> y first second first)
-                                     (->> x last second last))
+                                     (->> x last second reverse))
     (fuse-left x y)
     (concat x y)))
 
