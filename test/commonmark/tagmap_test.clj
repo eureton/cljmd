@@ -436,7 +436,11 @@
       (testing "separation from following paragraph"
         (are [s r] (= r (parse s))
              "> abc\n\nxyz"  [[:bq ["> abc"]] [:blank [""]] [:p ["xyz"]]]
-             "> abc\n>\nxyz" [[:bq ["> abc" ">"]] [:p ["xyz"]]])))
+             "> abc\n>\nxyz" [[:bq ["> abc" ">"]] [:p ["xyz"]]]))
+
+      (testing "multiple levels of nesting"
+        (is (= (parse "> > > abc\nxyz")
+               [[:bq ["> > > abc" "xyz"]]]))))
 
     (testing "paragraph continuation text"
       (testing "not lazy"
