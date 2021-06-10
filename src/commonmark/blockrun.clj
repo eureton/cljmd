@@ -1,4 +1,4 @@
-(ns commonmark.tagmap
+(ns commonmark.blockrun
   (:require [clojure.string :as string]
             [commonmark.block :as block]))
 
@@ -7,7 +7,7 @@
   [])
 
 (defn add-df
-  "Dispatch function for tagmap/add."
+  "Dispatch function for blockrun/add."
   ([] :default)
   ([x] :default)
   ([x y]
@@ -15,38 +15,38 @@
     (->> y first first)]))
 
 (defmulti add
-  "Binary operation on tagmaps. Serves to compose tagmaps."
+  "Binary operation on blockruns. Serves to compose blockruns."
   #'add-df)
 
 (defn from-line
-  "Returns a tagmap containing a single tagged line."
+  "Returns a blockrun containing a single tagged line."
   [line]
   [[(-> line block/tagger :tag)
     [line]]])
 
 (defn retag
-  "Returns the tagmap with either its first or its last entry retagged to tag.
+  "Returns the blockrun with either its first or its last entry retagged to tag.
    The entry to be affected is specified by position and may be either :first or
    :last."
-  [tagmap position tag]
+  [blockrun position tag]
   (let [positionf (case position
                     :last last
                     :first first)]
-    (concat (butlast tagmap)
-            [(assoc (positionf tagmap) 0 tag)])))
+    (concat (butlast blockrun)
+            [(assoc (positionf blockrun) 0 tag)])))
 
 (defn shift
-  "Recalculates tagmap after removing the first n lines of the first entry."
-  [n tagmap]
-  (->> (rest tagmap)
+  "Recalculates blockrun after removing the first n lines of the first entry."
+  [n blockrun]
+  (->> (rest blockrun)
        (map second)
-       (concat (->> tagmap first second (drop n)))
+       (concat (->> blockrun first second (drop n)))
        flatten
        (map from-line)
        (reduce add)))
 
 (defn fuse
-  "Concatenates tagmaps x and y with the exception of their adjoining entries.
+  "Concatenates blockruns x and y with the exception of their adjoining entries.
    The latter are merged into a single entry, according to direction.
      * if direction equals :rtol
        y-side lines are appended to x-side lines under the x-side tag

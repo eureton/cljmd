@@ -1,7 +1,7 @@
-(ns commonmark.tagmap-test
+(ns commonmark.blockrun-test
   (:require [clojure.test :refer :all]
             [clojure.string :as string]
-            [commonmark.tagmap :refer :all]))
+            [commonmark.blockrun :refer :all]))
 
 (deftest add-test
   (testing "monoid structure"
