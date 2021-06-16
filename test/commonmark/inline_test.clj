@@ -7,12 +7,20 @@
     (is (= (->> "`foo`" code-span :content)
            "foo")))
 
+  (testing "preamble"
+    (is (= (->> "bar `foo`" code-span :preamble)
+           "bar ")))
+
+  (testing "multiple"
+    (is (= (->> "`foo` bar `baz`" code-span :content)
+           "foo")))
+
   (testing "backtick in contents"
     (is (= (->> "``foo`bar``" code-span :content)
            "foo`bar")))
 
   (testing "wrap backtick pairs"
-    (is (= (->> "` `ls -l` `" code-span :content)
+    (is (= (->> "`` `ls -l` ``" code-span :content)
            "`ls -l`")))
 
   (testing "strip"
@@ -20,7 +28,8 @@
       (are [s c] (= (->> s code-span :content)
                     c)
            "` foo `"   "foo"
-           "`  foo  `" " foo "))
+           "`  foo  `" " foo "
+           "` `` `"    "``"))
 
     (testing "space not on both ends => don't"
       (is (= (->> "` foo`" code-span :content)
@@ -67,11 +76,16 @@
     (is (= (->> "`foo   bar \nbaz`" code-span :content)
            "foo   bar  baz")))
 
-  (testing "backtick strings unequal length => no match"
-    (are [s] (nil? (code-span s))
-         "```foo``"
-         "`foo"
-         "`foo``bar``")))
+  (testing "backtick strings unequal length"
+    (testing "no match"
+      (are [s] (nil? (code-span s))
+           "```foo``"
+           "`foo"
+           "`foo``"))
+
+    (testing "match"
+      (are [s c] (= c (->> s code-span :content))
+           "`foo``bar``" "bar"))))
 
 (deftest delimeter-run-test
   (let [e* (emphasis-delimeter-re \* 1)
