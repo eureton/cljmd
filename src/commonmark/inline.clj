@@ -19,18 +19,19 @@ OK      a single space character is removed from the front and back.")
 (def code-span-re
   ""
   (let [backtick "((?<!`)`+(?!`))"
-        spaced #"[ \n](.*[^ ].*)[ \n]"
-        non-spaced #"(.*[^`])"
-        same-backtick #"\1"]
-    (re-pattern (str "(?s)^" backtick
+        spaced #"[ \n](.*?[^ ].*?)[ \n]"
+        non-spaced #"(.*?[^`])"
+        same-backtick #"\2"]
+    (re-pattern (str "(?s)(.*?(?:^|[^`]))" backtick
                      "(?:" spaced "|" non-spaced ")"
-                     same-backtick "$"))))
+                     same-backtick "((?:[^`]|$).*?)"))))
 
 (defn code-span
   [string]
-  (when-some [[_ backtick-string
+  (when-some [[_ preamble backtick-string
                spaced-content non-spaced-content] (re-find code-span-re string)]
     {:backtick-string backtick-string
+     :preamble preamble
      :content (-> (or spaced-content non-spaced-content)
                   (clojure.string/replace #"(?:\r|\n|\r\n)"  " "))}))
 
