@@ -169,7 +169,15 @@
       (are [s c] (= (-> s emphasis :content)
                     c)
            "foo*bar*" "bar"
-           "5*6*78"   "6")))
+           "5*6*78"   "6"))
+
+    (testing "multiple"
+      (are [s] (= (-> s emphasis :content)
+                  "xyz")
+               "*xyz* *abc*"
+               "*xyz* qpr *abc*"
+           "def *xyz* qpr *abc*"
+           "def *xyz* qpr *abc* 123")))
 
   (testing "opening with _"
     (testing "minimal"
