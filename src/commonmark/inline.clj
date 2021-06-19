@@ -158,53 +158,6 @@ OK  The beginning and the end of the line count as Unicode whitespace.
                      ")"
                      right))))
 
-(defn shard
-  [s p]
-  (let [shards (string/split s p)]
-    (cond-> shards
-      (= 1 (count shards)) (conj ""))))
-
-(defn trim
-  "Returns the given AST node if it is not degenerate, otherwise its children.
-   A degenerate node is a non-leaf text node."
-  [[t v]]
-  (if (and (= :txt t)
-           (coll? v))
-    v
-    [[t v]]))
-
-(defn tokenize
-  [string]
-  (loop [s string
-         h {}]
-    (if-some [[_ token] (re-find star-emphasis-re s)]
-      (let [digest (str (hash token))]
-        (recur (string/replace s star-emphasis-re digest)
-               (assoc h digest {:tag :em :value token})))
-      [s h])))
-
-(defn inflate
-  "Recursively replaces in string the keys in the tokens hash with the AST which
-   corresponds to the tokenized entity. Returns the children of the root node of
-   the AST."
-  [string tokens]
-  (if-some [[k {:keys [tag value]}] (->> tokens
-                       (filter (comp #(string/includes? string %) key))
-                       first)]
-    (->> (shard string (re-pattern k))
-         (map #(vector :txt %))
-         (interpose [tag value])
-         (remove (comp string/blank? second))
-         (map #(update % 1 inflate (dissoc tokens k)))
-         (mapcat trim)
-         vec)
-    string))
-
-(defn ast
-  "Parses string into an AST."
-  [string]
-  [:doc (apply inflate (tokenize string))])
-
 (def lobar-open-emphasis-re
   (let [delimeter (emphasis-delimeter-re \_ 1)
         left-re (left-flanking-emphasis-delimeter-run-re delimeter)
