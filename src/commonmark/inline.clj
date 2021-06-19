@@ -21,19 +21,20 @@ OK      a single space character is removed from the front and back.")
   (let [backtick "((?<!`)`+(?!`))"
         spaced #"[ \n](.*?[^ ].*?)[ \n]"
         non-spaced #"(.*?[^`])"
-        same-backtick #"\2"]
-    (re-pattern (str "(?s)(.*?(?:^|[^`]))" backtick
+        same-backtick #"\1(?!`)"]
+    (re-pattern (str "(?s)" backtick
                      "(?:" spaced "|" non-spaced ")"
-                     same-backtick "((?:[^`]|$).*?)"))))
+                     same-backtick))))
 
 (defn code-span
   [string]
-  (when-some [[_ preamble backtick-string
+  (when-some [[_ backtick-string
                spaced-content non-spaced-content] (re-find code-span-re string)]
     {:backtick-string backtick-string
-     :preamble preamble
      :content (-> (or spaced-content non-spaced-content)
-                  (clojure.string/replace #"(?:\r|\n|\r\n)"  " "))}))
+                  (string/replace #"(?:\r|\n|\r\n)"  " "))
+     :tag :cs
+     :pattern code-span-re}))
 
 (comment "Emphasis, Strong Emphasis
 
@@ -189,7 +190,9 @@ OK  The beginning and the end of the line count as Unicode whitespace.
 (defn emphasis
   [string]
   (when-some [[_ star-content lobar-content] (re-find emphasis-re string)]
-    {:content (or star-content lobar-content)}))
+    {:content (or star-content lobar-content)
+     :tag :em
+     :pattern emphasis-re}))
 
 (def star-strong-emphasis-re
   (let [delimeter (emphasis-delimeter-re \* 2)]
@@ -274,4 +277,9 @@ OK  The beginning and the end of the line count as Unicode whitespace.
     consists of the link destination, excluding enclosing <...> if present, with backslash-escapes in effect as
     described above. The link’s title consists of the link title, excluding its enclosing delimiters, with
     backslash-escapes in effect as described above.)")
+
+(defn tagger
+  [string]
+  (when string
+    ((some-fn code-span emphasis) string)))
 

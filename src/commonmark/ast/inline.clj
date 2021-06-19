@@ -10,12 +10,12 @@
   [string]
   (loop [s string
          h {}]
-    (if-some [[_ token] (re-find inline/star-emphasis-re s)]
-      (let [digest (str (hash token))]
-        (recur (string/replace-first s inline/star-emphasis-re digest)
-               (assoc h digest {:pattern inline/star-emphasis-re
-                                :tag :em
-                                :value token})))
+    (if-some [{:keys [tag pattern content]} (inline/tagger s)]
+      (let [digest (str (hash content))]
+        (recur (string/replace-first s pattern digest)
+               (assoc h digest {:pattern pattern
+                                :tag tag
+                                :value content})))
       h)))
 
 (defn digest
@@ -51,7 +51,7 @@
          (map #(update % 1 inflate (dissoc tokens k)))
          trim
          vec)
-    string))
+    [[:txt string]]))
 
 (defn ast
   "Parses string into an AST. Assumes string contains inline Markdown entities."

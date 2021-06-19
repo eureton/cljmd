@@ -7,10 +7,6 @@
     (is (= (->> "`foo`" code-span :content)
            "foo")))
 
-  (testing "preamble"
-    (is (= (->> "bar `foo`" code-span :preamble)
-           "bar ")))
-
   (testing "multiple"
     (is (= (->> "`foo` bar `baz`" code-span :content)
            "foo")))
