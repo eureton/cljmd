@@ -164,8 +164,9 @@ OK  The beginning and the end of the line count as Unicode whitespace.
         left (left-flanking-emphasis-delimeter-run-re delimeter)
         right (right-flanking-emphasis-delimeter-run-re delimeter)
         punctuated-right (re-pattern (str #"\p{IsPunctuation}" right))]
-    (re-pattern (str "(?:"
-                       "(?<!" right ")|(?<=" punctuated-right ")"
+    (re-pattern (str "(?=" left ")"
+                     "(?:"
+                       "(?!" right ")|(?=" punctuated-right ")"
                      ")" left))))
 
 (def lobar-close-emphasis-re
@@ -173,10 +174,10 @@ OK  The beginning and the end of the line count as Unicode whitespace.
         left (left-flanking-emphasis-delimeter-run-re delimeter)
         right (right-flanking-emphasis-delimeter-run-re delimeter)
         punctuated-left (re-pattern (str left #"\p{IsPunctuation}"))]
-    (re-pattern (str right
+    (re-pattern (str "(?=" right ")"
                      "(?:"
                        "(?!" left ")|(?=" punctuated-left ")"
-                     ")"))))
+                     ")" right))))
 
 (def lobar-emphasis-re
   (re-pattern (str lobar-open-emphasis-re
