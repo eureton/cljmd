@@ -132,6 +132,10 @@
       (is (= (-> "*foo bar*" emphasis :content)
              "foo bar")))
 
+    (testing "multiple => match first"
+      (is (= (-> "*abc* xyz *def*" emphasis :content)
+             "abc")))
+
     (testing "opening * followed by whitespace => not emphasis"
       (is (nil? (emphasis "a * foo bar*"))))
 
@@ -179,6 +183,10 @@
     (testing "minimal"
       (is (= (-> "_foo bar_" emphasis :content)
              "foo bar")))
+
+    (testing "multiple => match first"
+      (is (= (-> "_abc_ xyz _def_" emphasis :content)
+             "abc")))
 
     (testing "opening _ followed by whitespace => not emphasis"
       (is (nil? (emphasis "_ foo bar_"))))
