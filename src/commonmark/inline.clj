@@ -179,7 +179,7 @@ OK  The beginning and the end of the line count as Unicode whitespace.
          h {}]
     (if-some [[_ token] (re-find star-emphasis-re s)]
       (let [digest (str (hash token))]
-        (recur (string/replace-first s star-emphasis-re digest)
+        (recur (string/replace s star-emphasis-re digest)
                (assoc h digest {:tag :em :value token})))
       [s h])))
 
