@@ -3,7 +3,9 @@
 
 (defn split
   [string pattern]
-  (let [parts (string/split string pattern)]
+  (let [parts (string/split string pattern)
+        length (count parts)]
     (cond-> parts
-      (= 1 (count parts)) (conj ""))))
+      (zero? length) (conj "" "")
+      (= 1 length) (conj ""))))
 

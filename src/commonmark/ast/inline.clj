@@ -30,32 +30,45 @@
   "Replaces degenerate nodes in the ast with their children.
    A degenerate node is a non-leaf text node."
   [ast]
-  (mapcat (fn [[t v]]
-            (if (and (= :txt t)
-                     (coll? v))
-              v
-              [[t v]])) ast))
+  (mapcat (fn [[tag value]]
+            (if (and (= :txt tag)
+                     (coll? value))
+              value
+              [[tag value]])) ast))
 
 (defn inflate
   "Recursively replaces in string the keys in the tokens hash with the AST which
    corresponds to the tokenized entity. Returns the children of the root node of
    the AST."
   [string tokens]
-  (if-some [[k {:keys [tag value]}] (->> tokens
-                                         (filter (comp #(string/includes? string %) key))
-                                         first)]
-    (->> (util/split string (re-pattern k))
+  (if-some [[digest
+             {:keys [tag value]}] (->> tokens
+                                       (filter (comp #(string/includes? string %) key))
+                                       first)]
+    (->> (util/split string (re-pattern digest))
          (map #(vector :txt %))
          (interpose [tag value])
          (remove (comp string/blank? second))
-         (map #(update % 1 inflate (dissoc tokens k)))
+         (map #(update % 1 inflate (dissoc tokens digest)))
          trim
          vec)
     [[:txt string]]))
+
+(defn canonize
+  "Transforms intermediate-representation nodes to the canonical AST format."
+  [[tag value]]
+  (let [leaf? (and (= :txt tag)
+                   (string? value))
+        base {:data {:tag tag}}]
+    (if leaf?
+      (assoc-in base [:data :content] value)
+      (assoc base :children (mapv canonize value)))))
 
 (defn ast
   "Parses string into an AST. Assumes string contains inline Markdown entities."
   [string]
   (let [token-hash (tokens string)]
-    [:doc (inflate (digest string token-hash) token-hash)]))
+    {:data {:tag :doc}
+     :children (mapv canonize
+                     (inflate (digest string token-hash) token-hash))}))
 
