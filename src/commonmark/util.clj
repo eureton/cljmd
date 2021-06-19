@@ -1,8 +1,5 @@
 (ns commonmark.util
-  (:require [clojure.string :as string]
-            [commonmark.block :as block]
-            [commonmark.inline :as inline]
-            [commonmark.blockrun :as blockrun]))
+  (:require [clojure.string :as string]))
 
 (defn split
   [string pattern]
