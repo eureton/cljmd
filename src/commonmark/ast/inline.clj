@@ -42,16 +42,15 @@
    the AST."
   [string tokens]
   (if-some [[k {:keys [tag value]}] (->> tokens
-                       (filter (comp #(string/includes? string %) key))
-                       first)]
+                                         (filter (comp #(string/includes? string %) key))
+                                         first)]
     (->> (util/split string (re-pattern k))
          (map #(vector :txt %))
          (interpose [tag value])
          (remove (comp string/blank? second))
          (map #(update % 1 inflate (dissoc tokens k)))
          trim
-         vec
-         )
+         vec)
     string))
 
 (defn ast
