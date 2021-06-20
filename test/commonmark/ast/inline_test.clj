@@ -6,16 +6,16 @@
   (testing "minimal"
     (let [txt-node {:data {:tag :txt :content "xyz"}}]
       (testing "text"
-        (is (= (-> "xyz" ast (get-in [:children 0]))
+        (is (= (-> "xyz" from-string (get-in [:children 0]))
                txt-node)))
 
       (testing "code span"
-        (is (= (-> "`xyz`" ast (get-in [:children 0]))
+        (is (= (-> "`xyz`" from-string (get-in [:children 0]))
                {:data {:tag :cs}
                 :children [txt-node]})))
 
       (testing "emphasis"
-        (are [s] (= (-> s ast (get-in [:children 0]))
+        (are [s] (= (-> s from-string (get-in [:children 0]))
                     {:data {:tag :em}
                      :children [txt-node]})
              "*xyz*"

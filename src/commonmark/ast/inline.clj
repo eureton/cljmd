@@ -64,7 +64,7 @@
       (assoc-in base [:data :content] value)
       (assoc base :children (mapv canonize value)))))
 
-(defn ast
+(defn from-string
   "Parses string into an AST. Assumes string contains inline Markdown entities."
   [string]
   (let [token-hash (tokens string)]
