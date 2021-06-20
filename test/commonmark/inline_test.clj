@@ -88,14 +88,14 @@
         e_ (emphasis-delimeter-re \_ 1)
         s* (emphasis-delimeter-re \* 2)
         s_ (emphasis-delimeter-re \_ 2)
-        le* (left-flanking-emphasis-delimeter-run-re e*)
-        le_ (left-flanking-emphasis-delimeter-run-re e_)
-        ls* (left-flanking-emphasis-delimeter-run-re s*)
-        ls_ (left-flanking-emphasis-delimeter-run-re s_)
-        re* (right-flanking-emphasis-delimeter-run-re e*)
-        re_ (right-flanking-emphasis-delimeter-run-re e_)
-        rs* (right-flanking-emphasis-delimeter-run-re s*)
-        rs_ (right-flanking-emphasis-delimeter-run-re s_)
+        le* (lfdr-re e*)
+        le_ (lfdr-re e_)
+        ls* (lfdr-re s*)
+        ls_ (lfdr-re s_)
+        re* (rfdr-re e*)
+        re_ (rfdr-re e_)
+        rs* (rfdr-re s*)
+        rs_ (rfdr-re s_)
         match? (fn [s re] (->> s (re-find re) some?))]
     (testing "left-flanking"
       (are [s le*? le_? ls*? ls_? re*? re_? rs*? rs_?]
@@ -188,6 +188,10 @@
       (is (= (-> "_abc_ xyz _def_" emphasis :content)
              "abc")))
 
+    (testing "part of rfdr preceded by punctuation and followed by punctuation"
+      (is (= (-> "._.xyz_" emphasis :content)
+             ".xyz")))
+
     (testing "opening _ followed by whitespace => not emphasis"
       (is (nil? (emphasis "_ foo bar_"))))
 
@@ -219,8 +223,12 @@
       (is (nil? (emphasis "*(*foo)"))))
 
     (testing "preceded by punctuation, followed by whitespace"
-      (is (= (-> "*(*foo*)*" emphasis :content)
-             "(*foo*)")))
+      (is (= (-> "*(xyz)*" emphasis :content)
+             "(xyz)")))
+
+    (testing "nested => matches innermost"
+      (is (= (-> "*(*xyz*)*" emphasis :content)
+             "xyz")))
 
     (testing "intraword"
       (is (= (-> "*foo*bar" emphasis :content)
@@ -230,21 +238,26 @@
     (testing "preceded by whitespace => not emphasis"
       (is (nil? (emphasis "_foo bar _"))))
 
+    (testing "nested => matches innermost"
+      (is (= (-> "_(_xyz_)_" emphasis :content)
+             "xyz")))
+
+    (testing "preceded by punctuation, followed by whitespace"
+      (is (= (-> "_(xyz)_" emphasis :content)
+             "(xyz)")))
+
     (testing "preceded by punctuation, followed by alphanumeric => not emphasis"
       (is (nil? (emphasis "_(_foo)"))))
 
-    (testing "preceded by punctuation, followed by whitespace"
-      (is (= (-> "_(_foo_)_" emphasis :content)
-             "(_foo_)")))
+    (testing "lfdr followed by punctuation"
+      (are [s c] (= c (-> s emphasis :content))
+           "_xyz)_(" "xyz)"
+           "_(xyz)_." "(xyz)"))
 
     (testing "intraword => not emphasis"
       (are [s] (nil? (emphasis s))
            "_foo_bar"
-           "foo_bar_baz"))
-
-    (testing "left-flank, right-flank, followed by punctuation => emphasis"
-      (is (= (-> "_(bar)_." emphasis :content)
-             "(bar)")))))
+           "foo_bar_baz"))))
 
 (deftest strong-emphasis-test
   (testing "opening with **"

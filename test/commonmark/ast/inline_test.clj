@@ -2,9 +2,10 @@
   (:require [clojure.test :refer :all]
             [commonmark.ast.inline :refer :all]))
 
-(deftest code-span-test
+(deftest from-string-test
   (testing "minimal"
-    (let [txt-node {:data {:tag :txt :content "xyz"}}]
+    (let [txt-node {:data {:tag :txt
+                           :content "xyz"}}]
       (testing "text"
         (is (= (-> "xyz" from-string (get-in [:children 0]))
                txt-node)))
@@ -19,5 +20,17 @@
                     {:data {:tag :em}
                      :children [txt-node]})
              "*xyz*"
-             "_xyz_")))))
+             "_xyz_"))))
+
+  (testing "nested emphasis"
+    (let [em-tree {:data {:tag :em}
+                   :children [{:data {:tag :txt :content "("}}
+                              {:data {:tag :em}
+                               :children [{:data {:tag :txt
+                                                  :content "xyz"}}]}
+                              {:data {:tag :txt :content ")"}}]}]
+      (are [s] (= (-> s from-string (get-in [:children 0]))
+                  em-tree)
+           "_(_xyz_)_"
+           "*(*xyz*)*"))))
 

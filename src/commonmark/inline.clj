@@ -126,62 +126,93 @@ OK  The beginning and the end of the line count as Unicode whitespace.
                      escaped "{" length "}"
                      "(?!" escaped ")"))))
 
-(defn left-flanking-emphasis-delimeter-run-re
+(defn lfdr-nopunc-re
   [delimeter]
-  (let [no-whitespace (re-pattern (str delimeter #"(?!\p{IsWhite_Space}|$)"))
-        no-punctuation (re-pattern (str no-whitespace #"(?!\p{IsPunctuation})"))
-        punctuation (re-pattern
-                      (str #"(?<=^|\p{IsWhite_Space}|\p{IsPunctuation})"
-                           no-whitespace
-                           #"(?=\p{IsPunctuation})"))]
-    (re-pattern (str "(?:" no-punctuation "|" punctuation ")"))))
+  (re-pattern (str delimeter
+                   #"(?!\p{IsWhite_Space}|$)"
+                   #"(?!\p{IsPunctuation})")))
 
-(defn right-flanking-emphasis-delimeter-run-re
+(defn lfdr-punc-re
   [delimeter]
-  (let [no-whitespace (re-pattern (str #"(?<!^|\p{IsWhite_Space})" delimeter))
-        no-punctuation (re-pattern (str #"(?<!\p{IsPunctuation})" no-whitespace))
-        punctuation (re-pattern
-                      (str #"(?<=\p{IsPunctuation})"
-                           no-whitespace
-                           #"(?=\p{IsWhite_Space}|\p{IsPunctuation}|$)"))]
-    (re-pattern (str "(?:" no-punctuation "|" punctuation ")"))))
+  (re-pattern (str #"(?<=^|\p{IsWhite_Space}|\p{IsPunctuation})"
+                   delimeter
+                   #"(?!\p{IsWhite_Space}|$)"
+                   #"(?=\p{IsPunctuation})")))
+
+(defn lfdr-re
+  [delimeter]
+  (re-pattern (str "(?:"
+                   (lfdr-nopunc-re delimeter)
+                   "|"
+                   (lfdr-punc-re delimeter)
+                   ")")))
+
+(defn rfdr-punc-re
+  [delimeter]
+  (let [no-whitespace (re-pattern (str #"(?<!^|\p{IsWhite_Space})" delimeter))]
+    (re-pattern (str #"(?<=\p{IsPunctuation})"
+                     no-whitespace
+                     #"(?=\p{IsWhite_Space}|\p{IsPunctuation}|$)"))))
+
+(defn rfdr-nopunc-re
+  [delimeter]
+  (let [no-whitespace (re-pattern (str #"(?<!^|\p{IsWhite_Space})" delimeter))]
+    (re-pattern (str #"(?<!\p{IsPunctuation})" no-whitespace))))
+
+(defn rfdr-re
+  [delimeter]
+  (re-pattern (str "(?:"
+                     (rfdr-nopunc-re delimeter)
+                     "|"
+                     (rfdr-punc-re delimeter)
+                   ")")))
 
 (def star-emphasis-re
   (let [delimeter (emphasis-delimeter-re \* 1)
-        left (left-flanking-emphasis-delimeter-run-re delimeter)
-        right (right-flanking-emphasis-delimeter-run-re delimeter)]
+        left (lfdr-re delimeter)
+        right (rfdr-re delimeter)]
     (re-pattern (str left
                      "("
                        "(?:"
                          "(?!" left ")" #"\p{Print}"
-                       ")"
-                       "*?"
+                       ")*?"
                      ")"
                      right))))
 
 (def lobar-open-emphasis-re
+  "
+      2. A single _ character can open emphasis iff it is part of a left-flanking delimiter run and
+         either (a) not part of a right-flanking delimiter run
+         or (b) part of a right-flanking delimiter run preceded by punctuation.
+  "
   (let [delimeter (emphasis-delimeter-re \_ 1)
-        left (left-flanking-emphasis-delimeter-run-re delimeter)
-        right (right-flanking-emphasis-delimeter-run-re delimeter)
-        punctuated-right (re-pattern (str #"\p{IsPunctuation}" right))]
-    (re-pattern (str "(?=" left ")"
-                     "(?:"
-                       "(?!" right ")|(?=" punctuated-right ")"
+        left (lfdr-re delimeter)
+        right (rfdr-re delimeter)
+        punctuated-right (rfdr-punc-re delimeter)]
+    (re-pattern (str "(?:"
+                       "(?=" left ")" "(?!" right ")"
+                       "|"
+                       "(?=" left ")" "(?=" punctuated-right ")"
                      ")" left))))
 
 (def lobar-close-emphasis-re
   (let [delimeter (emphasis-delimeter-re \_ 1)
-        left (left-flanking-emphasis-delimeter-run-re delimeter)
-        right (right-flanking-emphasis-delimeter-run-re delimeter)
-        punctuated-left (re-pattern (str left #"\p{IsPunctuation}"))]
-    (re-pattern (str "(?=" right ")"
-                     "(?:"
-                       "(?!" left ")|(?=" punctuated-left ")"
+        left (lfdr-re delimeter)
+        punctuated-left (lfdr-punc-re delimeter)
+        right (rfdr-re delimeter)]
+    (re-pattern (str "(?:"
+                       "(?=" right ")" "(?!" left ")"
+                       "|"
+                       "(?=" right ")" "(?=" punctuated-left ")"
                      ")" right))))
 
 (def lobar-emphasis-re
   (re-pattern (str lobar-open-emphasis-re
-                   #"(\p{Print}*?)"
+                   "("
+                     "(?:"
+                       "(?!" lobar-open-emphasis-re ")" #"\p{Print}"
+                     ")*?"
+                   ")"
                    lobar-close-emphasis-re)))
 
 (def emphasis-re
@@ -196,14 +227,14 @@ OK  The beginning and the end of the line count as Unicode whitespace.
 
 (def star-strong-emphasis-re
   (let [delimeter (emphasis-delimeter-re \* 2)]
-    (re-pattern (str (left-flanking-emphasis-delimeter-run-re delimeter)
+    (re-pattern (str (lfdr-re delimeter)
                      #"(\p{Print}*)"
-                     (right-flanking-emphasis-delimeter-run-re delimeter)))))
+                     (rfdr-re delimeter)))))
 
 (def lobar-open-strong-emphasis-re
   (let [delimeter (emphasis-delimeter-re \_ 2)
-        left-re (left-flanking-emphasis-delimeter-run-re delimeter)
-        right-re (right-flanking-emphasis-delimeter-run-re delimeter)
+        left-re (lfdr-re delimeter)
+        right-re (rfdr-re delimeter)
         punctuated-right-re (re-pattern (str #"\p{IsPunctuation}" right-re))]
     (re-pattern (str "(?<=" left-re ")"
                      "(?:"
@@ -212,8 +243,8 @@ OK  The beginning and the end of the line count as Unicode whitespace.
 
 (def lobar-close-strong-emphasis-re
   (let [delimeter (emphasis-delimeter-re \_ 2)
-        left-re (left-flanking-emphasis-delimeter-run-re delimeter)
-        right-re (right-flanking-emphasis-delimeter-run-re delimeter)
+        left-re (lfdr-re delimeter)
+        right-re (rfdr-re delimeter)
         punctuated-left-re (re-pattern (str left-re #"\p{IsPunctuation}"))]
     (re-pattern (str "(?=" right-re ")"
                      "(?:"
