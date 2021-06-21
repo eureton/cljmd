@@ -51,5 +51,45 @@
              [   "- abc" ""    "  # foo"    "  xyz"    "  ```"    "  opq"    "  ```"    "      bar"]
              [  " - abc" ""   "   # foo"   "   xyz"   "   ```"   "   opq"   "   ```"   "       bar"]
              [ "  - abc" ""  "    # foo"  "    xyz"  "    ```"  "    opq"  "    ```"  "        bar"]
-             ["   - abc" "" "     # foo" "     xyz" "     ```" "     opq" "     ```" "         bar"])))))
+             ["   - abc" "" "     # foo" "     xyz" "     ```" "     opq" "     ```" "         bar"])))
+
+    (testing "starting with indented code"
+      (testing "minimal"
+        (is (= (content [:li ["-     abc"]])
+               "    abc")))
+
+      (testing "followed by paragraph"
+        (is (= (content [:li ["-     abc" "  xyz"]])
+               "    abc\r\nxyz")))
+
+      (testing "followed by atx heading"
+        (is (= (content [:li ["-     abc" "# xyz"]])
+               "    abc\r\n# xyz")))
+
+      (testing "followed by fenced code block"
+        (is (= (content [:li ["-     abc" "  ```" "  xyz" "  ```"]])
+               "    abc\r\n```\r\nxyz\r\n```")))
+
+      (testing "followed by blank"
+        (is (= (content [:li ["-     abc" "" "  xyz"]])
+               "    abc\r\n\r\nxyz")))
+
+      (testing "followed by thematic break"
+        (is (= (content [:li ["-     abc" "" "  ---"]])
+               "    abc\r\n\r\n---")))
+
+      (testing "blanks"
+        (are [ls c] (= c (content [:li ls]))
+             ["-     abc" ""          "  xyz"] "    abc\r\n\r\nxyz"
+             ["-     abc" "" ""       "  xyz"] "    abc\r\n\r\n\r\nxyz"
+             ["-     abc" "" "" ""    "  xyz"] "    abc\r\n\r\n\r\n\r\nxyz"
+             ["-     abc" "" "" "" "" "  xyz"] "    abc\r\n\r\n\r\n\r\n\r\nxyz"))
+
+      (testing "indentation"
+        (are [ls] (= (content [:li ls])
+                    "    abc\r\n\r\n# foo\r\nxyz\r\n```\r\nopq\r\n```")
+             [   "-     abc" ""    "  # foo"    "  xyz"    "  ```"    "  opq"    "  ```"]
+             [  " -     abc" ""   "   # foo"   "   xyz"   "   ```"   "   opq"   "   ```"]
+             [ "  -     abc" ""  "    # foo"  "    xyz"  "    ```"  "    opq"  "    ```"]
+             ["   -     abc" "" "     # foo" "     xyz" "     ```" "     opq" "     ```"])))))
 
