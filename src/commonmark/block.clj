@@ -1,6 +1,11 @@
 (ns commonmark.block
   (:require [clojure.string :as string]))
 
+(def ontology (-> (make-hierarchy)
+                  (derive :bq :container)
+                  (derive :li :container)
+                  atom))
+
 (comment "ATX Headings
          
 OK  An ATX heading consists of:
@@ -313,6 +318,16 @@ OK  followed by either a . character or a ) character.
               blank-line
               paragraph-line) line)))
 
+(defn list-item-content
+  "Returns the current line with as much leading whitespace trimmed, as
+   corresponds to the indentation, marker and spacing of the origin line."
+  [current origin]
+  (when-some [{:keys [indent marker space]
+               :or {space " "}} (list-item-lead-line origin)]
+    (let [prefix-length (->> [indent marker space] (map count) (reduce +))
+          trim-re (re-pattern (str "^ {0," prefix-length "}"))]
+      (string/replace current trim-re ""))))
+
 (defn fenced-code-block-pair?
   "True if lines x and y are matching code block fences, false otherwise."
   [x y]
@@ -360,6 +375,7 @@ OK  followed by either a . character or a ) character.
                :or {space " "}} (list-item-lead-line origin)]
     (let [prefix (string/replace (str indent marker space) #"."  " ")
           trim-re (re-pattern (str "^ {0," (count prefix) "}"))
+          ; TODO refactor this to use list-item-content
           previous (string/replace previous trim-re "")]
       (or (string/starts-with? current prefix)
           (lazy-continuation-line? current previous)
