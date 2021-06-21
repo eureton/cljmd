@@ -130,5 +130,66 @@
              [   "-"    "  abc"    "  # foo"    "  ```"    "  xyz"    "  ```"   "      bar"]
              [  " -"   "   abc"   "   # foo"   "   ```"   "   xyz"   "   ```"  "       bar"]
              [ "  -"  "    abc"  "    # foo"  "    ```"  "    xyz"  "    ```" "        bar"]
-             ["   -" "     abc" "     # foo" "     ```" "     xyz" "     ```""         bar"])))))
+             ["   -" "     abc" "     # foo" "     ```" "     xyz" "     ```""         bar"]))))
+
+  (testing "block quote"
+    (testing "basic case"
+      (testing "minimal"
+        (is (= "xyz" (content [:bq ["> xyz"]]))))
+
+      (testing "indentation"
+        (are [s] (= "xyz" (content [:bq [s]]))
+             " > xyz"
+             "  > xyz"
+             "   > xyz"))
+
+      (testing "multiline"
+        (is (= (content [:bq ["> xyz" "> # abc" "> def"]])
+               "xyz\r\n# abc\r\ndef")))
+
+      (testing "empty"
+        (are [ls c] (= c (content [:bq ls]))
+             [">"]             ""
+             [">" ">"]         "\r\n"
+             [">" ">" ">"]     "\r\n\r\n"
+             ["> xyz" ">"]     "xyz\r\n"
+             [">" "> xyz" ">"] "\r\nxyz\r\n"
+             [">" "> xyz"]     "\r\nxyz")))
+
+    (testing "laziness"
+      (testing "minimal"
+        (is (= (content [:bq ["> xyz" "abc"]])
+               "xyz\r\nabc")))
+
+      (testing "marker omission"
+        (testing "before paragraph continuation text"
+          (are [ls c] (= c (content [:bq ls]))
+               ["> xyz" "abc" "> def" "pqr"] "xyz\r\nabc\r\ndef\r\npqr"
+               ["> xyz" "    abc"]           "xyz\r\n    abc")))
+
+      (testing "whitespace before paragraph continuation text"
+        (are [l] (= (content [:bq ["> xyz" l]])
+                    (str "xyz\r\n" l))
+             " abc"
+             "  abc"
+             "   abc"))
+
+      (testing "multiple levels of nesting"
+        (is (= (content [:bq ["> > > abc" "xyz"]])
+               "> > abc\r\nxyz"))))
+
+    (testing "paragraph continuation text"
+      (testing "not lazy"
+        (are [ls c] (= c (content [:bq ls]))
+             ["> xyz" "abc"]                         "xyz\r\nabc"
+             ["> xyz" "    abc"]                     "xyz\r\n    abc"
+             ["> xyz" ">     abc" "pqr"]             "xyz\r\n    abc\r\npqr"
+             ["> xyz" ">     abc" ">     pqr" "123"] "xyz\r\n    abc\r\n    pqr\r\n123"))
+
+      (testing "lazy"
+        (are [ls c] (= c (content [:bq ls]))
+             ["> xyz" "abc"]                     "xyz\r\nabc"
+             ["> xyz" "    abc"]                 "xyz\r\n    abc"
+             ["> xyz" "    abc" "pqr"]           "xyz\r\n    abc\r\npqr"
+             ["> xyz" "    abc" "    pqr" "123"] "xyz\r\n    abc\r\n    pqr\r\n123")))))
 
