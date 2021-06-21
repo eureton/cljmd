@@ -91,5 +91,44 @@
              [   "-     abc" ""    "  # foo"    "  xyz"    "  ```"    "  opq"    "  ```"]
              [  " -     abc" ""   "   # foo"   "   xyz"   "   ```"   "   opq"   "   ```"]
              [ "  -     abc" ""  "    # foo"  "    xyz"  "    ```"  "    opq"  "    ```"]
-             ["   -     abc" "" "     # foo" "     xyz" "     ```" "     opq" "     ```"])))))
+             ["   -     abc" "" "     # foo" "     xyz" "     ```" "     opq" "     ```"])))
+
+    (testing "starting with blank line"
+      (testing "minimal"
+        (is (= "" (content [:li ["-"]]))))
+
+      (testing "followed by paragraph"
+        (is (= (content [:li ["-" "  xyz"]])
+               "\r\nxyz")))
+
+      (testing "followed by atx heading"
+        (is (= (content [:li ["-" "# xyz"]])
+               "\r\n# xyz")))
+
+      (testing "followed by fenced code block"
+        (is (= (content [:li ["-" "```" "xyz" "```"]])
+               "\r\n```\r\nxyz\r\n```")))
+
+      (testing "followed by blank"
+        (is (= (content [:li ["-" ""]])
+               "\r\n")))
+
+      (testing "followed by thematic break"
+        (is (= (content [:li ["-" "  ---"]])
+               "\r\n---")))
+
+      (testing "blanks"
+        (are [ls c] (= c (content [:li ls]))
+             ["-" "  xyz" ""          "  abc"] "\r\nxyz\r\n\r\nabc"
+             ["-" "  xyz" "" ""       "  abc"] "\r\nxyz\r\n\r\n\r\nabc"
+             ["-" "  xyz" "" "" ""    "  abc"] "\r\nxyz\r\n\r\n\r\n\r\nabc"
+             ["-" "  xyz" "" "" "" "" "  abc"] "\r\nxyz\r\n\r\n\r\n\r\n\r\nabc"))
+
+      (testing "indentation"
+        (are [ls] (= (content [:li ls])
+                     "\r\nabc\r\n# foo\r\n```\r\nxyz\r\n```\r\n    bar")
+             [   "-"    "  abc"    "  # foo"    "  ```"    "  xyz"    "  ```"   "      bar"]
+             [  " -"   "   abc"   "   # foo"   "   ```"   "   xyz"   "   ```"  "       bar"]
+             [ "  -"  "    abc"  "    # foo"  "    ```"  "    xyz"  "    ```" "        bar"]
+             ["   -" "     abc" "     # foo" "     ```" "     xyz" "     ```""         bar"])))))
 
