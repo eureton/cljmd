@@ -67,8 +67,10 @@
 (defn from-string
   "Parses string into an AST. Assumes string contains inline Markdown entities."
   [string]
-  (let [token-hash (tokens string)]
-    {:data {:tag :doc}
-     :children (mapv canonize
-                     (inflate (digest string token-hash) token-hash))}))
+  (some->> string
+           tokens
+           ((juxt #(digest string %) identity))
+           (apply inflate)
+           (mapv canonize)
+           (hash-map :data {:tag :doc} :children)))
 

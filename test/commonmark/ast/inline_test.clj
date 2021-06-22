@@ -3,6 +3,9 @@
             [commonmark.ast.inline :refer :all]))
 
 (deftest from-string-test
+  (testing "pun nil"
+    (is (nil? (from-string nil))))
+
   (testing "minimal"
     (let [txt-node {:data {:tag :txt
                            :content "xyz"}}]
