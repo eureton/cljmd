@@ -273,16 +273,20 @@
 
     (testing "intraword"
       (is (= (-> "foo**bar**" strong-emphasis :content)
-             "bar"))))
+             "bar")))
+
+    (testing "nested => matches innermost"
+      (is (= (-> "**(**xyz**)**" strong-emphasis :content)
+             "xyz"))))
 
   (testing "opening with __"
     (testing "minimal"
       (is (= (-> "__foo bar__" strong-emphasis :content)
              "foo bar")))
 
-    (testing "complex"
-      (is (= (-> "__foo, __bar__, baz__" strong-emphasis :content)
-             "foo, __bar__, baz")))
+    (testing "nested => matches innermost"
+      (is (= (-> "__(__xyz__)__" strong-emphasis :content)
+             "xyz")))
 
     (testing "followed by whitespace => not strong emphasis"
       (are [s] (nil? (strong-emphasis s))

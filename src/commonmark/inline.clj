@@ -164,9 +164,9 @@ OK  The beginning and the end of the line count as Unicode whitespace.
                      (rfdr-nopunc-re delimeter) "|" (rfdr-punc-re delimeter)
                    ")")))
 
-(def star-emphasis-re
-  (let [delimeter (emphasis-delimeter-re \* 1)
-        left (lfdr-re delimeter)
+(defn star-emphasis-re
+  [delimeter]
+  (let [left (lfdr-re delimeter)
         right (rfdr-re delimeter)]
     (re-pattern (str left
                      "("
@@ -176,9 +176,9 @@ OK  The beginning and the end of the line count as Unicode whitespace.
                      ")"
                      right))))
 
-(def lobar-open-emphasis-re
-  (let [delimeter (emphasis-delimeter-re \_ 1)
-        left (lfdr-re delimeter)
+(defn lobar-open-emphasis-re
+  [delimeter]
+  (let [left (lfdr-re delimeter)
         right (rfdr-re delimeter)
         punctuated-right (rfdr-punc-re delimeter)]
     (re-pattern (str "(?:"
@@ -187,9 +187,9 @@ OK  The beginning and the end of the line count as Unicode whitespace.
                        "(?=" left ")" "(?=" punctuated-right ")"
                      ")" left))))
 
-(def lobar-close-emphasis-re
-  (let [delimeter (emphasis-delimeter-re \_ 1)
-        left (lfdr-re delimeter)
+(defn lobar-close-emphasis-re
+  [delimeter]
+  (let [left (lfdr-re delimeter)
         punctuated-left (lfdr-punc-re delimeter)
         right (rfdr-re delimeter)]
     (re-pattern (str "(?:"
@@ -198,63 +198,40 @@ OK  The beginning and the end of the line count as Unicode whitespace.
                        "(?=" right ")" "(?=" punctuated-left ")"
                      ")" right))))
 
-(def lobar-emphasis-re
-  (re-pattern (str lobar-open-emphasis-re
-                   "("
-                     "(?:"
-                       "(?!" lobar-open-emphasis-re ")" #"\p{Print}"
-                     ")*?"
-                   ")"
-                   lobar-close-emphasis-re)))
+(defn lobar-emphasis-re
+  [delimeter]
+  (let [open (lobar-open-emphasis-re delimeter)
+        close (lobar-close-emphasis-re delimeter)]
+    (re-pattern (str open
+                     "("
+                       "(?:"
+                         "(?!" open ")" #"\p{Print}"
+                       ")*?"
+                     ")"
+                     close))))
 
-(def emphasis-re
-  (re-pattern (str "(?:" star-emphasis-re "|" lobar-emphasis-re ")")))
+(defn emphasis-re
+  [length]
+  (re-pattern (str "(?:"
+                     (star-emphasis-re (emphasis-delimeter-re \* length)) "|"
+                     (lobar-emphasis-re (emphasis-delimeter-re \_ length))
+                   ")")))
 
 (defn emphasis
   [string]
-  (when-some [[_ star-content lobar-content] (re-find emphasis-re string)]
-    {:content (or star-content lobar-content)
-     :tag :em
-     :pattern emphasis-re}))
-
-(def star-strong-emphasis-re
-  (let [delimeter (emphasis-delimeter-re \* 2)]
-    (re-pattern (str (lfdr-re delimeter)
-                     #"(\p{Print}*)"
-                     (rfdr-re delimeter)))))
-
-(def lobar-open-strong-emphasis-re
-  (let [delimeter (emphasis-delimeter-re \_ 2)
-        left-re (lfdr-re delimeter)
-        right-re (rfdr-re delimeter)
-        punctuated-right-re (re-pattern (str #"\p{IsPunctuation}" right-re))]
-    (re-pattern (str "(?<=" left-re ")"
-                     "(?:"
-                       "(?<!" right-re ")|(?<=" punctuated-right-re ")"
-                     ")"))))
-
-(def lobar-close-strong-emphasis-re
-  (let [delimeter (emphasis-delimeter-re \_ 2)
-        left-re (lfdr-re delimeter)
-        right-re (rfdr-re delimeter)
-        punctuated-left-re (re-pattern (str left-re #"\p{IsPunctuation}"))]
-    (re-pattern (str "(?=" right-re ")"
-                     "(?:"
-                       "(?!" left-re ")|(?=" punctuated-left-re ")"
-                     ")"))))
-
-(def lobar-strong-emphasis-re
-  (re-pattern (str lobar-open-strong-emphasis-re
-                   #"(\p{Print}*)"
-                   lobar-close-strong-emphasis-re)))
-
-(def strong-emphasis-re
-  (re-pattern (str "(?:" star-strong-emphasis-re "|" lobar-strong-emphasis-re ")")))
+  (let [pattern (emphasis-re 1)]
+    (when-some [[_ star-content lobar-content] (re-find pattern string)]
+      {:content (or star-content lobar-content)
+       :tag :em
+       :pattern pattern})))
 
 (defn strong-emphasis
   [string]
-  (when-some [[_ star-content lobar-content] (re-find strong-emphasis-re string)]
-    {:content (or star-content lobar-content)}))
+  (let [pattern (emphasis-re 2)]
+    (when-some [[_ star-content lobar-content] (re-find pattern string)]
+      {:content (or star-content lobar-content)
+       :tag :strong
+       :pattern pattern})))
 
 (comment "Links
 
