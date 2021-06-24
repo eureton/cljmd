@@ -281,5 +281,5 @@ OK  The beginning and the end of the line count as Unicode whitespace.
 (defn tagger
   [string]
   (when string
-    ((some-fn code-span emphasis) string)))
+    ((some-fn code-span emphasis strong-emphasis) string)))
 

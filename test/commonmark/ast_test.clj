@@ -19,7 +19,17 @@
                           [(node {:tag :em}
                                  [(node {:tag :txt :content "abc"})])])]))))
 
-    (testing "nested emphasis"
+    (testing "nested __-strong emphasis"
+      (is (= (from-string "__abc, __xyz__, pqr__")
+             (node {:tag :doc}
+                   [(node {:tag :p}
+                          [(node {:tag :strong}
+                                 [(node {:tag :txt :content "abc, "})
+                                  (node {:tag :strong}
+                                        [(node {:tag :txt :content "xyz"})])
+                                  (node {:tag :txt :content ", pqr"})])])]))))
+
+    (testing "nested *-emphasis"
       (is (= (from-string "*(*abc*)* xyz *pqr*")
              (node {:tag :doc}
                    [(node {:tag :p}
