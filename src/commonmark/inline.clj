@@ -1,5 +1,6 @@
 (ns commonmark.inline
-  (:require [clojure.string :as string]))
+  (:require [clojure.string :as string]
+            [flatland.useful.fn :as ufn]))
 
 (comment "Code spans
 
@@ -292,12 +293,25 @@ OK  The beginning and the end of the line count as Unicode whitespace.
                        #"\s*"
                      #"\)"))))
 
+(defn balanced-brackets?
+  [string]
+  (let [brackets #(or (re-seq #"(?:(?<!\\)\[|(?<!\\)\])" %) [])]
+    (some->> string
+             brackets
+             (reduce (fn [acc x]
+                       (ufn/fix acc (comp not neg?) (case x
+                                                      "[" inc
+                                                      "]" dec)))
+                     0)
+             zero?)))
+
 (defn inline-link
   [string]
   (some->> string
            (re-find inline-link-re)
            (drop 1)
            (zipmap [:text :destination :title])
+           ((ufn/to-fix (comp not balanced-brackets? :text) nil))
            (merge {:tag :link
                    :pattern inline-link-re})))
 
