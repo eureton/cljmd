@@ -1,5 +1,6 @@
 (ns commonmark.inline-test
   (:require [clojure.test :refer :all]
+            [clojure.string :as string]
             [commonmark.inline :refer :all]))
 
 (deftest code-span-test
@@ -422,6 +423,27 @@
              "123\\<xyz"
              "123\\>xyz"
              "123\\<qpr\\>xyz"))
+
+      (testing "contains unescaped delimeters"
+        (are [s] (nil? (-> (str "[abc](<" s "> 456)") inline-link))
+             "123<xyz"
+             "123>xyz"
+             "123<qpr>xyz")))
+
+    (testing "not wrapped in <>"
+      (testing "minimal"
+        (is (= (-> "[abc](xyz)" inline-link :destination)
+               "xyz")))
+
+      (testing "contains spaces"
+        (is (not (string/includes? (-> "[abc](xyz 123)" inline-link :destination)
+                                   "123"))))
+
+      (testing "contains control characters"
+        (are [s] (nil? (inline-link (str "[abc](" s ")")))
+             "123\rxyz"
+             "123\nxyz"
+             "123\rqpr\nxyz"))
 
       (testing "contains unescaped delimeters"
         (are [s] (nil? (-> (str "[abc](<" s "> 456)") inline-link))

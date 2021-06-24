@@ -287,7 +287,7 @@ OK  The beginning and the end of the line count as Unicode whitespace.
                        ")*?"
                      ")>"
                      "|"
-                     #"([^<]\p{Print}*?)"
+                     #"([^<][\p{Print}&&[^ \p{Cntrl}]]*?)"
                    ")")))
 
 (def inline-link-re
