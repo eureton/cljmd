@@ -142,29 +142,26 @@ OK  The beginning and the end of the line count as Unicode whitespace.
 (defn lfdr-re
   [delimeter]
   (re-pattern (str "(?:"
-                   (lfdr-nopunc-re delimeter)
-                   "|"
-                   (lfdr-punc-re delimeter)
+                     (lfdr-nopunc-re delimeter) "|" (lfdr-punc-re delimeter)
                    ")")))
 
 (defn rfdr-punc-re
   [delimeter]
-  (let [no-whitespace (re-pattern (str #"(?<!^|\p{IsWhite_Space})" delimeter))]
-    (re-pattern (str #"(?<=\p{IsPunctuation})"
-                     no-whitespace
-                     #"(?=\p{IsWhite_Space}|\p{IsPunctuation}|$)"))))
+  (re-pattern (str #"(?<=\p{IsPunctuation})"
+                   #"(?<!^|\p{IsWhite_Space})"
+                   delimeter
+                   #"(?=\p{IsWhite_Space}|\p{IsPunctuation}|$)")))
 
 (defn rfdr-nopunc-re
   [delimeter]
-  (let [no-whitespace (re-pattern (str #"(?<!^|\p{IsWhite_Space})" delimeter))]
-    (re-pattern (str #"(?<!\p{IsPunctuation})" no-whitespace))))
+  (re-pattern (str #"(?<!\p{IsPunctuation})"
+                   #"(?<!^|\p{IsWhite_Space})"
+                   delimeter)))
 
 (defn rfdr-re
   [delimeter]
   (re-pattern (str "(?:"
-                     (rfdr-nopunc-re delimeter)
-                     "|"
-                     (rfdr-punc-re delimeter)
+                     (rfdr-nopunc-re delimeter) "|" (rfdr-punc-re delimeter)
                    ")")))
 
 (def star-emphasis-re
@@ -180,11 +177,6 @@ OK  The beginning and the end of the line count as Unicode whitespace.
                      right))))
 
 (def lobar-open-emphasis-re
-  "
-      2. A single _ character can open emphasis iff it is part of a left-flanking delimiter run and
-         either (a) not part of a right-flanking delimiter run
-         or (b) part of a right-flanking delimiter run preceded by punctuation.
-  "
   (let [delimeter (emphasis-delimeter-re \_ 1)
         left (lfdr-re delimeter)
         right (rfdr-re delimeter)
