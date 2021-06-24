@@ -353,3 +353,53 @@
       (is (= (-> "__(bar)__." strong-emphasis :content)
              "(bar)")))))
 
+(deftest inline-link-test
+  (testing "pun nil"
+    (is (nil? (inline-link nil))))
+
+  (testing "invalid input => nil"
+    (is (nil? (inline-link "not-a-valid-inline-link"))))
+
+  (testing "destination is optional"
+    (is (some? (inline-link "[abc]()"))))
+
+  (testing "title is optional"
+    (is (let [{:keys [text destination title]} (inline-link "[abc](xyz)")]
+          (and (some? text)
+               (some? destination)
+               (nil? title)))))
+
+  (testing "text"
+    (testing "bracket binding"
+      (testing "less tightly than backticks"
+        (is (= (-> "`[abc`](xyz)" tagger :tag)
+               :cs)))
+
+      (testing "more tightly than emphasis markers"
+        (is (= (-> "*[abc*](xyz)" tagger :tag)
+               :link))))
+
+    (testing "backslash-escaped brackets"
+      (are [s] (= s (-> (str "[" s "](xyz)") inline-link :text))
+           "abc\\]123"
+           "abc\\[123"))
+
+    (testing "balanced brackets"
+      (is (= (-> "[abc [123] pqr](xyz)" inline-link :text)
+             "abc [123] pqr")))
+
+    (testing "unbalanced brackets"
+      (are [s] (nil? (inline-link s))
+           "[]]()"
+           "[][]()"
+           "[[][]()"
+           "[[[]]()"
+           "[[[]][]()")))
+
+  (testing "minimal"
+    (is (let [res (inline-link "[p `code` *em*](http://example.com The title)")
+              {:keys [text destination title]} res]
+          (and (= text "p `code` *em*")
+               (= destination "http://example.com")
+               (= title "The title"))))))
+

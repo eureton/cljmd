@@ -278,8 +278,37 @@ OK  The beginning and the end of the line count as Unicode whitespace.
     described above. The link’s title consists of the link title, excluding its enclosing delimiters, with
     backslash-escapes in effect as described above.)")
 
+(def inline-link-re
+  (let [text-re #"\p{Print}*?"
+        destination-re #"\p{Print}*?"
+        title-re #"\p{Print}*?"]
+    (re-pattern (str #"\[" "(" text-re ")" #"\]"
+                     #"\("
+                       #"\s*"
+                       "(" destination-re ")?"
+                       "(?:"
+                         #"\s+" "(" title-re ")"
+                       ")?"
+                       #"\s*"
+                     #"\)"))))
+
+(defn inline-link
+  [string]
+  (some->> string
+           (re-find inline-link-re)
+           (drop 1)
+           (zipmap [:text :destination :title])
+           (merge {:tag :link
+                   :pattern inline-link-re})))
+
+(inline-link "[abc `def` *xyz*](https://www xtttq)")
+(re-find inline-link-re "[abc `def` *xyz*](https://www xtttq)")
+
 (defn tagger
   [string]
-  (when string
-    ((some-fn code-span emphasis strong-emphasis) string)))
+  (some->> string
+           ((some-fn code-span
+                     inline-link
+                     emphasis
+                     strong-emphasis))))
 
