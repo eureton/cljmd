@@ -385,8 +385,19 @@
            "abc\\[123"))
 
     (testing "balanced brackets"
-      (is (= (-> "[abc [123] pqr](xyz)" inline-link :text)
-             "abc [123] pqr")))
+      (are [s] (= s (-> (str "[" s "](xyz)") inline-link :text))
+           ""
+           "[]"
+           "[][]"
+           "[[]]"
+           "[[[]]]"
+           "[[][]]"
+           "[[]][]"
+           "[][][]"
+           "[abc]"
+           "[[abc]]"
+           "abc [123] pqr"
+           "[abc [123] pqr]"))
 
     (testing "unbalanced brackets"
       (are [s] (nil? (inline-link s))
@@ -395,6 +406,28 @@
            "[[][]()"
            "[[[]]()"
            "[[[]][]()")))
+
+  (testing "destination"
+    (testing "wrapped in <>"
+      (testing "minimal"
+        (is (= (-> "[abc](<xyz>)" inline-link :destination)
+               "xyz")))
+
+      (testing "contains spaces"
+        (is (= (-> "[abc](<xyz 123 qpr> 456)" inline-link :destination)
+             "xyz 123 qpr")))
+
+      (testing "contains escaped delimeters"
+        (are [s] (= s (-> (str "[abc](<" s "> 456)") inline-link :destination))
+             "123\\<xyz"
+             "123\\>xyz"
+             "123\\<qpr\\>xyz"))
+
+      (testing "contains unescaped delimeters"
+        (are [s] (nil? (-> (str "[abc](<" s "> 456)") inline-link))
+             "123<xyz"
+             "123>xyz"
+             "123<qpr>xyz"))))
 
   (testing "minimal"
     (is (let [res (inline-link "[p `code` *em*](http://example.com The title)")

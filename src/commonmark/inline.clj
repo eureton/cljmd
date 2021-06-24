@@ -279,14 +279,24 @@ OK  The beginning and the end of the line count as Unicode whitespace.
     described above. The link’s title consists of the link title, excluding its enclosing delimiters, with
     backslash-escapes in effect as described above.)")
 
+(def inline-link-destination-re
+  (re-pattern (str "(?:"
+                     "<("
+                       "(?:"
+                         #"(?!(?:[\r\n]|(?<!\\)<|(?<!\\)>))\p{Print}"
+                       ")*?"
+                     ")>"
+                     "|"
+                     #"([^<]\p{Print}*?)"
+                   ")")))
+
 (def inline-link-re
-  (let [text-re #"\p{Print}*?"
-        destination-re #"\p{Print}*?"
+  (let [text-re #"(\p{Print}*?)"
         title-re #"\p{Print}*?"]
-    (re-pattern (str #"\[" "(" text-re ")" #"\]"
+    (re-pattern (str #"\[" text-re #"\]"
                      #"\("
                        #"\s*"
-                       "(" destination-re ")?"
+                       inline-link-destination-re "?"
                        "(?:"
                          #"\s+" "(" title-re ")"
                        ")?"
@@ -307,13 +317,15 @@ OK  The beginning and the end of the line count as Unicode whitespace.
 
 (defn inline-link
   [string]
-  (some->> string
-           (re-find inline-link-re)
-           (drop 1)
-           (zipmap [:text :destination :title])
-           ((ufn/to-fix (comp not balanced-brackets? :text) nil))
-           (merge {:tag :link
-                   :pattern inline-link-re})))
+  (when string
+    (let [[_ text destination-wrapped
+           destination-unwrapped title] (re-find inline-link-re string)]
+      (when (balanced-brackets? text)
+        {:text text
+         :destination (or destination-wrapped destination-unwrapped)
+         :title title
+         :tag :link
+         :pattern inline-link-re}))))
 
 (inline-link "[abc `def` *xyz*](https://www xtttq)")
 (re-find inline-link-re "[abc `def` *xyz*](https://www xtttq)")
