@@ -1,6 +1,6 @@
 (ns commonmark.inline
   (:require [clojure.string :as string]
-            [flatland.useful.fn :as ufn]))
+            [commonmark.util :as util]))
 
 (comment "Code spans
 
@@ -279,15 +279,23 @@ OK  The beginning and the end of the line count as Unicode whitespace.
     described above. The link’s title consists of the link title, excluding its enclosing delimiters, with
     backslash-escapes in effect as described above.)")
 
+(def inline-link-wrapped-destination-re
+  (re-pattern (str "(?:"
+                     #"\\[<>]"
+                     "|"
+                     #"[\p{Print}&&[^\r\n<>]]"
+                   ")*?")))
+
+(def inline-link-unwrapped-destination-re
+  (re-pattern (str "(?:"
+                     "(?<!<)" #"[\p{Print}&&[^ \p{Cntrl}]]"
+                   ")*")))
+
 (def inline-link-destination-re
   (re-pattern (str "(?:"
-                     "<("
-                       "(?:"
-                         #"(?!(?:[\r\n]|(?<!\\)<|(?<!\\)>))\p{Print}"
-                       ")*?"
-                     ")>"
+                     "<(" inline-link-wrapped-destination-re ")>"
                      "|"
-                     #"([^<][\p{Print}&&[^ \p{Cntrl}]]*?)"
+                     "(" inline-link-unwrapped-destination-re ")"
                    ")")))
 
 (def inline-link-re
@@ -303,32 +311,19 @@ OK  The beginning and the end of the line count as Unicode whitespace.
                        #"\s*"
                      #"\)"))))
 
-(defn balanced-brackets?
-  [string]
-  (let [brackets #(or (re-seq #"(?:(?<!\\)\[|(?<!\\)\])" %) [])]
-    (some->> string
-             brackets
-             (reduce (fn [acc x]
-                       (ufn/fix acc (comp not neg?) (case x
-                                                      "[" inc
-                                                      "]" dec)))
-                     0)
-             zero?)))
-
 (defn inline-link
   [string]
   (when string
     (let [[_ text destination-wrapped
-           destination-unwrapped title] (re-find inline-link-re string)]
-      (when (balanced-brackets? text)
+           destination-unwrapped title] (re-find inline-link-re string)
+          destination (or destination-wrapped destination-unwrapped)]
+      (when (and (util/balanced-delimiters? "[" "]" text)
+                 (util/balanced-delimiters? "(" ")" destination))
         {:text text
-         :destination (or destination-wrapped destination-unwrapped)
+         :destination destination
          :title title
          :tag :link
          :pattern inline-link-re}))))
-
-(inline-link "[abc `def` *xyz*](https://www xtttq)")
-(re-find inline-link-re "[abc `def` *xyz*](https://www xtttq)")
 
 (defn tagger
   [string]

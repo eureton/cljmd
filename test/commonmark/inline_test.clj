@@ -435,21 +435,40 @@
         (is (= (-> "[abc](xyz)" inline-link :destination)
                "xyz")))
 
+      (testing "begins with <"
+        (is (nil? (-> "[abc](<xyz)" inline-link :destination))))
+
       (testing "contains spaces"
         (is (not (string/includes? (-> "[abc](xyz 123)" inline-link :destination)
                                    "123"))))
 
       (testing "contains control characters"
-        (are [s] (nil? (inline-link (str "[abc](" s ")")))
+        (are [s] (false? (string/includes? (-> (str "[abc](" s ")")
+                                               inline-link
+                                               :destination
+                                               (or ""))
+                                           "xyz"))
              "123\rxyz"
-             "123\nxyz"
-             "123\rqpr\nxyz"))
+             "123\nxyz"))
 
-      (testing "contains unescaped delimeters"
-        (are [s] (nil? (-> (str "[abc](<" s "> 456)") inline-link))
-             "123<xyz"
-             "123>xyz"
-             "123<qpr>xyz"))))
+      (testing "parentheses"
+        (testing "unescaped, unbalanced"
+          (are [s] (nil? (inline-link (str "[abc](" s " 456)")))
+               "123(xyz"
+               "123()xyz("
+               "123((qpr))xyz("))
+
+        (testing "unescaped, balanced"
+          (are [s] (= s (-> (str "[abc](" s " 456)") inline-link :destination))
+               "()"
+               "123()xyz"
+               "123(!(qpr)!)xyz"))
+
+        (testing "escaped"
+          (are [s] (= s (-> (str "[abc](" s " 456)") inline-link :destination))
+               "123\\(xyz"
+               "123\\)xyz"
+               "123\\)q\\(pr\\)xyz")))))
 
   (testing "minimal"
     (is (let [res (inline-link "[p `code` *em*](http://example.com The title)")
