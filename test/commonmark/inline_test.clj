@@ -481,6 +481,81 @@
                "123\\)xyz"
                "123\\)q\\(pr\\)xyz")))))
 
+  (testing "title"
+    (testing "'-delimited"
+      (testing "minimal"
+        (is (= (-> "[abc](xyz '123')" inline-link :title)
+               "123")))
+
+      (testing "contains escaped delimeters"
+        (are [t] (= t (-> (str "[abc](xyz '" t "')") inline-link :title))
+             "1\\'23"
+             "12\\'3"
+             "1\\'2\\'3"))
+
+      (testing "contains unescaped delimeters"
+        (are [t] (nil? (-> (str "[abc](xyz '" t "')") inline-link))
+             "1'23"
+             "12'3"
+             "1'23")))
+
+    (testing "\"-delimited"
+      (testing "minimal"
+        (is (= (-> "[abc](xyz \"123\")" inline-link :title)
+               "123")))
+
+      (testing "contains escaped delimeters"
+        (are [t] (= t (-> (str "[abc](xyz \"" t "\")") inline-link :title))
+             "1\\\"23"
+             "12\\\"3"
+             "1\\\"2\\\"3"))
+
+      (testing "contains unescaped delimeters"
+        (are [t] (nil? (-> (str "[abc](xyz \"" t "\")") inline-link))
+             "1\"23"
+             "12\"3"
+             "1\"23")))
+
+    (testing "()-delimited"
+      (testing "minimal"
+        (are [t] (= (-> (str "[abc](xyz " t ")") inline-link :title)
+                    "123")
+             "(123)"
+             "((123))"
+             "(((123)))"
+             "((((123))))"))
+
+      (testing "unbalanced delimeters"
+        (are [t] (nil? (-> (str "[abc](xyz " t ")") inline-link))
+             "(123"
+             "123)"
+             "((123)"
+             "(123))"
+             "(((123))"
+             "((123)))"))
+
+      (testing "contains escaped delimeters"
+        (are [t] (= t (-> (str "[abc](xyz (" t "))") inline-link :title))
+             "1\\(23"
+             "12\\(3"
+             "1\\(2\\(3"
+             "1\\)23"
+             "12\\)3"
+             "1\\)2\\)3"
+             "1\\(2\\)3"
+             "1\\)2\\(3"))
+
+      (testing "contains unescaped delimeters"
+        (are [t] (nil? (-> (str "[abc](xyz (" t "))") inline-link))
+             "1(23"
+             "12(3"
+             "1(2(3"
+             "1)23"
+             "12)3"
+             "1)2)3"
+             "1(2)3"
+             "1)2(3"))))
+
   (testing "all in one"
     (is (let [res (inline-link "[p `code` *em*](http://example.com 'The title')")
               {:keys [text destination title]} res]

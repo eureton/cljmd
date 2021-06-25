@@ -335,16 +335,15 @@ OK  The beginning and the end of the line count as Unicode whitespace.
   [string]
   (when string
     (let [[_ text destination-wrapped
-           destination-unwrapped _ _
+           destination-unwrapped full-title _
            quoted-title parenthesized-title] (re-find inline-link-re string)
-          destination (or destination-wrapped destination-unwrapped)
-          title (or quoted-title parenthesized-title)]
+          destination (or destination-wrapped destination-unwrapped)]
       (when (and (util/balanced-delimiters? "[" "]" text)
                  (util/balanced-delimiters? "(" ")" destination)
-                 (util/balanced-delimiters? "(" ")" (or title "")))
+                 (util/balanced-delimiters? "(" ")" (or full-title "")))
         {:text text
          :destination destination
-         :title title
+         :title (or quoted-title parenthesized-title)
          :tag :link
          :pattern inline-link-re}))))
 
