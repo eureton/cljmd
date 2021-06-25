@@ -298,15 +298,35 @@ OK  The beginning and the end of the line count as Unicode whitespace.
                      "(" inline-link-unwrapped-destination-re ")"
                    ")")))
 
+(def inline-link-quoted-title-re
+  (re-pattern #"(?<delim>['\\\"])((?:\\\k<delim>|(?!\k<delim>)\p{Print})*)\k<delim>"))
+
+(def inline-link-parenthesized-title-re
+  (re-pattern (str #"\(+"
+                     "("
+                       "(?:"
+                         #"\\[()]"
+                         "|"
+                         #"(?![()])\p{Print}"
+                       ")*"
+                     ")"
+                   #"\)+")))
+
+(def inline-link-title-re
+  (re-pattern (str "(?:"
+                     inline-link-quoted-title-re
+                     "|"
+                     inline-link-parenthesized-title-re
+                   ")")))
+
 (def inline-link-re
-  (let [text-re #"(\p{Print}*?)"
-        title-re #"\p{Print}*?"]
+  (let [text-re #"(\p{Print}*?)"]
     (re-pattern (str #"\[" text-re #"\]"
                      #"\("
                        #"\s*"
                        inline-link-destination-re "?"
                        "(?:"
-                         #"\s+" "(" title-re ")"
+                         #"\s+" "(" inline-link-title-re ")"
                        ")?"
                        #"\s*"
                      #"\)"))))
@@ -315,10 +335,13 @@ OK  The beginning and the end of the line count as Unicode whitespace.
   [string]
   (when string
     (let [[_ text destination-wrapped
-           destination-unwrapped title] (re-find inline-link-re string)
-          destination (or destination-wrapped destination-unwrapped)]
+           destination-unwrapped _ _
+           quoted-title parenthesized-title] (re-find inline-link-re string)
+          destination (or destination-wrapped destination-unwrapped)
+          title (or quoted-title parenthesized-title)]
       (when (and (util/balanced-delimiters? "[" "]" text)
-                 (util/balanced-delimiters? "(" ")" destination))
+                 (util/balanced-delimiters? "(" ")" destination)
+                 (util/balanced-delimiters? "(" ")" (or title "")))
         {:text text
          :destination destination
          :title title
