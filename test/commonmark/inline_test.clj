@@ -403,10 +403,8 @@
     (testing "unbalanced brackets"
       (are [s] (nil? (inline-link s))
            "[]]()"
-           "[][]()"
-           "[[][]()"
-           "[[[]]()"
-           "[[[]][]()")))
+           "[[]]]()"
+           "[[[]]]]()")))
 
   (testing "destination"
     (testing "wrapped in <>"
