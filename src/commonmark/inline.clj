@@ -279,6 +279,9 @@ OK  The beginning and the end of the line count as Unicode whitespace.
     described above. The link’s title consists of the link title, excluding its enclosing delimiters, with
     backslash-escapes in effect as described above.)")
 
+(def inline-link-text-re
+  (util/balanced-re \[ \]))
+
 (def inline-link-wrapped-destination-re
   (re-pattern (str "(?:"
                      #"\\[<>]"
@@ -289,7 +292,7 @@ OK  The beginning and the end of the line count as Unicode whitespace.
 (def inline-link-unwrapped-destination-re
   (re-pattern (str "(?:"
                      "(?<!<)" #"[\p{Print}&&[^ \p{Cntrl}]]"
-                   ")*")))
+                   ")*?")))
 
 (def inline-link-destination-re
   (re-pattern (str "(?:"
@@ -320,29 +323,28 @@ OK  The beginning and the end of the line count as Unicode whitespace.
                    ")")))
 
 (def inline-link-re
-  (let [text-re #"(\p{Print}*?)"]
-    (re-pattern (str #"\[" text-re #"\]"
-                     #"\("
-                       #"\s*"
-                       inline-link-destination-re "?"
-                       "(?:"
-                         #"\s+" "(" inline-link-title-re ")"
-                       ")?"
-                       #"\s*"
-                     #"\)"))))
+  (re-pattern (str ".*"
+                   #"(?<!\\)"
+                   #"\[" "(" inline-link-text-re ")" #"\]"
+                   #"\("
+                     #"\s*"
+                     inline-link-destination-re "?"
+                     "(?:"
+                       #"\s+" "(" inline-link-title-re ")"
+                     ")?"
+                     #"\s*"
+                   #"\)")))
 
 (defn inline-link
   [string]
   (when string
-    (let [[_ text destination-wrapped
-           destination-unwrapped full-title _
-           quoted-title parenthesized-title] (re-find inline-link-re string)
-          destination (or destination-wrapped destination-unwrapped)]
-      (when (and (util/balanced-delimiters? "[" "]" text)
-                 (util/balanced-delimiters? "(" ")" destination)
+    (when-let [[_ text destination-wrapped
+                destination-unwrapped full-title _
+                quoted-title parenthesized-title] (re-find inline-link-re string)]
+      (when (and (util/balanced-delimiters? "(" ")" (or destination-wrapped destination-unwrapped))
                  (util/balanced-delimiters? "(" ")" (or full-title "")))
         {:text text
-         :destination destination
+         :destination (or destination-wrapped destination-unwrapped)
          :title (or quoted-title parenthesized-title)
          :tag :link
          :pattern inline-link-re}))))
