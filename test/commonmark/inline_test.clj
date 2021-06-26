@@ -404,7 +404,13 @@
       (are [s] (nil? (inline-link s))
            "[]]()"
            "[[]]]()"
-           "[[[]]]]()")))
+           "[[[]]]]()"))
+
+    (testing "nested links"
+      (is (let [res (inline-link "[[inner](inner.com)](outer.com)")
+                {:keys [text destination title]} res]
+            (and (= text "inner")
+                 (= destination "inner.com"))))))
 
   (testing "destination"
     (testing "wrapped in <>"
