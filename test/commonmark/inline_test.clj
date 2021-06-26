@@ -448,6 +448,10 @@
       (testing "begins with <"
         (is (nil? (-> "[abc](<xyz)" inline-link :destination))))
 
+      (testing "contains <"
+        (is (= (-> "[abc](x<yz)" inline-link :destination)
+               "x<yz")))
+
       (testing "contains spaces"
         (is (nil? (-> "[abc](xyz 123)" inline-link :destination))))
 

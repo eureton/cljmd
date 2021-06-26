@@ -290,9 +290,8 @@ OK  The beginning and the end of the line count as Unicode whitespace.
                    ")*?")))
 
 (def inline-link-unwrapped-destination-re
-  (re-pattern (str "(?:"
-                     "(?<!<)" #"[\p{Print}&&[^ \p{Cntrl}]]"
-                   ")*?")))
+  (re-pattern (str #"[\p{Print}&&[^<]]"
+                   #"[\p{Print}&&[^ \p{Cntrl}]]*?")))
 
 (def inline-link-destination-re
   (re-pattern (str "(?:"
