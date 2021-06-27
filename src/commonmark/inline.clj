@@ -290,8 +290,8 @@ OK  The beginning and the end of the line count as Unicode whitespace.
                    ")*?")))
 
 (def inline-link-unwrapped-destination-re
-  (re-pattern (str #"[\p{Print}&&[^<]]"
-                   #"[\p{Print}&&[^ \p{Cntrl}]]*?")))
+  (re-pattern (str "(?!<)"
+                   (util/balanced-re \( \) {:intersect #"[^ \p{Cntrl}]"}))))
 
 (def inline-link-destination-re
   (re-pattern (str "(?:"
@@ -340,8 +340,7 @@ OK  The beginning and the end of the line count as Unicode whitespace.
     (when-let [[_ text destination-wrapped
                 destination-unwrapped full-title _
                 quoted-title parenthesized-title] (re-find inline-link-re string)]
-      (when (and (util/balanced-delimiters? "(" ")" (or destination-wrapped destination-unwrapped))
-                 (util/balanced-delimiters? "(" ")" (or full-title "")))
+      (when (util/balanced-delimiters? "(" ")" (or full-title ""))
         {:text text
          :destination (or destination-wrapped destination-unwrapped)
          :title (or quoted-title parenthesized-title)
