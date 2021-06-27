@@ -423,7 +423,12 @@
              "xyz 123 qpr")))
 
       (testing "contains line breaks"
-        (is (nil? (inline-link "[abc](123\nxyz)"))))
+        (is (nil? (inline-link "[abc](<123\nxyz>)"))))
+
+      (testing "contains parentheses"
+        (are [s d] (= d (-> s inline-link :destination))
+             "[abc](<123)xyz>)" "123)xyz"
+             "[abc](<123(xyz>)" "123(xyz"))
 
       (testing "with title"
         (are [t] (= (-> (str "[abc](<xyz> " t ")") inline-link :destination)
@@ -441,7 +446,13 @@
         (are [s] (nil? (-> (str "[abc](<" s ">)") inline-link))
              "123<xyz"
              "123>xyz"
-             "123<qpr>xyz")))
+             "123<qpr>xyz"))
+
+      (testing "improperly matched opening delimiters"
+        (are [s] (nil? (inline-link s))
+             "[a] (<b)c"
+             "[a] (<b)c>"
+             "[a] (<b>c)")))
 
     (testing "not wrapped in <>"
       (testing "minimal"
@@ -486,13 +497,23 @@
           (are [s] (= s (-> (str "[abc](" s ")") inline-link :destination))
                "123\\(xyz"
                "123\\)xyz"
-               "123\\)q\\(pr\\)xyz")))))
+               "123\\)q\\(pr\\)xyz"))))
+
+    (testing "contains fragments and queries"
+      (are [d] (= d (-> (str "[abc](" d ")") inline-link :destination))
+           "#fragment"
+           "http://example.com#fragment"
+           "http://example.com?foo=3#frag")))
 
   (testing "title"
     (testing "'-delimited"
       (testing "minimal"
         (is (= (-> "[abc](xyz '123')" inline-link :title)
                "123")))
+
+      (testing "contains double quotes"
+        (is (= (-> "[abc](xyz '12 \"34\" 56')" inline-link :title)
+               "12 \"34\" 56")))
 
       (testing "contains escaped delimeters"
         (are [t] (= t (-> (str "[abc](xyz '" t "')") inline-link :title))
@@ -504,12 +525,16 @@
         (are [t] (nil? (-> (str "[abc](xyz '" t "')") inline-link))
              "1'23"
              "12'3"
-             "1'23")))
+             "1'2'3")))
 
     (testing "\"-delimited"
       (testing "minimal"
         (is (= (-> "[abc](xyz \"123\")" inline-link :title)
                "123")))
+
+      (testing "contains single quotes"
+        (is (= (-> "[abc](xyz \"12 '34' 56\")" inline-link :title)
+               "12 '34' 56")))
 
       (testing "contains escaped delimeters"
         (are [t] (= t (-> (str "[abc](xyz \"" t "\")") inline-link :title))
@@ -521,7 +546,7 @@
         (are [t] (nil? (-> (str "[abc](xyz \"" t "\")") inline-link))
              "1\"23"
              "12\"3"
-             "1\"23")))
+             "1\"2\"3")))
 
     (testing "()-delimited"
       (testing "minimal"
@@ -560,7 +585,35 @@
              "12)3"
              "1)2)3"
              "1(2)3"
-             "1)2(3"))))
+             "1)2(3"))
+
+      (testing "contains backslash escapes"
+        (is (= (-> "[abc](xyz \"be there in 5\\\"\")" inline-link :title)
+               "be there in 5\\\"")))
+
+      (testing "contains entity"
+        (is (= (-> "[abc](xyz \"be there in 5&quot;\")" inline-link :title)
+               "be there in 5&quot;")))))
+
+  (testing "separating destination from title with non-unicode whitespace"
+    (are [c] (= (-> (str "[abc](xyz" c "123)") inline-link :destination)
+                (str "xyz" c "123"))
+         \u00A0
+         \u1680
+         \u2000
+         \u2001
+         \u2002
+         \u2003
+         \u2004
+         \u2005
+         \u2006
+         \u2007
+         \u2008
+         \u2009
+         \u200A
+         \u202F
+         \u205F
+         \u3000))
 
   (testing "all in one"
     (is (let [res (inline-link "[p `code` *em*](http://example.com 'The title')")

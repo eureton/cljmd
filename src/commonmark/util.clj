@@ -17,11 +17,11 @@
                           (apply zipmap))
          [l r] (->> [opener closer] (map escape-hash))
          escaped-delimeters (str "\\\\[" l r "]")
-         non-delimeters (cond-> (str "&&[^" l r "]")
+         non-delimeters (cond-> (str "[^" l r "]")
                           intersect (str "&&" intersect))
          fill (re-pattern (str "(?:"
                                  escaped-delimeters "|"
-                                 "[\\p{Print}" non-delimeters "]"
+                                 "[" non-delimeters "]"
                                ")*"))
          pad #(->> (interleave %& (repeat fill)) (cons fill) string/join)]
      (->> [[l l l r r r] [l l r l r r] [l l r r l r] [l r l l r r] [l r l r l r]
