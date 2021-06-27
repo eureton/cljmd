@@ -538,9 +538,8 @@
              "(123"
              "123)"
              "((123)"
-             "(123))"
              "(((123))"
-             "((123)))"))
+             "((((123)))"))
 
       (testing "contains escaped delimeters"
         (are [t] (= t (-> (str "[abc](xyz (" t "))") inline-link :title))

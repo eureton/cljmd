@@ -304,15 +304,20 @@ OK  The beginning and the end of the line count as Unicode whitespace.
   (re-pattern #"(?<delim>['\\\"])((?:\\\k<delim>|(?!\k<delim>)\p{Print})*)\k<delim>"))
 
 (def inline-link-parenthesized-title-re
-  (re-pattern (str #"\(+"
-                     "("
-                       "(?:"
-                         #"\\[()]"
-                         "|"
-                         #"(?![()])\p{Print}"
-                       ")*"
-                     ")"
-                   #"\)+")))
+  (let [inner (str "("
+                     "(?:"
+                       #"\\[()]"
+                       "|"
+                       #"[\p{Print}&&[^()]]"
+                     ")*"
+                   ")")]
+    (re-pattern (str "(?:"
+                       #"\({1}" inner #"\){1}" "|"
+                       #"\({2}" inner #"\){2}" "|"
+                       #"\({3}" inner #"\){3}" "|"
+                       #"\({4}" inner #"\){4}" "|"
+                       #"\({5}" inner #"\){5}"
+                     ")"))))
 
 (def inline-link-title-re
   (re-pattern (str "(?:"
@@ -339,13 +344,12 @@ OK  The beginning and the end of the line count as Unicode whitespace.
   (when string
     (when-let [[_ text destination-wrapped
                 destination-unwrapped full-title _
-                quoted-title parenthesized-title] (re-find inline-link-re string)]
-      (when (util/balanced-delimiters? "(" ")" (or full-title ""))
-        {:text text
-         :destination (or destination-wrapped destination-unwrapped)
-         :title (or quoted-title parenthesized-title)
-         :tag :link
-         :pattern inline-link-re}))))
+                quoted-title & parenthesized-title] (re-find inline-link-re string)]
+      {:text text
+       :destination (or destination-wrapped destination-unwrapped)
+       :title (or quoted-title (->> parenthesized-title (remove nil?) first))
+       :tag :link
+       :pattern inline-link-re})))
 
 (defn tagger
   [string]
