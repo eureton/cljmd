@@ -422,6 +422,9 @@
         (is (= (-> "[abc](<xyz 123 qpr>)" inline-link :destination)
              "xyz 123 qpr")))
 
+      (testing "contains line breaks"
+        (is (nil? (inline-link "[abc](123\nxyz)"))))
+
       (testing "with title"
         (are [t] (= (-> (str "[abc](<xyz> " t ")") inline-link :destination)
                     "xyz")
@@ -462,11 +465,7 @@
              "\"123\""))
 
       (testing "contains control characters"
-        (are [s] (false? (string/includes? (-> (str "[abc](" s ")")
-                                               inline-link
-                                               :destination
-                                               (or ""))
-                                           "xyz"))
+        (are [s] (nil? (inline-link (str "[abc](" s ")")))
              "123\rxyz"
              "123\nxyz"))
 
