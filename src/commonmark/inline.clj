@@ -279,7 +279,7 @@ OK  The beginning and the end of the line count as Unicode whitespace.
     described above. The link’s title consists of the link title, excluding its enclosing delimiters, with
     backslash-escapes in effect as described above.)")
 
-(def inline-link-text-re
+(def link-text-re
   (util/balanced-re \[ \]))
 
 (def inline-link-wrapped-destination-re
@@ -329,7 +329,7 @@ OK  The beginning and the end of the line count as Unicode whitespace.
 (def inline-link-re
   (re-pattern (str ".*"
                    #"(?<!\\)"
-                   #"\[" "(" inline-link-text-re ")" #"\]"
+                   #"\[" "(" link-text-re ")" #"\]"
                    #"\("
                      #"\s*"
                      inline-link-destination-re "?"
@@ -351,11 +351,54 @@ OK  The beginning and the end of the line count as Unicode whitespace.
        :tag :link
        :pattern inline-link-re})))
 
+(comment "Reference links
+    There are three kinds of reference link[861]s: full[862], collapsed[863], and shortcut[864].
+
+    A full reference link[865] consists of a link text[866] immediately followed by a link label[867] that
+    matches [868] a link reference definition [869] elsewhere in the document.
+
+    A link label [870] begins with a left bracket  ([) and ends with the first right bracket (]) that is not
+    backslash-escaped. Between these brackets there must be at least one non-whitespace character[871]. Unescaped
+    square bracket characters are not allowed inside the opening and closing square brackets of link labels[872]. A
+    link label can have at most 999 characters inside the square brackets.
+
+    One label matches [873] another just in case their normalized forms are equal. To normalize a label, strip off
+    the opening and closing brackets, perform the Unicode case fold, strip leading and trailing whitespace [874] and
+    collapse consecutive internal whitespace [875] to a single space. If there are multiple matching reference link
+    definitions, the one that comes first in the document is used.  (It is desirable in such cases to emit a
+    warning.)
+
+    The contents of the first link label are parsed as inlines, which are used as the link’s text. The link’s URI
+    and title are provided by the matching link reference definition [876].)")
+
+(def link-label-re
+  (re-pattern (str #"(?=.*\S)"
+                   "(?:"
+                     #"\\[\[\]]" "|"
+                     #"[^\[\]]"
+                   "){1,999}")))
+
+(def reference-link-re
+  (re-pattern (str #"\[" "(" link-text-re ")" #"\]"
+                   "(?:"
+                     #"\[" "(" link-label-re ")?" #"\]"
+                   ")?")))
+
+(defn reference-link
+  [string]
+  (when string
+    (when-let [[_ text label] (re-find reference-link-re string)]
+      (cond-> {:text text
+               :tag :reflink
+               :pattern reference-link-re}
+        label (assoc :label label)))))
+                   
 (defn tagger
   [string]
   (some->> string
            ((some-fn code-span
                      inline-link
+                     reference-link
                      emphasis
                      strong-emphasis))))
 
