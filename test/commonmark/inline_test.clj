@@ -629,6 +629,9 @@
          \tab
          " \n\t"))
 
+  (testing "opening bracket is escaped"
+    (is (nil? (inline-link (str "\\[abc](xyz)")))))
+
   (testing "all in one"
     (is (let [res (inline-link "[p `code` *em*](http://example.com 'The title')")
               {:keys [text destination title]} res]
