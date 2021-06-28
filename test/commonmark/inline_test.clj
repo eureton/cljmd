@@ -377,8 +377,9 @@
                :cs)))
 
       (testing "more tightly than emphasis markers"
-        (is (= (-> "*[abc*](xyz)" tagger :tag)
-               :link))))
+        (are [s] (= :link (-> s tagger :tag))
+             "*[abc*](xyz)"
+             "[abc *xyz](123*)")))
 
     (testing "backslash-escaped brackets"
       (are [s] (= s (-> (str "[" s "](xyz)") inline-link :text))
@@ -614,6 +615,19 @@
          \u202F
          \u205F
          \u3000))
+
+  (testing "whitespace around destination and title"
+    (is (let [res (inline-link "[abc]( \t\nxyz \t\n'12 34' \t\n)")
+              {:keys [destination title]} res]
+          (and (= destination "xyz")
+               (= title "12 34")))))
+
+  (testing "whitespace between text and destination"
+    (are [s] (nil? (inline-link (str "[abc]" s "(xyz)")))
+         \space
+         \newline
+         \tab
+         " \n\t"))
 
   (testing "all in one"
     (is (let [res (inline-link "[p `code` *em*](http://example.com 'The title')")
