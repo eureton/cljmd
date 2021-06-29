@@ -343,11 +343,20 @@ OK  The beginning and the end of the line count as Unicode whitespace.
     (when-let [[_ img? text destination-wrapped
                 destination-unwrapped full-title _
                 quoted-title & parenthesized-title] (re-find inline-link-re string)]
-      {:text text
-       :destination (or destination-wrapped destination-unwrapped)
-       :title (or quoted-title (->> parenthesized-title (remove nil?) first))
-       :tag (if img? :img :link)
-       :pattern inline-link-re})))
+      (if-some [inner (inline-link text)]
+        (update inner
+                :pattern
+                (comp re-pattern (partial format "(?<=%2$s)%1$s"))
+                (->> inner
+                     :text
+                     (string/index-of text)
+                     (subs text 0)
+                     util/escape-re-delimiter))
+        {:text text
+         :destination (or destination-wrapped destination-unwrapped)
+         :title (or quoted-title (->> parenthesized-title (remove nil?) first))
+         :tag (if img? :img :link)
+         :pattern inline-link-re}))))
 
 (comment "Reference links
     There are three kinds of reference link[861]s: full[862], collapsed[863], and shortcut[864].

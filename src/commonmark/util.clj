@@ -10,12 +10,18 @@
       (zero? length) (conj "" "")
       (= 1 length) (conj ""))))
 
+(def re-delimiter-escape-hash
+  (->> "()[]{}"
+       ((juxt identity #(map (partial str "\\") %)))
+       (apply zipmap)))
+
+(defn escape-re-delimiter
+  [string]
+  (string/escape string re-delimiter-escape-hash))
+
 (defn balanced-re
   ([opener closer {:keys [intersect]}]
-   (let [escape-hash (->> "()[]{}"
-                          ((juxt identity #(map (partial str "\\") %)))
-                          (apply zipmap))
-         [l r] (map escape-hash [opener closer])
+   (let [[l r] (map re-delimiter-escape-hash [opener closer])
          non-delimeters (cond-> (str "[^" l r "]")
                           intersect (str "&&" intersect))
          fill (re-pattern (str "(?:"
