@@ -327,9 +327,7 @@ OK  The beginning and the end of the line count as Unicode whitespace.
                    ")")))
 
 (def inline-link-re
-  (re-pattern (str ".*"
-                   #"(?<!\\)"
-                   #"\[" "(" link-text-re ")" #"\]"
+  (re-pattern (str #"(!)?(?<!\\)\[" "(" link-text-re ")" #"\]"
                    #"\("
                      #"\s*"
                      inline-link-destination-re "?"
@@ -342,13 +340,13 @@ OK  The beginning and the end of the line count as Unicode whitespace.
 (defn inline-link
   [string]
   (when string
-    (when-let [[_ text destination-wrapped
+    (when-let [[_ img? text destination-wrapped
                 destination-unwrapped full-title _
                 quoted-title & parenthesized-title] (re-find inline-link-re string)]
       {:text text
        :destination (or destination-wrapped destination-unwrapped)
        :title (or quoted-title (->> parenthesized-title (remove nil?) first))
-       :tag :link
+       :tag (if img? :img :link)
        :pattern inline-link-re})))
 
 (comment "Reference links
@@ -379,7 +377,7 @@ OK  The beginning and the end of the line count as Unicode whitespace.
                    "){1,999}")))
 
 (def reference-link-re
-  (re-pattern (str #"\[" "(" link-text-re ")" #"\]"
+  (re-pattern (str #"(!)?\[" "(" link-text-re ")" #"\]"
                    "(?:"
                      #"\[" "(" link-label-re ")?" #"\]"
                    ")?")))
@@ -387,12 +385,12 @@ OK  The beginning and the end of the line count as Unicode whitespace.
 (defn reference-link
   [string]
   (when string
-    (when-let [[_ text label] (re-find reference-link-re string)]
+    (when-let [[_ img? text label] (re-find reference-link-re string)]
       (cond-> {:text text
-               :tag :reflink
+               :tag (if img? :refimg :reflink)
                :pattern reference-link-re}
         label (assoc :label label)))))
-                   
+
 (defn tagger
   [string]
   (some->> string
