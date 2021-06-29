@@ -355,7 +355,7 @@ OK  The beginning and the end of the line count as Unicode whitespace.
         {:text text
          :destination (or destination-wrapped destination-unwrapped)
          :title (or quoted-title (->> parenthesized-title (remove nil?) first))
-         :tag (if img? :img :link)
+         :tag (if img? :img :a)
          :pattern inline-link-re}))))
 
 (comment "Reference links
@@ -396,7 +396,7 @@ OK  The beginning and the end of the line count as Unicode whitespace.
   (when string
     (when-let [[_ img? text label] (re-find reference-link-re string)]
       (cond-> {:text text
-               :tag (if img? :refimg :reflink)
+               :tag (if img? :img :a)
                :pattern reference-link-re}
         label (assoc :label label)))))
 

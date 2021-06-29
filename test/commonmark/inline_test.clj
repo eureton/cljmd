@@ -377,7 +377,7 @@
                :cs)))
 
       (testing "more tightly than emphasis markers"
-        (are [s] (= :link (-> s tagger :tag))
+        (are [s] (= :a (-> s tagger :tag))
              "*[abc*](xyz)"
              "[abc *xyz](123*)")))
 
