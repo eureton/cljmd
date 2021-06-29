@@ -11,6 +11,18 @@
                         [(node {:tag :txt
                                 :content "abc"})])]))))
 
+  (testing "link"
+    (testing "inline"
+      (testing "minimal"
+        (is (= (from-string "[abc](xyz '123')")
+               (node {:tag :doc}
+                     [(node {:tag :p}
+                            [(node {:tag :a
+                                    :destination "xyz"
+                                    :title "123"}
+                                  [(node {:tag :txt
+                                          :content "abc"})])])]))))))
+
   (testing "nested inline"
     (testing "text within emphasis"
       (is (= (from-string "*abc*")
