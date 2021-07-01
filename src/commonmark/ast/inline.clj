@@ -13,38 +13,63 @@
 
 (defmulti inflate
   "Recursively replaces inline markdown entities with the AST to which they
-   belong. Returns an AST whose root node is tagged :doc."
-  (fn [input]
+   belong."
+  (fn [input _]
     (cond
       (string? input) :string
       (map? input) (:tag input))))
 
+(defn roll
+  "Produces a string, all inline Markdown tokens of which have been replaced
+   by a digest. Token meta-data are collected in a hashmap, keyed by digest.
+   Returns the string and the meta-data in a hashmap under :rolled and :tokens,
+   respectively."
+  [string]
+  (loop [string string
+         tokens {}]
+    (if-some [info (inline/tagger string)]
+      (let [digest (str (hash info))]
+        (recur (string/replace-first string (:pattern info) digest)
+               (assoc tokens digest info)))
+      {:rolled string
+       :tokens tokens})))
+
+(defn unroll
+  "Transforms string into a vector of ASTs corresponding to inline Markdown
+   tokens. Assumes string and tokens have been produced by the roll function."
+  [string tokens]
+  (if-some [[digest token] (->> tokens
+                                (filter (comp #(string/includes? string %) key))
+                                first)]
+    (->> (util/split string (re-pattern digest))
+         (interpose token)
+         (remove empty?)
+         (map #(inflate % (dissoc tokens digest)))
+         (mapcat (ufn/to-fix degenerate? :children vector))
+         vec)
+    (when string
+      [(node {:tag :txt :content string})])))
+
 (defmethod inflate :a
-  [input]
+  [input tokens]
   (node (select-keys input [:tag :destination :title])
-        (:children (inflate (:text input)))))
+        (unroll (:text input) tokens)))
 
 (defmethod inflate :string
-  [input]
-  (when (string? input)
-    (node {:tag :txt}
-          (if-some [info (inline/tagger input)]
-            (->> (util/split input (:pattern info))
-                 (interpose info)
-                 (remove empty?)
-                 (map inflate)
-                 (mapcat (ufn/to-fix degenerate? :children vector))
-                 vec)
-            [(node {:tag :txt
-                    :content input})]))))
+  [input tokens]
+  (node {:tag :txt}
+        (unroll input tokens)))
 
 (defmethod inflate :default
-  [input]
-  (node (select-keys input [:tag])
-        (:children (inflate (:content input)))))
+  [{:keys [tag content]} tokens]
+  (node {:tag tag}
+        (unroll content tokens)))
 
 (defn from-string
-  "Parses string into an AST. Assumes string contains inline Markdown entities."
+  "Parses string into an AST. Assumes string contains inline Markdown entities.
+   Returns an AST whose root node is tagged :doc."
   [string]
-  (assoc-in (inflate string) [:data :tag] :doc))
+  (let [{:keys [rolled tokens]} (roll string)]
+    (some->> (unroll rolled tokens)
+             (node {:tag :doc}))))
 
