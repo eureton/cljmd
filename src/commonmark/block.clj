@@ -15,6 +15,7 @@
                   (derive :tbr    :block)
                   (derive :icblk  :block)
                   (derive :ofcblk :block)
+                  (derive :doc    :block)
                   (derive :bq :container)
                   (derive :li :container)
                   atom))

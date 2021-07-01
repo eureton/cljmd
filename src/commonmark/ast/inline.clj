@@ -50,10 +50,19 @@
     (when string
       [(node {:tag :txt :content string})])))
 
+(defn from-string
+  "Parses string into an AST. Assumes string contains inline Markdown entities.
+   Returns an AST whose root node is tagged :doc."
+  [string]
+  (let [{:keys [rolled tokens]} (roll string)]
+    (some->> (unroll rolled tokens)
+             (node {:tag :doc}))))
+
 (defmethod inflate :a
   [input tokens]
-  (node (select-keys input [:tag :destination :title])
-        (unroll (:text input) tokens)))
+  (let [{:keys [rolled] overlooked :tokens} (roll (:text input))]
+    (node (select-keys input [:tag :destination :title])
+          (:children (inflate rolled (merge overlooked tokens))))))
 
 (defmethod inflate :string
   [input tokens]
@@ -64,12 +73,4 @@
   [{:keys [tag content]} tokens]
   (node {:tag tag}
         (unroll content tokens)))
-
-(defn from-string
-  "Parses string into an AST. Assumes string contains inline Markdown entities.
-   Returns an AST whose root node is tagged :doc."
-  [string]
-  (let [{:keys [rolled tokens]} (roll string)]
-    (some->> (unroll rolled tokens)
-             (node {:tag :doc}))))
 

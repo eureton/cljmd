@@ -21,7 +21,12 @@
         (are [s] (= (-> s from-string (get-in [:children 0]))
                     (node {:tag :em} [txt-node]))
              "*xyz*"
-             "_xyz_"))))
+             "_xyz_"))
+
+      (testing "link"
+        (is (= (-> "[xyz](abc)" from-string (get-in [:children 0]))
+                    (node {:tag :a
+                           :destination "abc"} [txt-node]))))))
 
   (testing "nested emphasis"
     (let [em-tree (node {:tag :em}
@@ -31,5 +36,13 @@
       (are [s] (= (-> s from-string (get-in [:children 0]))
                   em-tree)
            "_(_xyz_)_"
-           "*(*xyz*)*"))))
+           "*(*xyz*)*")))
+
+  (testing "inlines within link text"
+    (is (= (-> "[`xyz` 123 *abc*](qpr)" from-string (get-in [:children 0]))
+                (node {:tag :a
+                       :destination "qpr"}
+                      [(node {:tag :cs} [(node {:tag :txt :content "xyz"})])
+                       (node {:tag :txt :content " 123 "})
+                       (node {:tag :em} [(node {:tag :txt :content "abc"})])])))))
 

@@ -93,7 +93,8 @@
 (defmethod dispatch :inline
   [{:as node :keys [children]}]
   (pprint-entity-wrap node
-    (if (= 1 (count children))
+    (if (and (= 1 (count children))
+             (= :txt (:tag (:data (first children)))))
       (pprint-content (first children))
       (pprint-multiple node))))
 
