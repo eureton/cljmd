@@ -26,6 +26,11 @@
       (testing "link"
         (is (= (-> "[xyz](abc)" from-string (get-in [:children 0]))
                     (node {:tag :a
+                           :destination "abc"} [txt-node]))))
+
+      (testing "image"
+        (is (= (-> "![xyz](abc)" from-string (get-in [:children 0]))
+                    (node {:tag :img
                            :destination "abc"} [txt-node]))))))
 
   (testing "nested emphasis"
@@ -44,5 +49,27 @@
                        :destination "qpr"}
                       [(node {:tag :cs} [(node {:tag :txt :content "xyz"})])
                        (node {:tag :txt :content " 123 "})
-                       (node {:tag :em} [(node {:tag :txt :content "abc"})])])))))
+                       (node {:tag :em} [(node {:tag :txt :content "abc"})])]))))
+
+  (testing "link within image"
+    (is (= (-> "![[txt](txt.com)](img.com)" from-string (get-in [:children 0]))
+                (node {:tag :img
+                       :destination "img.com"}
+                     [(node {:tag :a
+                             :destination "txt.com"}
+                            [(node {:tag :txt :content "txt"})])]))))
+
+  (testing "inlines within image description"
+    (is (= (-> "![`xyz` [*emphasis* on `code`](txt.com) *abc*](img.com)" from-string (get-in [:children 0]))
+                (node {:tag :img
+                       :destination "img.com"}
+                     [(node {:tag :cs} [(node {:tag :txt :content "xyz"})])
+                      (node {:tag :txt :content " "})
+                      (node {:tag :a
+                             :destination "txt.com"}
+                            [(node {:tag :em} [(node {:tag :txt :content "emphasis"})])
+                             (node {:tag :txt :content " on "})
+                             (node {:tag :cs} [(node {:tag :txt :content "code"})])])
+                      (node {:tag :txt :content " "})
+                      (node {:tag :em} [(node {:tag :txt :content "abc"})])])))))
 

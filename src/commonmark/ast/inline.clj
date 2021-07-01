@@ -1,6 +1,7 @@
 (ns commonmark.ast.inline
   (:require [clojure.string :as string]
             [flatland.useful.fn :as ufn]
+            [commonmark.block :as block]
             [commonmark.inline :as inline]
             [commonmark.ast.common :refer [node]]
             [commonmark.util :as util]))
@@ -17,7 +18,8 @@
   (fn [input _]
     (cond
       (string? input) :string
-      (map? input) (:tag input))))
+      (map? input) (:tag input)))
+  :hierarchy block/ontology)
 
 (defn roll
   "Produces a string, all inline Markdown tokens of which have been replaced
@@ -58,7 +60,7 @@
     (some->> (unroll rolled tokens)
              (node {:tag :doc}))))
 
-(defmethod inflate :a
+(defmethod inflate :link
   [input tokens]
   (let [{:keys [rolled] overlooked :tokens} (roll (:text input))]
     (node (select-keys input [:tag :destination :title])

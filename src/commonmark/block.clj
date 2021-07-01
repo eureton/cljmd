@@ -3,9 +3,14 @@
 
 (def ontology (-> (make-hierarchy)
                   (derive :a      :inline)
+                  (derive :img    :inline)
                   (derive :em     :inline)
                   (derive :strong :inline)
                   (derive :cs     :inline)
+
+                  (derive :a      :link)
+                  (derive :img    :link)
+
                   (derive :bq     :block)
                   (derive :li     :block)
                   (derive :p      :block)
@@ -16,6 +21,7 @@
                   (derive :icblk  :block)
                   (derive :ofcblk :block)
                   (derive :doc    :block)
+
                   (derive :bq :container)
                   (derive :li :container)
                   atom))

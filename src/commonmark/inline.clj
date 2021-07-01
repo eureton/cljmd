@@ -343,7 +343,8 @@ OK  The beginning and the end of the line count as Unicode whitespace.
     (when-let [[_ img? text destination-wrapped
                 destination-unwrapped full-title _
                 quoted-title & parenthesized-title] (re-find inline-link-re string)]
-      (if-some [inner (inline-link text)]
+      (if-let [inner (and (not img?)
+                          (inline-link text))]
         (update inner
                 :pattern
                 (comp re-pattern (partial format "(?<=%2$s)%1$s"))
