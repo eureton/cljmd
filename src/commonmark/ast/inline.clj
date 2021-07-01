@@ -1,76 +1,76 @@
 (ns commonmark.ast.inline
   (:require [clojure.string :as string]
+            [flatland.useful.fn :as ufn]
             [commonmark.inline :as inline]
+            [commonmark.ast.common :refer [node]]
             [commonmark.util :as util]))
 
-(defn tokens
-  "Parses string for inline markdown entity tokens. Tokens are collected in a
-   hash, under a unique digest key. Hash Collection is recursive, i.e. a hash
-   entry may reference another entry."
-  [string]
-  (loop [s string
-         h {}]
-    (if-some [{:keys [tag pattern content]} (inline/tagger s)]
-      (let [digest (str (hash content))]
-        (recur (string/replace-first s pattern digest)
-               (assoc h digest {:pattern pattern
-                                :tag tag
-                                :value content})))
-      h)))
-
-(defn digest
-  "Replaces tokens in string with their respective key in the tokens hash."
-  [string tokens]
-  (reduce (fn [acc [digest {:keys [pattern]}]]
-            (string/replace-first acc pattern digest))
-          string
-          tokens))
-
-(defn trim
-  "Replaces degenerate nodes in the ast with their children.
+(def degenerate?
+  "Returns true if the AST node is degenerate, false otherwise.
    A degenerate node is a non-leaf text node."
-  [ast]
-  (mapcat (fn [[tag value]]
-            (if (and (= :txt tag)
-                     (coll? value))
-              value
-              [[tag value]])) ast))
+  (every-pred (comp some? :children)
+              (comp #{:txt} :tag :data)))
 
-(defn inflate
-  "Recursively replaces in string the keys in the tokens hash with the AST which
-   corresponds to the tokenized entity. Returns the children of the root node of
-   the AST."
+(defmulti inflate
+  "Recursively replaces inline markdown entities with the AST to which they
+   belong."
+  (fn [input _]
+    (cond
+      (string? input) :string
+      (map? input) (:tag input))))
+
+(defn roll
+  "Produces a string, all inline Markdown tokens of which have been replaced
+   by a digest. Token meta-data are collected in a hashmap, keyed by digest.
+   Returns the string and the meta-data in a hashmap under :rolled and :tokens,
+   respectively."
+  [string]
+  (loop [string string
+         tokens {}]
+    (if-some [info (inline/tagger string)]
+      (let [digest (str (hash info))]
+        (recur (string/replace-first string (:pattern info) digest)
+               (assoc tokens digest info)))
+      {:rolled string
+       :tokens tokens})))
+
+(defn unroll
+  "Transforms string into a vector of ASTs corresponding to inline Markdown
+   tokens. Assumes string and tokens have been produced by the roll function."
   [string tokens]
-  (if-some [[digest
-             {:keys [tag value]}] (->> tokens
-                                       (filter (comp #(string/includes? string %) key))
-                                       first)]
+  (if-some [[digest token] (->> tokens
+                                (filter (comp #(string/includes? string %) key))
+                                first)]
     (->> (util/split string (re-pattern digest))
-         (map #(vector :txt %))
-         (interpose [tag value])
-         (remove (comp string/blank? second))
-         (map #(update % 1 inflate (dissoc tokens digest)))
-         trim
+         (interpose token)
+         (remove empty?)
+         (map #(inflate % (dissoc tokens digest)))
+         (mapcat (ufn/to-fix degenerate? :children vector))
          vec)
-    [[:txt string]]))
-
-(defn canonize
-  "Transforms intermediate-representation nodes to the canonical AST format."
-  [[tag value]]
-  (let [leaf? (and (= :txt tag)
-                   (string? value))
-        base {:data {:tag tag}}]
-    (if leaf?
-      (assoc-in base [:data :content] value)
-      (assoc base :children (mapv canonize value)))))
+    (when string
+      [(node {:tag :txt :content string})])))
 
 (defn from-string
-  "Parses string into an AST. Assumes string contains inline Markdown entities."
+  "Parses string into an AST. Assumes string contains inline Markdown entities.
+   Returns an AST whose root node is tagged :doc."
   [string]
-  (some->> string
-           tokens
-           ((juxt #(digest string %) identity))
-           (apply inflate)
-           (mapv canonize)
-           (hash-map :data {:tag :doc} :children)))
+  (let [{:keys [rolled tokens]} (roll string)]
+    (some->> (unroll rolled tokens)
+             (node {:tag :doc}))))
+
+(defmethod inflate :a
+  [input tokens]
+  (let [{:keys [rolled] overlooked :tokens} (roll (:text input))]
+    (node (select-keys input [:tag :destination :title])
+          (:children (inflate rolled (merge overlooked tokens))))))
+
+(defmethod inflate :string
+  [input tokens]
+  (node {:tag :txt}
+        (unroll input tokens)))
+
+(defmethod inflate :default
+  [{:keys [tag content]} tokens]
+  (node {:tag tag}
+        (unroll content tokens)))
 
