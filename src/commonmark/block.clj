@@ -1,31 +1,6 @@
 (ns commonmark.block
   (:require [clojure.string :as string]))
 
-(def ontology (-> (make-hierarchy)
-                  (derive :a      :inline)
-                  (derive :img    :inline)
-                  (derive :em     :inline)
-                  (derive :strong :inline)
-                  (derive :cs     :inline)
-
-                  (derive :a      :link)
-                  (derive :img    :link)
-
-                  (derive :bq     :block)
-                  (derive :li     :block)
-                  (derive :p      :block)
-                  (derive :blank  :block)
-                  (derive :atxh   :block)
-                  (derive :stxh   :block)
-                  (derive :tbr    :block)
-                  (derive :icblk  :block)
-                  (derive :ofcblk :block)
-                  (derive :doc    :block)
-
-                  (derive :bq :container)
-                  (derive :li :container)
-                  atom))
-
 (comment "ATX Headings
          
 OK  An ATX heading consists of:

@@ -1,7 +1,6 @@
 (ns commonmark.ast.common
   (:require [clojure.pprint :as pp]
-            [clojure.string :as string]
-            [commonmark.block :as block]))
+            [clojure.string :as string]))
 
 (defn node
   "Returns an AST node with the given data and children."
@@ -28,6 +27,31 @@
    (update x :children (comp vec conj) y3 y2 y1))
   ([x y1 y2 y3 & ys]
    (update x :children (comp vec concat) (conj ys y3 y2 y1))))
+
+(def ontology (-> (make-hierarchy)
+                  (derive :a      :inline)
+                  (derive :img    :inline)
+                  (derive :em     :inline)
+                  (derive :strong :inline)
+                  (derive :cs     :inline)
+
+                  (derive :a      :link)
+                  (derive :img    :link)
+
+                  (derive :bq     :block)
+                  (derive :li     :block)
+                  (derive :p      :block)
+                  (derive :blank  :block)
+                  (derive :atxh   :block)
+                  (derive :stxh   :block)
+                  (derive :tbr    :block)
+                  (derive :icblk  :block)
+                  (derive :ofcblk :block)
+                  (derive :doc    :block)
+
+                  (derive :bq :container)
+                  (derive :li :container)
+                  atom))
 
 (defn pprint-content
   "Shorthand for printing the :content value of entities to *out*."
@@ -78,7 +102,7 @@
   "Pretty-print dispatch function for interoperation with the clojure.pprint
    family of functions."
   (comp :tag :data)
-  :hierarchy block/ontology)
+  :hierarchy ontology)
 
 (defmethod dispatch :txt
   [node]

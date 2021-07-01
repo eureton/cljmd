@@ -1,14 +1,13 @@
 (ns commonmark.ast.block
   (:require [clojure.string :as string]
             [commonmark.ast.common :as common]
-            [commonmark.block :as block]
             [commonmark.blockrun :as blockrun]
             [commonmark.blockrun.entry :as blockrun.entry]))
 
 (defmulti from-blockrun-entry
   "Parses markdown AST from blockrun entry."
   first
-  :hierarchy block/ontology
+  :hierarchy common/ontology
   :default :leaf)
 
 (defn from-blockrun

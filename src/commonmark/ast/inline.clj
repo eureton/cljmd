@@ -1,9 +1,8 @@
 (ns commonmark.ast.inline
   (:require [clojure.string :as string]
             [flatland.useful.fn :as ufn]
-            [commonmark.block :as block]
             [commonmark.inline :as inline]
-            [commonmark.ast.common :refer [node]]
+            [commonmark.ast.common :refer [node ontology]]
             [commonmark.util :as util]))
 
 (def degenerate?
@@ -19,7 +18,7 @@
     (cond
       (string? input) :string
       (map? input) (:tag input)))
-  :hierarchy block/ontology)
+  :hierarchy ontology)
 
 (defn roll
   "Produces a string, all inline Markdown tokens of which have been replaced
