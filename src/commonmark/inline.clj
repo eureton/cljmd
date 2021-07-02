@@ -403,6 +403,13 @@ OK  The beginning and the end of the line count as Unicode whitespace.
                :pattern reference-link-re}
         label (assoc :label label)))))
 
+(defn text
+  [string]
+  (when string
+    {:tag :txt
+     :pattern #".*"
+     :content (string/replace string #"\\(?=\p{Punct})" "")}))
+
 (defn tagger
   [string]
   (some->> string
@@ -410,5 +417,6 @@ OK  The beginning and the end of the line count as Unicode whitespace.
                      inline-link
                      reference-link
                      emphasis
-                     strong-emphasis))))
+                     strong-emphasis
+                     text))))
 

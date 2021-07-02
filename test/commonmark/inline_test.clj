@@ -639,3 +639,46 @@
                (= destination "http://example.com")
                (= title "The title"))))))
 
+(deftest text-test
+  (testing "puns nil"
+    (is (nil? (text nil))))
+
+  (testing "captures all"
+    (let [s "abc *def* **ghi** [jkl](mno 'pqr') ![stu](vwx) `yz0`"]
+      (is (= s (-> s text :content)))))
+
+  (testing "removes backslash escapes from ASCII punctuation"
+    (are [in out] (= out (-> in text :content))
+         "\\!" "!"
+         "\\\"" "\""
+         "\\#" "#"
+         "\\$" "$"
+         "\\%" "%"
+         "\\&" "&"
+         "\\'" "'"
+         "\\(" "("
+         "\\)" ")"
+         "\\*" "*"
+         "\\+" "+"
+         "\\," ","
+         "\\-" "-"
+         "\\." "."
+         "\\/" "/"
+         "\\:" ":"
+         "\\;" ";"
+         "\\<" "<"
+         "\\=" "="
+         "\\>" ">"
+         "\\?" "?"
+         "\\@" "@"
+         "\\[" "["
+         "\\\\" "\\"
+         "\\]" "]"
+         "\\^" "^"
+         "\\_" "_"
+         "\\`" "`"
+         "\\{" "{"
+         "\\|" "|"
+         "\\}" "}"
+         "\\~" "~")))
+
