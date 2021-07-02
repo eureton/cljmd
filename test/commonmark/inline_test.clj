@@ -637,5 +637,73 @@
               {:keys [text destination title]} res]
           (and (= text "p `code` *em*")
                (= destination "http://example.com")
-               (= title "The title"))))))
+               (= title "The title")))))
+
+  (testing "image"
+    (testing "whitespace"
+      (is (let [res (inline-link "My ![abc def](/xyz \"123\"   )")
+                {:keys [tag text destination title]} res]
+            (and (= tag :img)
+                 (= text "abc def")
+                 (= destination "/xyz")
+                 (= title "123")))))
+
+    (testing "description"
+      (testing "empty"
+        (is (let [res (inline-link "![](xyz)")
+                  {:keys [tag text destination title]} res]
+              (and (= tag :img)
+                   (= text "")
+                   (= destination "xyz"))))))
+
+    (testing "destination"
+      (testing "<>-delimited"
+        (is (let [res (inline-link "![abc](<xyz>)")
+                  {:keys [tag text destination title]} res]
+              (and (= tag :img)
+                   (= text "abc")
+                   (= destination "xyz"))))))))
+
+(deftest text-test
+  (testing "puns nil"
+    (is (nil? (text nil))))
+
+  (testing "captures all"
+    (let [s "abc *def* **ghi** [jkl](mno 'pqr') ![stu](vwx) `yz0`"]
+      (is (= s (-> s text :content)))))
+
+  (testing "removes backslash escapes from ASCII punctuation"
+    (are [in out] (= out (-> in text :content))
+         "\\!" "!"
+         "\\\"" "\""
+         "\\#" "#"
+         "\\$" "$"
+         "\\%" "%"
+         "\\&" "&"
+         "\\'" "'"
+         "\\(" "("
+         "\\)" ")"
+         "\\*" "*"
+         "\\+" "+"
+         "\\," ","
+         "\\-" "-"
+         "\\." "."
+         "\\/" "/"
+         "\\:" ":"
+         "\\;" ";"
+         "\\<" "<"
+         "\\=" "="
+         "\\>" ">"
+         "\\?" "?"
+         "\\@" "@"
+         "\\[" "["
+         "\\\\" "\\"
+         "\\]" "]"
+         "\\^" "^"
+         "\\_" "_"
+         "\\`" "`"
+         "\\{" "{"
+         "\\|" "|"
+         "\\}" "}"
+         "\\~" "~")))
 

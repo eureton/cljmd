@@ -2,7 +2,7 @@
   (:require [clojure.string :as string]
             [flatland.useful.fn :as ufn]
             [commonmark.inline :as inline]
-            [commonmark.ast.common :refer [node]]
+            [commonmark.ast.common :refer [node ontology]]
             [commonmark.util :as util]))
 
 (def degenerate?
@@ -17,22 +17,26 @@
   (fn [input _]
     (cond
       (string? input) :string
-      (map? input) (:tag input))))
+      (map? input) (:tag input)))
+  :hierarchy ontology)
 
 (defn roll
   "Produces a string, all inline Markdown tokens of which have been replaced
-   by a digest. Token meta-data are collected in a hashmap, keyed by digest.
+   by a digest. Iterates until the entire string has been collapsed into a
+   single digest. Token meta-data are collected in a hashmap, keyed by digest.
    Returns the string and the meta-data in a hashmap under :rolled and :tokens,
    respectively."
   [string]
-  (loop [string string
-         tokens {}]
-    (if-some [info (inline/tagger string)]
-      (let [digest (str (hash info))]
-        (recur (string/replace-first string (:pattern info) digest)
-               (assoc tokens digest info)))
-      {:rolled string
-       :tokens tokens})))
+  (when string
+    (loop [string string
+           tokens {}]
+      (if (contains? tokens string)
+        {:rolled string
+         :tokens tokens}
+        (let [info (inline/tagger string)
+              digest (str (hash info))]
+            (recur (string/replace-first string (:pattern info) digest)
+                   (assoc tokens digest info)))))))
 
 (defn unroll
   "Transforms string into a vector of ASTs corresponding to inline Markdown
@@ -58,7 +62,7 @@
     (some->> (unroll rolled tokens)
              (node {:tag :doc}))))
 
-(defmethod inflate :a
+(defmethod inflate :link
   [input tokens]
   (let [{:keys [rolled] overlooked :tokens} (roll (:text input))]
     (node (select-keys input [:tag :destination :title])

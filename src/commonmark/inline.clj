@@ -327,7 +327,7 @@ OK  The beginning and the end of the line count as Unicode whitespace.
                    ")")))
 
 (def inline-link-re
-  (re-pattern (str #"(!)?(?<!\\)\[" "(" link-text-re ")" #"\]"
+  (re-pattern (str #"(?<!\\)(!)?(?<!\\)\[" "(" link-text-re ")" #"\]"
                    #"\("
                      #"\s*"
                      inline-link-destination-re "?"
@@ -343,7 +343,8 @@ OK  The beginning and the end of the line count as Unicode whitespace.
     (when-let [[_ img? text destination-wrapped
                 destination-unwrapped full-title _
                 quoted-title & parenthesized-title] (re-find inline-link-re string)]
-      (if-some [inner (inline-link text)]
+      (if-let [inner (and (not img?)
+                          (inline-link text))]
         (update inner
                 :pattern
                 (comp re-pattern (partial format "(?<=%2$s)%1$s"))
@@ -402,6 +403,13 @@ OK  The beginning and the end of the line count as Unicode whitespace.
                :pattern reference-link-re}
         label (assoc :label label)))))
 
+(defn text
+  [string]
+  (when string
+    {:tag :txt
+     :pattern #".*"
+     :content (string/replace string #"\\(?=\p{Punct})" "")}))
+
 (defn tagger
   [string]
   (some->> string
@@ -409,5 +417,6 @@ OK  The beginning and the end of the line count as Unicode whitespace.
                      inline-link
                      reference-link
                      emphasis
-                     strong-emphasis))))
+                     strong-emphasis
+                     text))))
 

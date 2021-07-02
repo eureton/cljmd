@@ -21,7 +21,54 @@
                                     :destination "xyz"
                                     :title "123"}
                                   [(node {:tag :txt
-                                          :content "abc"})])])]))))))
+                                          :content "abc"})])])]))))
+
+      (testing "preceded by literal '!'"
+        (is (= (from-string "\\![abc](xyz)")
+               (node {:tag :doc}
+                     [(node {:tag :p}
+                            [(node {:tag :txt
+                                         :content "!"})
+                             (node {:tag :a
+                                    :destination "xyz"}
+                                   [(node {:tag :txt
+                                           :content "abc"})])])]))))))
+
+  (testing "image"
+    (testing "inline"
+      (testing "description, destination and title"
+        (is (= (from-string "![abc](/xyz \"123\")")
+               (node {:tag :doc}
+                     [(node {:tag :p}
+                            [(node {:tag :img
+                                    :destination "/xyz"
+                                    :title "123"}
+                                  [(node {:tag :txt
+                                          :content "abc"})])])]))))
+
+      (testing "image within image"
+        (is (= (from-string "![txt ![abc](/xyz)](/123)")
+               (node {:tag :doc}
+                     [(node {:tag :p}
+                            [(node {:tag :img
+                                    :destination "/123"}
+                                  [(node {:tag :txt
+                                          :content "txt "})
+                                   (node {:tag :img
+                                          :destination "/xyz"}
+                                         [(node {:tag :txt :content "abc"})])])])]))))
+
+      (testing "link within image"
+        (is (= (from-string "![txt [abc](/xyz)](/123)")
+               (node {:tag :doc}
+                     [(node {:tag :p}
+                            [(node {:tag :img
+                                    :destination "/123"}
+                                  [(node {:tag :txt
+                                          :content "txt "})
+                                   (node {:tag :a
+                                          :destination "/xyz"}
+                                         [(node {:tag :txt :content "abc"})])])])]))))))
 
   (testing "nested inline"
     (testing "text within emphasis"
