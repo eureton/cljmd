@@ -403,6 +403,50 @@ OK  The beginning and the end of the line count as Unicode whitespace.
                :pattern reference-link-re}
         label (assoc :label label)))))
 
+(def absolute-uri-re
+  (let [unreserved #"[\p{Alnum}._~-]"
+        pct-encoded #"%[\p{XDigit}]{2}"
+        sub-delims "[!$&'()*+,;=]"
+        pchar (str "(?:" unreserved "|" pct-encoded "|" sub-delims "|[:@])")
+        segment-nz (str pchar "+")
+        segment (str pchar "*")
+        port "[0-9]*"
+        host (str "(?:" unreserved "|" pct-encoded "|" sub-delims ")*")
+        userinfo (str "(?:" unreserved "|" pct-encoded "|" sub-delims "|:)*")
+        path-empty ""
+        path-rootless (str segment-nz "(?:/" segment ")*")
+        path-absolute (str "/(?:" segment-nz "(?:/" segment ")*)?")
+        path-abempty (str "(?:/" segment ")*")
+        authority (str "(?:" userinfo "@)?" host "(?::" port ")?")
+        scheme #"\p{Alpha}[\p{Alnum}+.-]*"
+        hier-part (str "(?://" authority path-abempty "|" path-absolute "|" path-rootless "|" path-empty ")")
+        query (str "(?:" pchar "|[/?])*")
+        fragment (str "(?:" pchar "|[/?])*")]
+    (re-pattern (str scheme ":" hier-part
+                     "(?:\\?" query ")?"
+                     "(?:#" fragment ")?"))))
+
+(def email-address-re
+  (re-pattern (str "[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+"
+                   "@"
+                   "[a-zA-Z0-9]"
+                   "(?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?"
+                   "(?:"
+                     #"\.[a-zA-Z0-9]"
+                     "(?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?"
+                   ")*")))
+
+(def autolink-re
+  (re-pattern (str "<(" absolute-uri-re "|" email-address-re ")>")))
+
+(defn autolink
+  [string]
+  (when string
+    (when-let [[_ uri] (re-find autolink-re string)]
+      {:tag :auto
+       :pattern autolink-re
+       :uri uri})))
+
 (defn text
   [string]
   (when string
@@ -418,5 +462,6 @@ OK  The beginning and the end of the line count as Unicode whitespace.
                      reference-link
                      emphasis
                      strong-emphasis
+                     autolink
                      text))))
 

@@ -664,6 +664,57 @@
                    (= text "abc")
                    (= destination "xyz"))))))))
 
+(comment
+These are not autolinks:
+
+<>
+<p>&lt;&gt;</p>
+
+< http://foo.bar >
+<p>&lt; http://foo.bar &gt;</p>
+
+<m:abc>
+<p>&lt;m:abc&gt;</p>
+
+<foo.bar.baz>
+<p>&lt;foo.bar.baz&gt;</p>
+
+http://example.com
+<p>http://example.com</p>
+
+foo@bar.example.com
+<p>foo@bar.example.com</p>
+  )
+
+(deftest autolink-test
+  (testing "URI"
+    (testing "valid URIs"
+      (are [s] (= s (->> (str "<" s ">") autolink :uri))
+           "http://abc.xyz.123"
+           "http://abc.xyz.123/test?q=hello&id=22&boolean"
+           "irc://abc.xyz:2233/123"
+           "MAILTO:ABC@XYZ.123"
+           "a+b+c:d"
+           "made-up-scheme://abc,xyz"
+           "http://../"
+           "localhost:5001/abc"))
+
+    (testing "contains space"
+      (is (nil? (autolink "<http://abc.xyz/qpr jkl>"))))
+
+    (testing "backslash escape"
+      (is (let [s "http://example.com/\\[\\"]
+            (= s (->> (str "<" s ">") autolink :uri))))))
+
+  (testing "email address"
+    (testing "valid addresses"
+      (are [s] (= s (->> (str "<" s ">") autolink :uri))
+           "abc@xyz.example.com"
+           "abc+special@Xyz.123-xyz0.com"))
+
+    (testing "backslash escape"
+      (is (nil? (autolink "<foo\\+@bar.example.com>"))))))
+
 (deftest text-test
   (testing "puns nil"
     (is (nil? (text nil))))
