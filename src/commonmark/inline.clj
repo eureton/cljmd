@@ -327,7 +327,7 @@ OK  The beginning and the end of the line count as Unicode whitespace.
                    ")")))
 
 (def inline-link-re
-  (re-pattern (str #"(!)?(?<!\\)\[" "(" link-text-re ")" #"\]"
+  (re-pattern (str #"(?<!\\)(!)?(?<!\\)\[" "(" link-text-re ")" #"\]"
                    #"\("
                      #"\s*"
                      inline-link-destination-re "?"
