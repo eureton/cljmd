@@ -834,25 +834,36 @@
       (is (nil? (html "</p abc=xyz>")))))
 
   (testing "comments"
-    (testing "tag names"
-      (testing "valid"
-        (are [s] (= s (-> s html :content))
-             "<!--x-->"
-             "<!-- x -->"
-             "<!-- x y -->"
-             "<!-- x\ny -->"
-             "<!-- x-y -->"
-             "<!-- x<!->y -->"))
+    (testing "valid"
+      (are [s] (= s (-> s html :content))
+           "<!--x-->"
+           "<!---->"
+           "<!-- x -->"
+           "<!-- x y -->"
+           "<!-- x\ny -->"
+           "<!-- x-y -->"
+           "<!-- x<!->y -->"))
 
-      (testing "invalid"
-        (are [s] (nil? (html s))
-             "<!--x--->"
-             "<!--x--y-->"
-             "<!-->x-->"
-             "<!--->x-->")))
+    (testing "invalid"
+      (are [s] (nil? (html s))
+           "<!--x--->"
+           "<!--x--y-->"
+           "<!-->x-->"
+           "<!--->x-->")))
 
-    (testing "attributes"
-      (is (nil? (html "</p abc=xyz>"))))))
+  (testing "processing instructions"
+    (testing "valid"
+      (are [s] (= s (-> s html :content))
+           "<?x?>"
+           "<? x ?>"
+           "<??>"
+           "<? x y ?>"
+           "<? x\ny ?>"
+           "<? x<y ?>"
+           "<? x?y ?>"
+           "<? x<?y ?>"
+           "<? x? >y ?>"
+           "<? x<??y ?>"))))
 
 (deftest text-test
   (testing "puns nil"

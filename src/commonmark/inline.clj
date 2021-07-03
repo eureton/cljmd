@@ -453,10 +453,14 @@ OK  The beginning and the end of the line count as Unicode whitespace.
 (def html-comment-re
   #"(?:(?s)<!--(?:|(?!>)(?!->)(?!.*--.*-->).*?(?<!-))-->)")
 
+(def html-processing-instruction-re
+  #"(?s)<\?.*?\?>")
+
 (def html-tag-re
   (re-pattern (str "(?:" html-open-tag-re "|"
                          html-closing-tag-re "|"
-                         html-comment-re ")")))
+                         html-comment-re "|"
+                         html-processing-instruction-re ")")))
 
 (defn html
   [string]
