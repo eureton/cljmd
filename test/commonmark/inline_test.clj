@@ -868,7 +868,27 @@
     (testing "invalid"
       (are [s] (nil? (html s))
            "\\<? x ?>"
-           "<\\? x ?>"))))
+           "<\\? x ?>")))
+
+  (testing "declarations"
+    (testing "valid"
+      (are [s] (= s (-> s html :content))
+           "<!X >"
+           "<!X x>"
+           "<!X x >"
+           "<!X x y>"
+           "<!X x\ny>"
+           "<!X x <!X y>"))
+
+    (testing "followed by >"
+      (is (= (-> "<!X x>>" html :content)
+             "<!X x>")))
+
+    (testing "invalid"
+      (are [s] (nil? (html s))
+           "<!X>"
+           "\\<!X x>"
+           "<\\!X x>"))))
 
 (deftest text-test
   (testing "puns nil"
