@@ -888,7 +888,27 @@
       (are [s] (nil? (html s))
            "<!X>"
            "\\<!X x>"
-           "<\\!X x>"))))
+           "<\\!X x>")))
+
+  (testing "cdata sections"
+    (testing "valid"
+      (are [s] (= s (-> s html :content))
+           "<![CDATA[xyz]]>"
+           "<![CDATA[xy z]]>"
+           "<![CDATA[x y z]]>"
+           "<![CDATA[]]>"
+           "<![CDATA[xy\nz]]>"
+           "<![CDATA[xy<![CDATA[z]]>"
+           "<![CDATA[>&<]]>"))
+
+    (testing "followed by >"
+      (is (= (-> "<![CDATA[xyz]]>>" html :content)
+             "<![CDATA[xyz]]>")))
+
+    (testing "invalid"
+      (are [s] (nil? (html s))
+           "\\<![CDATA[X x]]>"
+           "<\\![CDATA[X x]]>"))))
 
 (deftest text-test
   (testing "puns nil"

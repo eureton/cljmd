@@ -457,16 +457,18 @@ OK  The beginning and the end of the line count as Unicode whitespace.
   #"(?s)(?<!\\)<\?.*?\?>")
 
 (def html-declaration-re
-  "A declaration[1032] consists of the string <!, a name consisting of one or more uppercase ASCII letters,
-   whitespace [1033], a string of characters not including the character >, and the character >."
   #"(?s)(?<!\\)<![A-Z]+\s+(?:|[^>]*)>")
+
+(def html-cdata-section-re
+  #"(?s)(?<!\\)<!\[CDATA\[.*?]]>")
 
 (def html-tag-re
   (re-pattern (str "(?:" html-open-tag-re "|"
                          html-closing-tag-re "|"
                          html-comment-re "|"
                          html-processing-instruction-re "|"
-                         html-declaration-re ")")))
+                         html-declaration-re "|"
+                         html-cdata-section-re ")")))
 
 (defn html
   [string]
