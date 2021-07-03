@@ -403,6 +403,32 @@ OK  The beginning and the end of the line count as Unicode whitespace.
                :pattern reference-link-re}
         label (assoc :label label)))))
 
+(def absolute-uri-re
+  (re-pattern (str #"\p{Alpha}[\p{Alnum}+.-]{1,31}" ":"
+                   #"[\S&&[^\p{Cntrl}<>]]*")))
+
+(def email-address-re
+  (re-pattern (str "[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+"
+                   "@"
+                   "[a-zA-Z0-9]"
+                   "(?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?"
+                   "(?:"
+                     #"\.[a-zA-Z0-9]"
+                     "(?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?"
+                   ")*")))
+
+(def autolink-re
+  (re-pattern (str "<(" absolute-uri-re "|" email-address-re ")>")))
+
+(defn autolink
+  [string]
+  (when string
+    (when-let [[_ uri] (re-find autolink-re string)]
+      {:tag :auto
+       :pattern autolink-re
+       :uri uri
+       :label (java.net.URLDecoder/decode uri)})))
+
 (defn text
   [string]
   (when string
@@ -418,5 +444,6 @@ OK  The beginning and the end of the line count as Unicode whitespace.
                      reference-link
                      emphasis
                      strong-emphasis
+                     autolink
                      text))))
 

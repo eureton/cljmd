@@ -664,6 +664,57 @@
                    (= text "abc")
                    (= destination "xyz"))))))))
 
+(deftest autolink-test
+  (testing "URI"
+    (testing "valid URIs"
+      (are [s] (= s (->> (str "<" s ">") autolink :uri))
+           "http://abc.xyz.123"
+           "http://abc.xyz.123/test?q=hello&id=22&boolean"
+           "irc://abc.xyz:2233/123"
+           "MAILTO:ABC@XYZ.123"
+           "a+b+c:d"
+           "made-up-scheme://abc,xyz"
+           "http://../"
+           "localhost:5001/abc"))
+
+    (testing "invalid URIs"
+      (are [s] (nil? (autolink s))
+           "<>"
+           "< http://abc.xyz >"
+           "<m:abc>"
+           "<abc.xyz.123>"))
+
+    (testing "not wrapped in <>"
+      (are [s] (nil? (autolink s))
+           "http://xyz.com"
+           "abc@qpr.xyz.com"))
+
+    (testing "contains space"
+      (is (nil? (autolink "<http://abc.xyz/qpr jkl>"))))
+
+    (testing "backslash escape"
+      (is (let [s "http://example.com/\\[\\"]
+            (= s (->> (str "<" s ">") autolink :uri)))))
+
+    (testing "label"
+      (testing "nothing to decode"
+        (is (let [res (autolink "<https://abc.xyz?q=1>")]
+              (= (:label res)
+                 (:uri res)))))
+
+      (testing "percent decoding"
+        (is (= (->> "<https://a%09b%0Dc%0A.%20x%5By%5Cz?q=%3C1%3E>" autolink :label)
+               "https://a\tb\rc\n. x[y\\z?q=<1>")))))
+
+  (testing "email address"
+    (testing "valid addresses"
+      (are [s] (= s (->> (str "<" s ">") autolink :uri))
+           "abc@xyz.example.com"
+           "abc+special@Xyz.123-xyz0.com"))
+
+    (testing "backslash escape"
+      (is (nil? (autolink "<foo\\+@bar.example.com>"))))))
+
 (deftest text-test
   (testing "puns nil"
     (is (nil? (text nil))))
