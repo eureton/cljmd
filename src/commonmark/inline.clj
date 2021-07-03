@@ -404,27 +404,8 @@ OK  The beginning and the end of the line count as Unicode whitespace.
         label (assoc :label label)))))
 
 (def absolute-uri-re
-  (let [unreserved #"[\p{Alnum}._~-]"
-        pct-encoded #"%[\p{XDigit}]{2}"
-        sub-delims "[!$&'()*+,;=]"
-        pchar (str "(?:" unreserved "|" pct-encoded "|" sub-delims "|[:@])")
-        segment-nz (str pchar "+")
-        segment (str pchar "*")
-        port "[0-9]*"
-        host (str "(?:" unreserved "|" pct-encoded "|" sub-delims ")*")
-        userinfo (str "(?:" unreserved "|" pct-encoded "|" sub-delims "|:)*")
-        path-empty ""
-        path-rootless (str segment-nz "(?:/" segment ")*")
-        path-absolute (str "/(?:" segment-nz "(?:/" segment ")*)?")
-        path-abempty (str "(?:/" segment ")*")
-        authority (str "(?:" userinfo "@)?" host "(?::" port ")?")
-        scheme #"\p{Alpha}[\p{Alnum}+.-]*"
-        hier-part (str "(?://" authority path-abempty "|" path-absolute "|" path-rootless "|" path-empty ")")
-        query (str "(?:" pchar "|[/?])*")
-        fragment (str "(?:" pchar "|[/?])*")]
-    (re-pattern (str scheme ":" hier-part
-                     "(?:\\?" query ")?"
-                     "(?:#" fragment ")?"))))
+  (re-pattern (str #"\p{Alpha}[\p{Alnum}+.-]{1,31}" ":"
+                   #"[\S&&[^\p{Cntrl}<>]]*")))
 
 (def email-address-re
   (re-pattern (str "[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+"
@@ -445,7 +426,8 @@ OK  The beginning and the end of the line count as Unicode whitespace.
     (when-let [[_ uri] (re-find autolink-re string)]
       {:tag :auto
        :pattern autolink-re
-       :uri uri})))
+       :uri uri
+       :label (java.net.URLDecoder/decode uri)})))
 
 (defn text
   [string]

@@ -664,28 +664,6 @@
                    (= text "abc")
                    (= destination "xyz"))))))))
 
-(comment
-These are not autolinks:
-
-<>
-<p>&lt;&gt;</p>
-
-< http://foo.bar >
-<p>&lt; http://foo.bar &gt;</p>
-
-<m:abc>
-<p>&lt;m:abc&gt;</p>
-
-<foo.bar.baz>
-<p>&lt;foo.bar.baz&gt;</p>
-
-http://example.com
-<p>http://example.com</p>
-
-foo@bar.example.com
-<p>foo@bar.example.com</p>
-  )
-
 (deftest autolink-test
   (testing "URI"
     (testing "valid URIs"
@@ -699,12 +677,31 @@ foo@bar.example.com
            "http://../"
            "localhost:5001/abc"))
 
+    (testing "invalid URIs"
+      (are [s] (nil? (autolink s))
+           "<>"
+           "< http://abc.xyz >"
+           "<m:abc>"
+           "<abc.xyz.123>"
+           "http://xyz.com"
+           "abc@qpr.xyz.com"))
+
     (testing "contains space"
       (is (nil? (autolink "<http://abc.xyz/qpr jkl>"))))
 
     (testing "backslash escape"
       (is (let [s "http://example.com/\\[\\"]
-            (= s (->> (str "<" s ">") autolink :uri))))))
+            (= s (->> (str "<" s ">") autolink :uri)))))
+
+    (testing "label"
+      (testing "nothing to decode"
+        (is (let [res (autolink "<https://abc.xyz?q=1>")]
+              (= (:label res)
+                 (:uri res)))))
+
+      (testing "percent decoding"
+        (is (= (->> "<https://a%09b%0Dc%0A.%20x%5By%5Cz?q=%3C1%3E>" autolink :label)
+               "https://a\tb\rc\n. x[y\\z?q=<1>")))))
 
   (testing "email address"
     (testing "valid addresses"
