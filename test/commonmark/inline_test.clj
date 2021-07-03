@@ -769,6 +769,27 @@
                "<p a#c=xyz>"
                "<p a*c=xyz>")))
 
+      (comment "
+                  Entity and numeric character references are preserved in HTML attributes:
+
+                  Example 627 [1063]Try It
+                  foo <a href= "&ouml;">
+
+                  <p>foo <a href= "&ouml;"></p>
+
+                     Backslash escapes do not work in HTML attributes:
+
+                        Example 628 [1064]Try It
+                        foo <a href= "\*">
+                        
+                        <p>foo <a href="\*"></p>
+
+                           Example 629 [1065]Try It
+                           <a href= "\"">
+
+                           <p>&lt;a href=&quot;&quot;&quot;&gt;</p>
+
+               ")
       (testing "value"
         (testing "unquoted"
           (testing "valid"
@@ -776,7 +797,8 @@
                  "<p abc=xyz>"
                  "<p abc = xyz>"
                  "<p abc = xyz123>"
-                 "<p abc=@#$%^&*()_+->"))
+                 "<p abc=@#$%^&*()_+->"
+                 "<p abc=&quot;>"))
 
           (testing "invalid"
             (are [s] (not= s (-> s html :content))
@@ -794,7 +816,8 @@
                "<p abc = 'xyz \"123\"'>"
                "<p abc = 'xyz \"123\"=123'>"
                "<p abc = 'xyz \"123\"=123 <em>'>"
-               "<p abc = 'xyz \"123\"=123 <em> `ls`'>"))
+               "<p abc = 'xyz \"123\"=123 <em> `ls`'>"
+               "<p abc = '&quot;'>"))
 
         (testing "double-quoted"
           (are [s] (= s (-> s html :content))
@@ -802,7 +825,8 @@
                "<p abc = \"xyz\">"
                "<p abc = \"xyz '123'=123\">"
                "<p abc = \"xyz '123'=123 <em>\">"
-               "<p abc = \"xyz '123'=123 <em> `ls`\">"))))
+               "<p abc = \"xyz '123'=123 <em> `ls`\">"
+               "<p abc = \"&quot;\">"))))
 
     (testing "whitespace"
       (testing "misplaced"
