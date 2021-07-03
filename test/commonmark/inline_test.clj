@@ -715,6 +715,124 @@
     (testing "backslash escape"
       (is (nil? (autolink "<foo\\+@bar.example.com>"))))))
 
+(deftest html-test
+  (testing "open tags"
+    (testing "simple open"
+      (are [s] (= s (-> s html :content))
+           "<a>"
+           "<p>"
+           "<bab>"
+           "<c2c>"))
+
+    (testing "empty"
+      (are [s] (= s (-> s html :content))
+           "<a/>"
+           "<b2/>"))
+
+    (testing "whitespace"
+      (are [s] (= s (-> s html :content))
+           "<a  />"
+           "<b2\ndata=\"xyz\" >"))
+
+    (testing "tag names"
+      (testing "valid"
+        (are [s] (= s (-> s html :content))
+             "<p>"
+             "<p2>"
+             "<p->"
+             "<pP>"))
+
+      (testing "invalid"
+        (are [s] (nil? (html s))
+             "<_>"
+             "<p_>"
+             "<-p>"
+             "<2p>")))
+
+    (testing "attributes"
+      (testing "name"
+        (testing "valid"
+          (are [s] (= s (-> s html :content))
+               "<p abc=xyz>"
+               "<p _bc=xyz>"
+               "<p :bc=xyz>"
+               "<p a2c=xyz>"
+               "<p a.c=xyz>"
+               "<p a:c=xyz>"
+               "<p a-c=xyz>"))
+
+        (testing "invalid"
+          (are [s] (nil? (html s))
+               "<p 2bc=xyz>"
+               "<p .bc=xyz>"
+               "<p -bc=xyz>"
+               "<p a#c=xyz>"
+               "<p a*c=xyz>")))
+
+      (testing "value"
+        (testing "unquoted"
+          (testing "valid"
+            (are [s] (= s (-> s html :content))
+                 "<p abc=xyz>"
+                 "<p abc = xyz>"
+                 "<p abc = xyz123>"
+                 "<p abc=@#$%^&*()_+->"))
+
+          (testing "invalid"
+            (are [s] (not= s (-> s html :content))
+                 "<p abc=xy'z>"
+                 "<p abc=xy\"z>"
+                 "<p abc=xy=z>"
+                 "<p abc=xy<z>"
+                 "<p abc=xy>z>"
+                 "<p abc=xy`z>")))
+
+        (testing "single-quoted"
+          (are [s] (= s (-> s html :content))
+               "<p abc='xyz'>"
+               "<p abc = 'xyz'>"
+               "<p abc = 'xyz \"123\"'>"
+               "<p abc = 'xyz \"123\"=123'>"
+               "<p abc = 'xyz \"123\"=123 <em>'>"
+               "<p abc = 'xyz \"123\"=123 <em> `ls`'>"))
+
+        (testing "double-quoted"
+          (are [s] (= s (-> s html :content))
+               "<p abc=\"xyz\">"
+               "<p abc = \"xyz\">"
+               "<p abc = \"xyz '123'=123\">"
+               "<p abc = \"xyz '123'=123 <em>\">"
+               "<p abc = \"xyz '123'=123 <em> `ls`\">"))))
+
+    (testing "whitespace"
+      (testing "misplaced"
+        (are [s] (nil? (html s))
+                 "< p>"
+                 "<\np>"
+                 "<a/ >"))
+
+      (testing "missing"
+        (is (nil? (html "<p a='b'c='d'>"))))))
+
+  (testing "closing tags"
+    (testing "tag names"
+      (testing "valid"
+        (are [s] (= s (-> s html :content))
+             "</p>"
+             "</p2>"
+             "</p->"
+             "</pP>"))
+
+      (testing "invalid"
+        (are [s] (nil? (html s))
+             "</_>"
+             "</p_>"
+             "</-p>"
+             "</2p>")))
+
+    (testing "attributes"
+      (is (nil? (html "</p abc=xyz>"))))))
+
 (deftest text-test
   (testing "puns nil"
     (is (nil? (text nil))))

@@ -429,6 +429,39 @@ OK  The beginning and the end of the line count as Unicode whitespace.
        :uri uri
        :label (java.net.URLDecoder/decode uri)})))
 
+(def html-tag-name-re
+  #"[a-zA-Z][\w-&&[^_]]*")
+
+(def html-open-tag-re
+  (let [attribute-name #"[a-zA-Z_:][\w.:-]*"
+        unquoted-value #"[\p{Print}&&[^\s\"'=<>`]]+"
+        single-quoted-value #"'[\p{Print}&&[^']]*'"
+        double-quoted-value #"\"[\p{Print}&&[^\"]]*\""
+        attribute-value (str "(?:" unquoted-value "|"
+                                   single-quoted-value "|"
+                                   double-quoted-value ")")
+        attribute-value-spec (str #"\s*=\s*" attribute-value)
+        attribute (str #"\s+" attribute-name "(?:" attribute-value-spec ")?")]
+    (re-pattern (str "<" html-tag-name-re
+                         "(?:" attribute ")*"
+                         #"\s*"
+                         "/?" ">"))))
+
+(def html-closing-tag-re
+  (re-pattern (str "</" html-tag-name-re #"\s*" ">")))
+
+(def html-tag-re
+  (re-pattern (str "(?:" html-open-tag-re "|"
+                         html-closing-tag-re ")")))
+
+(defn html
+  [string]
+  (when string
+    (when-some [html (re-find html-tag-re string)]
+      {:tag :html
+       :pattern html-tag-re
+       :content html})))
+
 (defn text
   [string]
   (when string
@@ -445,5 +478,6 @@ OK  The beginning and the end of the line count as Unicode whitespace.
                      emphasis
                      strong-emphasis
                      autolink
+                     html
                      text))))
 
