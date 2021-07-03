@@ -682,7 +682,10 @@
            "<>"
            "< http://abc.xyz >"
            "<m:abc>"
-           "<abc.xyz.123>"
+           "<abc.xyz.123>"))
+
+    (testing "not wrapped in <>"
+      (are [s] (nil? (autolink s))
            "http://xyz.com"
            "abc@qpr.xyz.com"))
 
