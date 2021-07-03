@@ -454,7 +454,7 @@ OK  The beginning and the end of the line count as Unicode whitespace.
   #"(?:(?s)<!--(?:|(?!>)(?!->)(?!.*--.*-->).*?(?<!-))-->)")
 
 (def html-processing-instruction-re
-  #"(?s)<\?.*?\?>")
+  #"(?s)(?<!\\)<\?.*?\?>")
 
 (def html-tag-re
   (re-pattern (str "(?:" html-open-tag-re "|"

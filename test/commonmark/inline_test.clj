@@ -863,7 +863,12 @@
            "<? x?y ?>"
            "<? x<?y ?>"
            "<? x? >y ?>"
-           "<? x<??y ?>"))))
+           "<? x<??y ?>"))
+
+    (testing "invalid"
+      (are [s] (nil? (html s))
+           "\\<? x ?>"
+           "<\\? x ?>"))))
 
 (deftest text-test
   (testing "puns nil"
