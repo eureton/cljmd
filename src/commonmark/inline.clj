@@ -474,7 +474,7 @@ OK  The beginning and the end of the line count as Unicode whitespace.
   [string]
   (when string
     (when-some [html (re-find html-tag-re string)]
-      {:tag :html
+      {:tag :html-inline
        :pattern html-tag-re
        :content html})))
 
