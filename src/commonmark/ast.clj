@@ -6,13 +6,14 @@
             [commonmark.blockrun :as blockrun]
             [commonmark.ast.common :as common]
             [commonmark.ast.block :as block]
-            [commonmark.ast.inline :as inline]))
+            [commonmark.ast.inline :as inline]
+            [commonmark.ast.postprocessing :as postp]))
 
 (def has-inline?
   "Returns true if the node has inline content which may be expanded into AST
    form, false otherwise."
   (every-pred common/leaf?
-              (comp not #{:txt} :tag :data)))
+              (comp not #{:txt :hbr} :tag :data)))
 
 (defn expand-inline
   "Assuming node contains inline Markdown content:
@@ -26,8 +27,10 @@
 (defn from-string
   "Parses markdown AST from string."
   [string]
-  (->> string
-       blockrun/parse
-       block/from-blockrun
-       (treeduce/map (ufn/to-fix has-inline? expand-inline))))
+  (reduce #(treeduce/map %2 %1)
+          (->> string
+               blockrun/parse
+               block/from-blockrun
+               (treeduce/map (ufn/to-fix has-inline? expand-inline)))
+          postp/queue))
 

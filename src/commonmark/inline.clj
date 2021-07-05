@@ -3,7 +3,7 @@
             [commonmark.util :as util]))
 
 (def line-ending-re
-  #"(?:\r\n|\n|\r)")
+  #"(?:\r\n|\n|\r|$)")
 
 (comment "Code spans
 
@@ -474,8 +474,10 @@ OK  The beginning and the end of the line count as Unicode whitespace.
                          html-cdata-section-re ")")))
 
 (def hard-line-break-re
-  (re-pattern (str "(?:" "  " line-ending-re "|"
-                         #"\\" line-ending-re ")")) )
+  (re-pattern (str "(?:"
+                     "  " line-ending-re "|"
+                     #"\\" line-ending-re
+                   ")")) )
 
 (defn hard-line-break
   [string]

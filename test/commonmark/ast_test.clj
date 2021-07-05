@@ -99,5 +99,14 @@
                                   (node {:tag :txt :content ")"})])
                            (node {:tag :txt :content " xyz "})
                            (node {:tag :em}
-                                 [(node {:tag :txt :content "pqr"})])])]))))))
+                                 [(node {:tag :txt :content "pqr"})])])])))))
+
+  (testing "post-processing"
+    (testing "hard line break at end of block"
+      (is (= (map (comp :tag :data)
+                  (-> "`123` xyz *abc*  " from-string (get-in [:children 0 :children])))
+             [:cs :txt :em])))
+
+    (testing "block containing only a hard line break"
+      (is (nil? (-> "  " from-string (get-in [:children 0 :children])))))))
 

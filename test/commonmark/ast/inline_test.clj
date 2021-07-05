@@ -33,10 +33,6 @@
                     (node {:tag :img
                            :destination "abc"} [txt-node]))))))
 
-  (testing "hard line break at end of block"
-    (is (= (->> "`123` xyz *abc*  \n" from-string :children (map (comp :tag :data)))
-                [:cs :txt :em])))
-
   (testing "nested emphasis"
     (let [em-tree (node {:tag :em}
                         [(node {:tag :txt :content "("})

@@ -53,6 +53,11 @@
                   (derive :li :container)
                   atom))
 
+(defn block?
+  "Returns true if node represents a block entity, false otherwise."
+  [node]
+  (isa? (deref ontology) (:tag (:data node)) :block))
+
 (defn pprint-content
   "Shorthand for printing the :content value of entities to *out*."
   [node]
