@@ -916,6 +916,19 @@
            "\\<![CDATA[X x]]>"
            "<\\![CDATA[X x]]>"))))
 
+(deftest hard-line-break-test
+  (testing "puns nil"
+    (is (nil? (hard-line-break nil))))
+
+  (testing "standard"
+    (are [s c] (= c (-> s hard-line-break :content))
+         "abc  \nxyz"   "  \n"
+         "abc  \rxyz"   "  \r"
+         "abc  \r\nxyz" "  \r\n"
+         "abc\\\nxyz"   "\\\n"
+         "abc\\\rxyz"   "\\\r"
+         "abc\\\r\nxyz" "\\\r\n")))
+
 (deftest text-test
   (testing "puns nil"
     (is (nil? (text nil))))

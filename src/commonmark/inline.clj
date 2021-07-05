@@ -2,6 +2,9 @@
   (:require [clojure.string :as string]
             [commonmark.util :as util]))
 
+(def line-ending-re
+  #"(?:\r\n|\n|\r)")
+
 (comment "Code spans
 
 OK  A backtick string is a string of one or more backtick characters (`)
@@ -470,6 +473,16 @@ OK  The beginning and the end of the line count as Unicode whitespace.
                          html-declaration-re "|"
                          html-cdata-section-re ")")))
 
+(def hard-line-break-re
+  (re-pattern (str "(?:" "  " line-ending-re "|"
+                         #"\\" line-ending-re ")")) )
+
+(defn hard-line-break
+  [string]
+  (some->> string
+           (re-find hard-line-break-re)
+           (hash-map :tag :hbr :pattern hard-line-break-re :content)))
+
 (defn html
   [string]
   (when string
@@ -489,6 +502,7 @@ OK  The beginning and the end of the line count as Unicode whitespace.
   [string]
   (some->> string
            ((some-fn code-span
+                     hard-line-break
                      inline-link
                      reference-link
                      emphasis
