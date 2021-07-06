@@ -113,7 +113,14 @@
              [(node {:tag :em}
                     [(node {:tag :txt :content "abc"})
                      (node {:tag :hbr :content "  \r\n"})
-                     (node {:tag :txt :content "xyz"})])]))))
+                     (node {:tag :txt :content "xyz"})])])))
+
+    (testing "inside code span"
+      (are [s c] (= (-> s from-string (get-in [:children 0 :children]))
+                    [(node {:tag :cs}
+                           [(node {:tag :txt :content c})])])
+           "`abc  \nxyz`" "abc    xyz"
+           "`abc\\\nxyz`" "abc\\  xyz")))
 
   (testing "post-processing"
     (testing "hard line break at end of block"
