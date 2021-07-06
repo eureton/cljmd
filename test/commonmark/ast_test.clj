@@ -127,7 +127,16 @@
                     [(node {:tag :html-inline}
                            [(node {:tag :txt :content s})])])
            "<a href=\"x  \r\nyz\">"
-           "<a href=\"x\\\r\nyz\">")))
+           "<a href=\"x\\\r\nyz\">"))
+
+    (testing "inside inline link"
+      (are [s c] (= (-> s from-string (get-in [:children 0 :children 0]))
+                    (node {:tag :a :destination "123"}
+                          [(node {:tag :txt :content "abc"})
+                           (node {:tag :hbr :content c})
+                           (node {:tag :txt :content "xyz"})]))
+           "[abc  \nxyz](123)" "  \r\n"
+           "[abc\\\nxyz](123)" "\\\r\n")))
 
   (testing "post-processing"
     (testing "hard line break at end of block"
