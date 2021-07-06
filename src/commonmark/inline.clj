@@ -36,7 +36,7 @@ OK      a single space character is removed from the front and back.")
                spaced-content non-spaced-content] (re-find code-span-re string)]
     {:backtick-string backtick-string
      :content (-> (or spaced-content non-spaced-content)
-                  (string/replace #"(?:\r|\n|\r\n)"  " "))
+                  (string/replace #"(?:\r\n|\r|\n)"  " "))
      :tag :cs
      :pattern code-span-re}))
 
@@ -477,13 +477,22 @@ OK  The beginning and the end of the line count as Unicode whitespace.
   (re-pattern (str "(?:"
                      #"(?<=\p{Print})  " line-ending-re "|"
                      #"\\" line-ending-re
-                   ")")) )
+                   ")")))
 
 (defn hard-line-break
   [string]
   (some->> string
            (re-find hard-line-break-re)
            (hash-map :tag :hbr :pattern hard-line-break-re :content)))
+
+(def soft-line-break-re
+  (re-pattern (str #"(?<=.)(?<!(?:[ ]{2,}|\\))" line-ending-re #"(?=.)")))
+
+(defn soft-line-break
+  [string]
+  (some->> string
+           (re-find soft-line-break-re)
+           (hash-map :tag :sbr :pattern soft-line-break-re :content)))
 
 (defn html
   [string]
@@ -511,5 +520,6 @@ OK  The beginning and the end of the line count as Unicode whitespace.
                      autolink
                      html
                      hard-line-break
+                     soft-line-break
                      text))))
 

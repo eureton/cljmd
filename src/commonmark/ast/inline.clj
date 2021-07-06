@@ -60,7 +60,7 @@
     (node (select-keys input [:tag :destination :title])
           (:children (inflate rolled (merge overlooked tokens))))))
 
-(defmethod inflate :hbr
+(defmethod inflate :break
   [input _]
   (node (select-keys input [:tag :content])))
 

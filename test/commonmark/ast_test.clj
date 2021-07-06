@@ -119,8 +119,8 @@
       (are [s c] (= (-> s from-string (get-in [:children 0 :children]))
                     [(node {:tag :cs}
                            [(node {:tag :txt :content c})])])
-           "`abc  \nxyz`" "abc    xyz"
-           "`abc\\\nxyz`" "abc\\  xyz"))
+           "`abc  \nxyz`" "abc   xyz"
+           "`abc\\\nxyz`" "abc\\ xyz"))
 
     (testing "inside raw HTML"
       (are [s] (= (-> s from-string (get-in [:children 0 :children]))
@@ -137,6 +137,56 @@
                            (node {:tag :txt :content "xyz"})]))
            "[abc  \nxyz](123)" "  \r\n"
            "[abc\\\nxyz](123)" "\\\r\n")))
+
+  (testing "soft line break"
+    (testing "standard"
+      (is (= (-> "abc\nxyz" from-string (get-in [:children 0 :children]))
+             [(node {:tag :txt :content "abc"})
+              (node {:tag :sbr :content "\r\n"})
+              (node {:tag :txt :content "xyz"})])))
+
+    (testing "spaces at beginning of next line"
+      (is (= (-> "abc\n xyz" from-string (get-in [:children 0 :children]))
+             [(node {:tag :txt :content "abc"})
+              (node {:tag :sbr :content "\r\n"})
+              (node {:tag :txt :content "xyz"})])))
+
+    (testing "inside emphasis"
+      (is (= (-> "*abc\nxyz*" from-string (get-in [:children 0 :children]))
+             [(node {:tag :em}
+                    [(node {:tag :txt :content "abc"})
+                     (node {:tag :sbr :content "\r\n"})
+                     (node {:tag :txt :content "xyz"})])])))
+
+    (testing "inside code span"
+      (is (= (-> "`abc\nxyz`" from-string (get-in [:children 0 :children]))
+             [(node {:tag :cs}
+                    [(node {:tag :txt :content "abc xyz"})])])))
+
+    (testing "inside raw HTML"
+      (are [e] (= (-> (str "<a href=\"xyz" e "abc\">")
+                      from-string
+                      (get-in [:children 0 :children 0]))
+                  (node {:tag :html-inline}
+                        [(node {:tag :txt :content "<a href=\"xyz\r\nabc\">"})]))
+           "\n"
+;          "\r"
+           "\r\n"))
+
+    (testing "inside inline link"
+      (are [e] (let [res (from-string (str "[abc" e "xyz](123)"))]
+                 (and (= (get-in res [:children 0 :children 0 :data])
+                         {:tag :a :destination "123"})
+                      (= (map (comp :tag :data)
+                              (get-in res [:children 0 :children 0 :children]))
+                         [:txt :sbr :txt])
+                      (= (get-in res [:children 0 :children 0 :children 0 :data :content])
+                         "abc")
+                      (= (get-in res [:children 0 :children 0 :children 2 :data :content])
+                         "xyz")))
+           "\n"
+           "\r"
+           "\r\n")))
 
   (testing "post-processing"
     (testing "hard line break at end of block"

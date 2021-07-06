@@ -34,6 +34,11 @@
                   (derive :em     :inline)
                   (derive :strong :inline)
                   (derive :cs     :inline)
+                  (derive :hbr    :inline)
+                  (derive :sbr    :inline)
+
+                  (derive :hbr    :break)
+                  (derive :sbr    :break)
 
                   (derive :a      :link)
                   (derive :img    :link)
