@@ -16,12 +16,15 @@
                 ast))
 
 (def empty-text?
-  "True if the node is a paragraph which has no children."
+  "True if the parameter is a text node whose :content is either nil or \"\"."
   (every-pred (comp #{:txt} :tag :data)
               (comp empty? :content :data)))
 
 (def empty-paragraph?
-  "True if the node is a paragraph which has no children."
+  "True if all of the following apply to the parameter:
+     * is a paragraph
+     * either has no children or all its children are empty text nodes
+   Returns false otherwise."
   (every-pred (comp #{:p} :tag :data)
               (some-fn (comp nil? :children)
                        (comp empty? #(remove empty-text? %) :children))))
@@ -34,8 +37,6 @@
 
 (def queue
   "A collection of post-processing fixes to apply to the AST."
-  [
-   hbr-fix
-   empty-p-fix
-   ])
+  [hbr-fix
+   empty-p-fix])
 
