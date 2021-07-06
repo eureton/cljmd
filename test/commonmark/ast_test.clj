@@ -101,6 +101,13 @@
                            (node {:tag :em}
                                  [(node {:tag :txt :content "pqr"})])])])))))
 
+  (testing "hard line break"
+    (testing "spaces at beginning of next line"
+      (is (= (-> "abc  \n     xyz" from-string (get-in [:children 0 :children]))
+             [(node {:tag :txt :content "abc"})
+              (node {:tag :hbr :content "  \r\n"})
+              (node {:tag :txt :content "xyz"})]))))
+
   (testing "post-processing"
     (testing "hard line break at end of block"
       (is (= (map (comp :tag :data)

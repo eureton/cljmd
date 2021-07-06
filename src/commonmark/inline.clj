@@ -497,7 +497,7 @@ OK  The beginning and the end of the line count as Unicode whitespace.
   [string]
   (when string
     {:tag :txt
-     :pattern #".*"
+     :pattern #"(?s).*"
      :content (string/replace string #"\\(?=\p{Punct})" "")}))
 
 (defn tagger

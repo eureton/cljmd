@@ -2,6 +2,7 @@
   (:require [clojure.string :as string]
             [commonmark.ast.common :as common]
             [commonmark.block :as block]
+            [commonmark.inline :as inline]
             [commonmark.blockrun :as blockrun]
             [commonmark.blockrun.entry :as blockrun.entry]))
 
@@ -33,12 +34,15 @@
        common/node))
 
 (defmethod from-blockrun-entry :p
-  [[tag lines]]
-  (->> lines
-       (map (comp :content block/paragraph-line))
-       (string/join "\r\n")
-       (hash-map :tag tag :content)
-       common/node))
+  [[_ lines]]
+  (let [fetcher (comp string/join
+                      #(map :content %)
+                      (juxt block/paragraph-line inline/hard-line-break))]
+    (->> lines
+         (map fetcher)
+         (string/join "\r\n")
+         (hash-map :tag :p :content)
+         common/node)))
 
 (defmethod from-blockrun-entry :blank
   [[_ _]]
