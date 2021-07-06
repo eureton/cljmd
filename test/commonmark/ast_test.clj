@@ -131,9 +131,25 @@
 
   (testing "post-processing"
     (testing "hard line break at end of block"
-      (is (= (map (comp :tag :data)
-                  (-> "`123` xyz *abc*  " from-string (get-in [:children 0 :children])))
-             [:cs :txt :em])))
+      (are [s cs] (= cs (-> s from-string (get-in [:children 0 :children])))
+           "*abc*  "    [(node {:tag :em}
+                               [(node {:tag :txt :content "abc"})])]
+           "abc  "      [(node {:tag :txt :content "abc"})]
+           "  "         nil
+           "*abc*\\"    [(node {:tag :em}
+                               [(node {:tag :txt :content "abc"})])
+                         (node {:tag :txt :content "\\"})]
+           "abc\\"      [(node {:tag :txt :content "abc\\"})]
+           "\\"         [(node {:tag :txt :content "\\"})]
+           "## *abc*  " [(node {:tag :em}
+                               [(node {:tag :txt :content "abc"})])]
+           "## abc  "   [(node {:tag :txt :content "abc"})]
+           "##   "      nil
+           "## *abc*\\" [(node {:tag :em}
+                               [(node {:tag :txt :content "abc"})])
+                         (node {:tag :txt :content "\\"})]
+           "## abc\\"   [(node {:tag :txt :content "abc\\"})]
+           "## \\"      [(node {:tag :txt :content "\\"})]))
 
     (testing "block containing only a hard line break"
       (is (nil? (-> "  " from-string (get-in [:children 0 :children])))))

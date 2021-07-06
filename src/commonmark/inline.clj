@@ -475,7 +475,7 @@ OK  The beginning and the end of the line count as Unicode whitespace.
 
 (def hard-line-break-re
   (re-pattern (str "(?:"
-                     "  " line-ending-re "|"
+                     #"(?<=\p{Print})  " line-ending-re "|"
                      #"\\" line-ending-re
                    ")")) )
 

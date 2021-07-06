@@ -47,6 +47,14 @@
          (hash-map :tag :p :content)
          common/node)))
 
+(defmethod from-blockrun-entry :atxh
+  [[_ lines]]
+  (->> lines
+       (map (comp :content block/atx-heading))
+       (string/join "\r\n")
+       (hash-map :tag :atxh :content)
+       common/node))
+
 (defmethod from-blockrun-entry :blank
   [[_ _]]
   (common/node {:tag :blank}))

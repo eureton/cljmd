@@ -927,7 +927,14 @@
          "abc  \r\nxyz" "  \r\n"
          "abc\\\nxyz"   "\\\n"
          "abc\\\rxyz"   "\\\r"
-         "abc\\\r\nxyz" "\\\r\n")))
+         "abc\\\r\nxyz" "\\\r\n"))
+
+  (testing "alone on a line"
+    (testing "space"
+      (is (nil? (hard-line-break "  \nabc"))))
+
+    (testing "backslash"
+      (is (some? (hard-line-break "\\\nabc"))))))
 
 (deftest text-test
   (testing "puns nil"
