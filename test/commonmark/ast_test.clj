@@ -139,7 +139,8 @@
            "*abc*\\"    [(node {:tag :em}
                                [(node {:tag :txt :content "abc"})])
                          (node {:tag :txt :content "\\"})]
-           "abc\\"      [(node {:tag :txt :content "abc\\"})]
+           "abc\\"      [(node {:tag :txt :content "abc"})
+                         (node {:tag :txt :content "\\"})]
            "\\"         [(node {:tag :txt :content "\\"})]
            "## *abc*  " [(node {:tag :em}
                                [(node {:tag :txt :content "abc"})])]
@@ -148,7 +149,8 @@
            "## *abc*\\" [(node {:tag :em}
                                [(node {:tag :txt :content "abc"})])
                          (node {:tag :txt :content "\\"})]
-           "## abc\\"   [(node {:tag :txt :content "abc\\"})]
+           "## abc\\"   [(node {:tag :txt :content "abc"})
+                         (node {:tag :txt :content "\\"})]
            "## \\"      [(node {:tag :txt :content "\\"})]))
 
     (testing "block containing only a hard line break"

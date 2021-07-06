@@ -25,24 +25,17 @@
    backslash."
   (block-with-hbr-end? #(string/includes? % "\\")))
 
-(defn incorporate-backslash
-  ""
-  [node]
-  (let [hbr-index (dec (count (:children node)))
-        penultimate-txt? (comp #{:txt} :tag :data peek pop)
-        append-to-last #(update-in % [(dec (count %)) :data :content] str "\\")]
-    (-> node
-        (update-in [:children hbr-index :data] assoc :tag :txt :content "\\")
-        (update :children (ufn/to-fix penultimate-txt? (comp append-to-last pop))))))
-
 (defn hbr-fix
   "Deals with :hbr entities from the end of blocks."
   [ast]
-  (treeduce/map (ufn/to-fix block-with-space-hbr-end?
-                            #(update % :children pop)
-                            block-with-backslash-hbr-end?
-                            incorporate-backslash)
-                ast))
+  (let [pop-hbr #(update % :children pop)
+        push-bslash #(update % :children conj (common/node {:tag :txt
+                                                            :content "\\"}))]
+    (treeduce/map (ufn/to-fix block-with-space-hbr-end?
+                              pop-hbr
+                              block-with-backslash-hbr-end?
+                              (comp push-bslash pop-hbr))
+                  ast)))
 
 (def empty-text?
   "True if the parameter is a text node whose :content is either nil or \"\"."
