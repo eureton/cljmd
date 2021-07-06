@@ -1,6 +1,7 @@
 (ns commonmark.ast.block
   (:require [clojure.string :as string]
             [commonmark.ast.common :as common]
+            [commonmark.block :as block]
             [commonmark.blockrun :as blockrun]
             [commonmark.blockrun.entry :as blockrun.entry]))
 
@@ -30,4 +31,16 @@
        (string/join "\r\n")
        (hash-map :tag tag :content)
        common/node))
+
+(defmethod from-blockrun-entry :p
+  [[tag lines]]
+  (->> lines
+       (map (comp :content block/paragraph-line))
+       (string/join "\r\n")
+       (hash-map :tag tag :content)
+       common/node))
+
+(defmethod from-blockrun-entry :blank
+  [[_ _]]
+  (common/node {:tag :blank}))
 

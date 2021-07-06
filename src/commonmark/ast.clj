@@ -13,7 +13,7 @@
   "Returns true if the node has inline content which may be expanded into AST
    form, false otherwise."
   (every-pred common/leaf?
-              (comp not #{:txt :hbr} :tag :data)))
+              (comp not #{:txt :hbr :blank} :tag :data)))
 
 (defn expand-inline
   "Assuming node contains inline Markdown content:

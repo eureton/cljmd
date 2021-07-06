@@ -108,5 +108,10 @@
              [:cs :txt :em])))
 
     (testing "block containing only a hard line break"
-      (is (nil? (-> "  " from-string (get-in [:children 0 :children])))))))
+      (is (nil? (-> "  " from-string (get-in [:children 0 :children])))))
+
+    (testing "empty paragraph"
+      (is (= (map (comp :tag :data)
+                  (-> "- abc\r\n\r\n  \r\n> xyz" from-string :children))
+             [:li :bq])))))
 
