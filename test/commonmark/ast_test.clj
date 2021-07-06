@@ -120,7 +120,14 @@
                     [(node {:tag :cs}
                            [(node {:tag :txt :content c})])])
            "`abc  \nxyz`" "abc    xyz"
-           "`abc\\\nxyz`" "abc\\  xyz")))
+           "`abc\\\nxyz`" "abc\\  xyz"))
+
+    (testing "inside raw HTML"
+      (are [s] (= (-> s from-string (get-in [:children 0 :children]))
+                    [(node {:tag :html-inline}
+                           [(node {:tag :txt :content s})])])
+           "<a href=\"x  \r\nyz\">"
+           "<a href=\"x\\\r\nyz\">")))
 
   (testing "post-processing"
     (testing "hard line break at end of block"

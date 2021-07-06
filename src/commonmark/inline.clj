@@ -437,9 +437,9 @@ OK  The beginning and the end of the line count as Unicode whitespace.
 
 (def html-open-tag-re
   (let [attribute-name #"[a-zA-Z_:][\w.:-]*"
-        unquoted-value #"[\p{Print}&&[^\s\"'=<>`]]+"
-        single-quoted-value #"'[\p{Print}&&[^']]*'"
-        double-quoted-value #"\"[\p{Print}&&[^\"]]*\""
+        unquoted-value #"[^\s\"'=<>`]+"
+        single-quoted-value #"'[^']*'"
+        double-quoted-value #"\"[^\"]*\""
         attribute-value (str "(?:" unquoted-value "|"
                                    single-quoted-value "|"
                                    double-quoted-value ")")
@@ -504,12 +504,12 @@ OK  The beginning and the end of the line count as Unicode whitespace.
   [string]
   (some->> string
            ((some-fn code-span
-                     hard-line-break
                      inline-link
                      reference-link
                      emphasis
                      strong-emphasis
                      autolink
                      html
+                     hard-line-break
                      text))))
 
