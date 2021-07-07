@@ -1,6 +1,7 @@
 (ns commonmark.blockrun
   (:require [clojure.string :as string]
-            [commonmark.block :as block]))
+            [commonmark.block :as block]
+            [commonmark.blockrun.entry :as entry]))
 
 (def zero
   "Identity element of the add binary operation."
@@ -144,6 +145,16 @@
   [x y]
   (fuse-left x y))
 
+(defmethod add [:html-block-begin :html-block-end]
+  [x y]
+  (fuse-left x y))
+
+(defmethod add [:html-block-begin :_]
+  [x y]
+  (if (block/html-block-end (-> x last second first))
+    (concat x y)
+    (fuse-left x y)))
+
 (defmethod add :default
   ([] zero)
   ([x] x)
@@ -176,5 +187,6 @@
   (->> string
        tokenize
        (map from-line)
-       (reduce add)))
+       (reduce add)
+       (map entry/postprocess)))
 

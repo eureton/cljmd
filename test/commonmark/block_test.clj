@@ -310,3 +310,78 @@
     (testing "both quoted and non-quoted indented code blocks"
       (is (false? (paragraph-continuation-text? "abc" ["    qpr" ">     xyz" "    123" ">     top"]))))))
 
+(deftest html-block-begin-test
+  (testing "pun nil"
+    (is (nil? (html-block-begin nil))))
+
+  (testing "variant 1"
+    (testing "tags"
+      (testing "valid"
+        (are [t] (= (-> (str t "xyz") html-block-begin :variant)
+                    1)
+             "<pre>"
+             "<script>"
+             "<style>"))
+
+      (testing "invalid"
+        (are [t] (nil? (html-block-begin (str t "xyz")))
+             "<abc>"
+             "<xyz>"
+             "<>")))
+
+    (testing "capture"
+      (are [s] (let [res (html-block-begin s)]
+                 (and (= 1 (:variant res))
+                      (= s (:content res))))
+           "<pre"
+           "<script"
+           "<style"
+           "<pre>xyz"
+           "<script>xyz"
+           "<style>xyz"
+           "<pre xyz"
+           "<script xyz"
+           "<style xyz"))
+
+    (testing "indentation"
+      (are [s] (let [res (html-block-begin s)]
+                 (and (= 1 (:variant res))
+                      (= s (:content res))))
+           " <pre"
+           "  <pre"
+           "   <pre"))))
+
+(deftest html-block-end-test
+  (testing "pun nil"
+    (is (nil? (html-block-end nil))))
+
+  (testing "variant 1"
+    (testing "tags"
+      (testing "valid"
+        (are [t] (= 1 (-> t html-block-end :variant))
+             "</pre>"
+             "</script>"
+             "</style>"))
+
+      (testing "invalid"
+        (are [t] (nil? (html-block-end (str t "xyz")))
+             "</abc>"
+             "</xyz>"
+             "</>")))
+
+    (testing "capture"
+      (are [s] (let [res (html-block-end s)]
+                 (and (= 1 (:variant res))
+                      (= s (:content res))))
+           "</pre> xyz"
+           "</script> xyz"
+           "</style> xyz"))
+
+    (testing "indentation"
+      (are [s] (let [res (html-block-end s)]
+                 (and (= 1 (:variant res))
+                      (= s (:content res))))
+           " </pre>"
+           "  </pre>"
+           "   </pre>"))))
+

@@ -24,23 +24,27 @@
 (def closing-tag-re
   (re-pattern (str #"(?<!\\)</" tag-name-re #"\s*" ">")))
 
-(def comment-re
-  #"(?:(?s)(?<!\\)<!--(?:|(?!>)(?!->)(?!.*--.*-->).*?(?<!-))-->)")
+(def comment-begin-re #"(?<!\\)<!--")
 
-(def processing-instruction-re
-  #"(?s)(?<!\\)<\?.*?\?>")
+(def comment-end-re #"-->")
 
-(def declaration-re
-  #"(?s)(?<!\\)<![A-Z]+\s+(?:|[^>]*)>")
+(def processing-instruction-begin-re #"(?<!\\)<\?")
 
-(def cdata-section-re
-  #"(?s)(?<!\\)<!\[CDATA\[.*?\]\]>")
+(def processing-instruction-end-re #"\?>")
+
+(def declaration-begin-re #"(?<!\\)<!")
+
+(def declaration-end-re #">")
+
+(def cdata-section-begin-re #"(?<!\\)<!\[CDATA\[")
+
+(def cdata-section-end-re #"\]\]>")
 
 (def tag-re
-  (re-pattern (str "(?:" open-tag-re "|"
-                         closing-tag-re "|"
-                         comment-re "|"
-                         processing-instruction-re "|"
-                         declaration-re "|"
-                         cdata-section-re ")")))
+  (re-pattern (str "(?:(?s)" open-tag-re "|"
+                             closing-tag-re "|"
+                             comment-begin-re #"(?:|(?!>)(?!->)(?!.*--.*-->).*?(?<!-))" comment-end-re "|"
+                             processing-instruction-begin-re ".*?" processing-instruction-end-re "|"
+                             declaration-begin-re #"[A-Z]+\s+(?:|[^>]*)" declaration-end-re "|"
+                             cdata-section-begin-re ".*?" cdata-section-end-re ")")))
 

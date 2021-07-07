@@ -30,3 +30,13 @@
   [[_ lines]]
   (string/join "\r\n" lines))
 
+(defmulti postprocess
+  "Hook for performing transformations after the blockrun has been compiled."
+  first)
+
+(defmethod postprocess :html-block-begin
+  [x]
+  (assoc x 0 :html-block))
+
+(defmethod postprocess :default [x] x)
+

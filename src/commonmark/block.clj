@@ -297,6 +297,26 @@ OK  followed by either a . character or a ) character.
            (concat [:bq])
            (zipmap [:tag :indent :space :content])))
 
+(def html-block-variant-1-tag-re #"(?:(?i)script|pre|style)")
+
+(def html-block-variant-1-begin-line-re
+  (re-pattern (str #"^ {0,3}(?<!\\)<" html-block-variant-1-tag-re #"(?:\s|>|$).*")))
+
+(defn html-block-begin
+  [line]
+  (some->> line
+           (re-find html-block-variant-1-begin-line-re)
+           (hash-map :tag :html-block-begin :variant 1 :content)))
+
+(def html-block-variant-1-end-line-re
+  (re-pattern (str #"^ {0,3}.*?(?<!\\)</" html-block-variant-1-tag-re #">.*")))
+
+(defn html-block-end
+  [line]
+  (some->> line
+           (re-find html-block-variant-1-end-line-re)
+           (hash-map :tag :html-block-end :variant 1 :content)))
+
 (defn tagger
   [line]
   (when line
@@ -308,6 +328,8 @@ OK  followed by either a . character or a ) character.
               indented-chunk-line
               opening-code-fence
               closing-code-fence
+              html-block-begin
+              html-block-end
               blank-line
               paragraph-line) line)))
 

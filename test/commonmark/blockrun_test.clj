@@ -457,5 +457,31 @@
              "> xyz\nabc"                   ["> xyz" "abc"]
              "> xyz\n    abc"               ["> xyz" "    abc"]
              "> xyz\n    abc\npqr"          ["> xyz" "    abc" "pqr"]
-             "> xyz\n    abc\n    pqr\n123" ["> xyz" "    abc" "    pqr" "123"])))))
+             "> xyz\n    abc\n    pqr\n123" ["> xyz" "    abc" "    pqr" "123"]))))
+
+  (testing "html block"
+    (testing "variant 1"
+      (testing "single line"
+        (let [s "<pre>abc</pre>"]
+          (is (= (parse s)
+                 [[:html-block [s]]]))))
+
+      (testing "multiline"
+        (is (= (parse "<pre>\nabc\nxyz\n</pre>")
+               [[:html-block ["<pre>" "abc" "xyz" "</pre>"]]])))
+
+      (testing "tag interchangability"
+        (are [t1 t2] (= (parse (str t1 "\nabc\n" t2))
+                        [[:html-block [t1 "abc" t2]]])
+             "<pre>"    "</script>"
+             "<pre>"    "</style>"
+             "<script>" "</pre>"
+             "<script>" "</style>"
+             "<style>"  "</pre>"
+             "<style>"  "</script>"))
+
+      (testing "empty"
+        (let [s "<pre></pre>"]
+          (= (parse s)
+             [[:html-block [s]]]))))))
 
