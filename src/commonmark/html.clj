@@ -33,7 +33,7 @@
   #"(?s)(?<!\\)<![A-Z]+\s+(?:|[^>]*)>")
 
 (def cdata-section-re
-  #"(?s)(?<!\\)<!\[CDATA\[.*?]]>")
+  #"(?s)(?<!\\)<!\[CDATA\[.*?\]\]>")
 
 (def tag-re
   (re-pattern (str "(?:" open-tag-re "|"
