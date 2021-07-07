@@ -309,7 +309,7 @@ OK  followed by either a . character or a ) character.
            (hash-map :tag :html-block-begin :variant 1 :content)))
 
 (def html-block-variant-1-end-line-re
-  (re-pattern (str #"^ {0,3}.*?(?<!\\)</" html-block-variant-1-tag-re #">.*")))
+  (re-pattern (str #"^ {0,3}(?! ).*?(?<!\\)</" html-block-variant-1-tag-re #">.*")))
 
 (defn html-block-end
   [line]

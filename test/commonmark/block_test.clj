@@ -347,12 +347,17 @@
            "<style xyz"))
 
     (testing "indentation"
-      (are [s] (let [res (html-block-begin s)]
-                 (and (= 1 (:variant res))
-                      (= s (:content res))))
-           " <pre"
-           "  <pre"
-           "   <pre"))))
+      (testing "valid"
+        (are [s] (some? (html-block-begin s))
+             " <pre"
+             "  <pre"
+             "   <pre"))
+
+      (testing "invalid"
+        (are [s] (nil? (html-block-begin s))
+             "    <pre"
+             "     <pre"
+             "      <pre")))))
 
 (deftest html-block-end-test
   (testing "pun nil"
@@ -384,10 +389,15 @@
            "</style> xyz"))
 
     (testing "indentation"
-      (are [s] (let [res (html-block-end s)]
-                 (and (= 1 (:variant res))
-                      (= s (:content res))))
-           " </pre>"
-           "  </pre>"
-           "   </pre>"))))
+      (testing "valid"
+        (are [s] (some? (html-block-end s))
+             " </pre>"
+             "  </pre>"
+             "   </pre>"))
+
+      (testing "invalid"
+        (are [s] (nil? (html-block-end s))
+             "    </pre>"
+             "     </pre>"
+             "      </pre>")))))
 
