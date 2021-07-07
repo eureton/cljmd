@@ -82,7 +82,16 @@
 
     (testing "match"
       (are [s c] (= c (->> s code-span :content))
-           "`foo``bar``" "bar"))))
+           "`foo``bar``" "bar")))
+
+  (testing "line endings"
+    (are [s c] (= c (->> s code-span :content))
+         "`abc\r\nxyz`"     "abc xyz"
+         "`abc\nxyz`"       "abc xyz"
+         "`abc\rxyz`"       "abc xyz"
+         "`abc\r\n\r\nxyz`" "abc  xyz"
+         "`abc\n\nxyz`"     "abc  xyz"
+         "`abc\r\rxyz`"     "abc  xyz")))
 
 (deftest delimeter-run-test
   (let [e* (emphasis-delimeter-re \* 1)
@@ -915,6 +924,51 @@
       (are [s] (nil? (html s))
            "\\<![CDATA[X x]]>"
            "<\\![CDATA[X x]]>"))))
+
+(deftest hard-line-break-test
+  (testing "puns nil"
+    (is (nil? (hard-line-break nil))))
+
+  (testing "standard"
+    (are [s c] (= c (-> s hard-line-break :content))
+         "abc  \nxyz"   "  \n"
+         "abc  \rxyz"   "  \r"
+         "abc  \r\nxyz" "  \r\n"
+         "abc\\\nxyz"   "\\\n"
+         "abc\\\rxyz"   "\\\r"
+         "abc\\\r\nxyz" "\\\r\n"))
+
+  (testing "alone on a line"
+    (testing "space"
+      (is (nil? (hard-line-break "  \nabc"))))
+
+    (testing "backslash"
+      (is (some? (hard-line-break "\\\nabc"))))))
+
+(deftest soft-line-break-test
+  (testing "puns nil"
+    (is (nil? (soft-line-break nil))))
+
+  (testing "preceded by spaces"
+    (are [s] (nil? (soft-line-break s))
+         "  \nxyz"
+         "   \nxyz"
+         "    \nxyz"))
+
+  (testing "preceded by backslash"
+    (is (nil? (soft-line-break "\\\nxyz"))))
+
+  (testing "standard"
+    (are [s c] (= c (-> s soft-line-break :content))
+         "abc \nxyz"   "\n"
+         "abc \rxyz"   "\r"
+         "abc \r\nxyz" "\r\n"
+         "abc\nxyz"    "\n"
+         "abc\rxyz"    "\r"
+         "abc\r\nxyz"  "\r\n"))
+
+  (testing "alone on a line"
+    (is (nil? (soft-line-break "\nabc")))))
 
 (deftest text-test
   (testing "puns nil"

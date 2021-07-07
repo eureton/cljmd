@@ -1,6 +1,9 @@
 (ns commonmark.ast.block
   (:require [clojure.string :as string]
+            [flatland.useful.fn :as ufn]
             [commonmark.ast.common :as common]
+            [commonmark.block :as block]
+            [commonmark.inline :as inline]
             [commonmark.blockrun :as blockrun]
             [commonmark.blockrun.entry :as blockrun.entry]))
 
@@ -30,4 +33,29 @@
        (string/join "\r\n")
        (hash-map :tag tag :content)
        common/node))
+
+(defmethod from-blockrun-entry :p
+  [[_ lines]]
+  (let [fetch (comp string/join
+                    (juxt (comp :content block/paragraph-line)
+                          (comp (ufn/to-fix some? #(string/replace % #"\\" ""))
+                                :content
+                                inline/hard-line-break)))]
+    (->> lines
+         (map fetch)
+         (string/join "\r\n")
+         (hash-map :tag :p :content)
+         common/node)))
+
+(defmethod from-blockrun-entry :atxh
+  [[_ lines]]
+  (->> lines
+       (map (comp :content block/atx-heading))
+       (string/join "\r\n")
+       (hash-map :tag :atxh :content)
+       common/node))
+
+(defmethod from-blockrun-entry :blank
+  [[_ _]]
+  (common/node {:tag :blank}))
 

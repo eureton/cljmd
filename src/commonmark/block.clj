@@ -168,7 +168,7 @@ OK  forms a paragraph.
     The paragraph’s raw content is formed by concatenating the lines
 OK  and removing initial and final whitespace.")
 
-(def paragraph-line-re #"^\s*(.*?\S.*?)\s*$")
+(def paragraph-line-re #"^\s*(.*?)\s*$")
 
 (defn paragraph-line
   [line]
@@ -176,11 +176,9 @@ OK  and removing initial and final whitespace.")
     {:tag :p
      :content content}))
 
-(def blank-line-re #"^$")
-
 (defn blank-line
   [line]
-  (when (string/blank? line)
+  (when ((every-pred string? empty?) line)
     {:tag :blank}))
 
 (comment "List items

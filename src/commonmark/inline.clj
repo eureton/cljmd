@@ -2,6 +2,9 @@
   (:require [clojure.string :as string]
             [commonmark.util :as util]))
 
+(def line-ending-re
+  #"(?:\r\n|\n|\r|$)")
+
 (comment "Code spans
 
 OK  A backtick string is a string of one or more backtick characters (`)
@@ -33,7 +36,7 @@ OK      a single space character is removed from the front and back.")
                spaced-content non-spaced-content] (re-find code-span-re string)]
     {:backtick-string backtick-string
      :content (-> (or spaced-content non-spaced-content)
-                  (string/replace #"(?:\r|\n|\r\n)"  " "))
+                  (string/replace #"(?:\r\n|\r|\n)"  " "))
      :tag :cs
      :pattern code-span-re}))
 
@@ -434,9 +437,9 @@ OK  The beginning and the end of the line count as Unicode whitespace.
 
 (def html-open-tag-re
   (let [attribute-name #"[a-zA-Z_:][\w.:-]*"
-        unquoted-value #"[\p{Print}&&[^\s\"'=<>`]]+"
-        single-quoted-value #"'[\p{Print}&&[^']]*'"
-        double-quoted-value #"\"[\p{Print}&&[^\"]]*\""
+        unquoted-value #"[^\s\"'=<>`]+"
+        single-quoted-value #"'[^']*'"
+        double-quoted-value #"\"[^\"]*\""
         attribute-value (str "(?:" unquoted-value "|"
                                    single-quoted-value "|"
                                    double-quoted-value ")")
@@ -470,6 +473,27 @@ OK  The beginning and the end of the line count as Unicode whitespace.
                          html-declaration-re "|"
                          html-cdata-section-re ")")))
 
+(def hard-line-break-re
+  (re-pattern (str "(?:"
+                     #"(?<=\p{Print})  " line-ending-re "|"
+                     #"\\" line-ending-re
+                   ")")))
+
+(defn hard-line-break
+  [string]
+  (some->> string
+           (re-find hard-line-break-re)
+           (hash-map :tag :hbr :pattern hard-line-break-re :content)))
+
+(def soft-line-break-re
+  (re-pattern (str #"(?<=.)(?<!(?:[ ]{2,}|\\))" line-ending-re #"(?=.)")))
+
+(defn soft-line-break
+  [string]
+  (some->> string
+           (re-find soft-line-break-re)
+           (hash-map :tag :sbr :pattern soft-line-break-re :content)))
+
 (defn html
   [string]
   (when string
@@ -482,7 +506,7 @@ OK  The beginning and the end of the line count as Unicode whitespace.
   [string]
   (when string
     {:tag :txt
-     :pattern #".*"
+     :pattern #"(?s).*"
      :content (string/replace string #"\\(?=\p{Punct})" "")}))
 
 (defn tagger
@@ -495,5 +519,7 @@ OK  The beginning and the end of the line count as Unicode whitespace.
                      strong-emphasis
                      autolink
                      html
+                     hard-line-break
+                     soft-line-break
                      text))))
 

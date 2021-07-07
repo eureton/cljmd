@@ -34,6 +34,11 @@
                   (derive :em     :inline)
                   (derive :strong :inline)
                   (derive :cs     :inline)
+                  (derive :hbr    :inline)
+                  (derive :sbr    :inline)
+
+                  (derive :hbr    :break)
+                  (derive :sbr    :break)
 
                   (derive :a      :link)
                   (derive :img    :link)
@@ -52,6 +57,11 @@
                   (derive :bq :container)
                   (derive :li :container)
                   atom))
+
+(defn block?
+  "Returns true if node represents a block entity, false otherwise."
+  [node]
+  (isa? (deref ontology) (:tag (:data node)) :block))
 
 (defn pprint-content
   "Shorthand for printing the :content value of entities to *out*."

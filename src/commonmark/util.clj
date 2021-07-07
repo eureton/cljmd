@@ -4,11 +4,13 @@
 
 (defn split
   [string pattern]
-  (let [parts (string/split string pattern)
-        length (count parts)]
-    (cond-> parts
-      (zero? length) (conj "" "")
-      (= 1 length) (conj ""))))
+  (let [suffix (str (+ 10000 (rand-int 10000)))
+        desufficize #(subs % 0 (- (count %) (count suffix)))]
+    (->> (string/split (str string suffix) pattern)
+         ((juxt butlast
+                (comp vector desufficize peek)))
+         (apply concat)
+         vec)))
 
 (def re-delimiter-escape-hash
   (->> "()[]{}"
