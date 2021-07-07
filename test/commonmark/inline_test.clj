@@ -861,6 +861,7 @@
 
     (testing "invalid"
       (are [s] (nil? (html s))
+           "\\<!--x-->"
            "<!--x--->"
            "<!--x--y-->"
            "<!-->x-->"
