@@ -726,17 +726,20 @@
 
 (deftest html-test
   (testing "open tags"
-    (testing "simple open"
+    (testing "simple"
       (are [s] (= s (-> s html :content))
            "<a>"
            "<p>"
            "<bab>"
-           "<c2c>"))
-
-    (testing "empty"
-      (are [s] (= s (-> s html :content))
+           "<c2c>"
            "<a/>"
            "<b2/>"))
+
+    (testing "backslash escaping"
+      (are [s] (nil? (html s))
+           "\\<p>"
+           "\\<p class=\"xyz\">"
+           "\\<p/>"))
 
     (testing "whitespace"
       (are [s] (= s (-> s html :content))
@@ -840,6 +843,7 @@
 
       (testing "invalid"
         (are [s] (nil? (html s))
+             "\\</p>"
              "</_>"
              "</p_>"
              "</-p>"

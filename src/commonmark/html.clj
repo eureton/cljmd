@@ -15,13 +15,14 @@
                                    double-quoted-value ")")
         attribute-value-spec (str #"\s*=\s*" attribute-value)
         attribute (str #"\s+" attribute-name "(?:" attribute-value-spec ")?")]
-    (re-pattern (str "<" tag-name-re
-                         "(?:" attribute ")*"
-                         #"\s*"
-                         "/?" ">"))))
+    (re-pattern (str #"(?<!\\)<"
+                     tag-name-re
+                     "(?:" attribute ")*"
+                     #"\s*"
+                     "/?>"))))
 
 (def closing-tag-re
-  (re-pattern (str "</" tag-name-re #"\s*" ">")))
+  (re-pattern (str #"(?<!\\)</" tag-name-re #"\s*" ">")))
 
 (def comment-re
   #"(?:(?s)(?<!\\)<!--(?:|(?!>)(?!->)(?!.*--.*-->).*?(?<!-))-->)")
