@@ -327,7 +327,10 @@
         (are [t] (nil? (html-block-begin (str t "xyz")))
              "<abc>"
              "<xyz>"
-             "<>")))
+             "<>"
+             "\\<pre>"
+             "\\<script>"
+             "\\<style>")))
 
     (testing "capture"
       (are [s] (let [res (html-block-begin s)]
@@ -367,7 +370,10 @@
         (are [t] (nil? (html-block-end (str t "xyz")))
              "</abc>"
              "</xyz>"
-             "</>")))
+             "</>"
+             "\\</pre>"
+             "\\</script>"
+             "\\</style>")))
 
     (testing "capture"
       (are [s] (let [res (html-block-end s)]
