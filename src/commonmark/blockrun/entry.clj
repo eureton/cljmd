@@ -40,7 +40,9 @@
 
 (defmethod promote :html-block-unpaired
   [x]
-  (assoc x 0 :p))
+  (assoc x 0 (if (block/html-block-begin (origin x))
+               :html-block
+               :p)))
 
 (defmethod promote :default [x] x)
 

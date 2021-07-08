@@ -483,7 +483,17 @@
       (testing "empty"
         (let [s "<pre></pre>"]
           (= (from-string s)
-             [[:html-block [s]]]))))
+             [[:html-block [s]]])))
+
+      (testing "unpaired"
+        (testing "opener"
+          (is (= (postprocess (from-string "xyz\n<pre>\nabc"))
+                 [[:p          ["xyz"]]
+                  [:html-block ["<pre>" "abc"]]])))
+
+        (testing "closer"
+          (is (= (postprocess (from-string "xyz\n</pre>\nabc"))
+                 [[:p ["xyz" "</pre>" "abc"]]])))))
 
     (testing "variant 2"
       (testing "single line"
@@ -498,7 +508,17 @@
       (testing "empty"
         (let [s "<!---->"]
           (= (from-string s)
-             [[:html-block [s]]]))))
+             [[:html-block [s]]])))
+
+      (testing "unpaired"
+        (testing "opener"
+          (is (= (postprocess (from-string "xyz\n<!--\nabc"))
+                 [[:p          ["xyz"]]
+                  [:html-block ["<!--" "abc"]]])))
+
+        (testing "closer"
+          (is (= (postprocess (from-string "xyz\n-->\nabc"))
+                 [[:p ["xyz" "-->" "abc"]]])))))
 
     (testing "nesting"
       (testing "different variants"
