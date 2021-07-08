@@ -29,7 +29,8 @@
   [string]
   (reduce #(treeduce/map %2 %1)
           (->> string
-               blockrun/parse
+               blockrun/from-string
+               blockrun/postprocess
                block/from-blockrun
                (treeduce/map (ufn/to-fix has-inline? expand-inline)))
           postp/queue))

@@ -23,7 +23,8 @@
   [entry]
   (->> entry
        blockrun.entry/content
-       blockrun/parse
+       blockrun/from-string
+       blockrun/postprocess
        (mapv from-blockrun-entry)
        (common/node {:tag (first entry)})))
 

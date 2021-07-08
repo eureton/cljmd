@@ -179,7 +179,7 @@
 
 (defn tokenize
   [string]
-  (let [lines (string/split-lines (str "_" string "_"))]
+  (let [lines (string/split (str "_" string "_") #"(?:\r\n|\r|\n)")]
     (if (= 1 (count lines))
       [string]
       (->> lines
@@ -188,13 +188,30 @@
                   (comp list #(subs % 0 (dec (count %))) last)))
            (reduce concat)))))
 
-(defn parse
-  "Parses the given input into a flat list of hashes. Each of these hashes
+(defn coalesce
+  "Merges adjacent entries of the same type."
+  [blockrun]
+  (reduce (fn [acc x]
+            (let [left (last acc)]
+              (if (= (first left) (first x))
+                (-> acc pop (conj (update left 1 (comp vec concat) (second x))))
+                (conj acc x))))
+          []
+          blockrun))
+
+(defn postprocess
+  "Hook for performing transformations after the blockrun has been compiled."
+  [blockrun]
+  (->> blockrun
+       (map entry/promote)
+       coalesce))
+
+(defn from-string
+  "Parses the given input into a list of blockrun entries. Each of these entries
    represents a top-level block."
   [string]
   (->> string
        tokenize
        (map from-line)
-       (reduce add)
-       (map entry/postprocess)))
+       (reduce add)))
 

@@ -34,13 +34,13 @@
   [[_ lines]]
   (string/join "\r\n" lines))
 
-(defmulti postprocess
+(defmulti promote
   "Hook for performing transformations after the blockrun has been compiled."
   first)
 
-(defmethod postprocess :html-block-begin
+(defmethod promote :html-block-unpaired
   [x]
-  (assoc x 0 :html-block))
+  (assoc x 0 :p))
 
-(defmethod postprocess :default [x] x)
+(defmethod promote :default [x] x)
 
