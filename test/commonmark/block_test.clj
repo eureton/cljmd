@@ -324,7 +324,7 @@
              "<style>"))
 
       (testing "invalid"
-        (are [t] (nil? (html-block-begin (str t "xyz")))
+        (are [t] (not= 1 (-> (str t "xyz") html-block-begin :variant))
              "<abc>"
              "<xyz>"
              "<>"
@@ -366,7 +366,7 @@
                2)))
 
       (testing "invalid"
-        (are [t] (nil? (html-block-begin (str t "xyz")))
+        (are [t] (not= 2 (-> (str t "xyz") html-block-begin :variant))
              "< !--"
              "<! --"
              "<!- -"
@@ -401,7 +401,7 @@
                3)))
 
       (testing "invalid"
-        (are [t] (nil? (html-block-begin (str t "xyz")))
+        (are [t] (not= 3 (-> (str t "xyz") html-block-begin :variant))
              "< ?"
              "\\<?"
              "<\\?")))
@@ -425,7 +425,43 @@
         (are [s] (nil? (html-block-begin s))
              "    <?"
              "     <?"
-             "      <?")))))
+             "      <?"))))
+
+  (testing "variant 4"
+    (testing "tags"
+      (testing "valid"
+        (is (= (-> "<!Wxyz" html-block-begin :variant)
+               4)))
+
+      (testing "invalid"
+        (are [t] (not= 4 (-> (str t "xyz") html-block-begin :variant))
+             "< !W"
+             "<! W"
+             "<! "
+             "\\<!W"
+             "<\\!W"
+             "<!\\W")))
+
+    (testing "capture"
+      (are [s] (let [res (html-block-begin s)]
+                 (and (= 4 (:variant res))
+                      (= s (:content res))))
+           "<!W"
+           "<!Wxyz"
+           "<!W xyz"))
+
+    (testing "indentation"
+      (testing "valid"
+        (are [s] (some? (html-block-begin s))
+             " <!W"
+             "  <!W"
+             "   <!W"))
+
+      (testing "invalid"
+        (are [s] (nil? (html-block-begin s))
+             "    <!W"
+             "     <!W"
+             "      <!W")))))
 
 (deftest html-block-end-test
   (testing "pun nil"
@@ -440,7 +476,7 @@
              "</style>"))
 
       (testing "invalid"
-        (are [t] (nil? (html-block-end (str t "xyz")))
+        (are [t] (not= 1 (-> (str t "xyz") html-block-end :variant))
              "</abc>"
              "</xyz>"
              "</>"
@@ -481,7 +517,7 @@
         (is (= 2 (-> "-->" html-block-end :variant))))
 
       (testing "invalid"
-        (are [t] (nil? (html-block-end (str t "xyz")))
+        (are [t] (not= 2 (-> (str t "xyz") html-block-end :variant))
              "- ->"
              "-- >"
              "\\-->")))
@@ -513,7 +549,7 @@
         (is (= 3 (-> "?>" html-block-end :variant))))
 
       (testing "invalid"
-        (are [t] (nil? (html-block-end (str t "xyz")))
+        (are [t] (not= 3 (-> (str t "xyz") html-block-end :variant))
              "? >"
              "?\\>"
              "\\?>")))
@@ -537,5 +573,34 @@
         (are [s] (nil? (html-block-end s))
              "    ?>"
              "     ?>"
-             "      ?>")))))
+             "      ?>"))))
+
+  (testing "variant 4"
+    (testing "tags"
+      (testing "valid"
+        (is (= 4 (-> ">" html-block-end :variant))))
+
+      (testing "invalid"
+        (is (not= 4 (-> "\\>xyz" html-block-end :variant)))))
+
+    (testing "capture"
+      (are [s] (let [res (html-block-end s)]
+                 (and (= 4 (:variant res))
+                      (= s (:content res))))
+           ">"
+           "> xyz"
+           "abc > xyz"))
+
+    (testing "indentation"
+      (testing "valid"
+        (are [s] (some? (html-block-end s))
+             " >"
+             "  >"
+             "   >"))
+
+      (testing "invalid"
+        (are [s] (nil? (html-block-end s))
+             "    >"
+             "     >"
+             "      >")))))
 

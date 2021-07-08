@@ -32,9 +32,9 @@
 
 (def processing-instruction-end-re #"(?<!\\)\?>")
 
-(def declaration-begin-re #"(?<!\\)<!")
+(def declaration-begin-re #"(?<!\\)<![A-Z]")
 
-(def declaration-end-re #">")
+(def declaration-end-re #"(?<!\\)>")
 
 (def cdata-section-begin-re #"(?<!\\)<!\[CDATA\[")
 
@@ -45,6 +45,6 @@
                              closing-tag-re "|"
                              comment-begin-re #"(?:|(?!>)(?!->)(?!.*--.*-->).*?(?<!-))" comment-end-re "|"
                              processing-instruction-begin-re ".*?" processing-instruction-end-re "|"
-                             declaration-begin-re #"[A-Z]+\s+(?:|[^>]*)" declaration-end-re "|"
+                             declaration-begin-re #"[A-Z]*\s+(?:|[^>]*)" declaration-end-re "|"
                              cdata-section-begin-re ".*?" cdata-section-end-re ")")))
 

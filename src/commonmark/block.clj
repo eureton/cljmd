@@ -311,11 +311,15 @@ OK  followed by either a . character or a ) character.
 (def html-block-variant-3-begin-line-re
   (re-pattern (str #"^ {0,3}" html/processing-instruction-begin-re ".*")))
 
+(def html-block-variant-4-begin-line-re
+  (re-pattern (str #"^ {0,3}" html/declaration-begin-re ".*")))
+
 (defn html-block-begin
   [line]
   (let [regexps [html-block-variant-1-begin-line-re
                  html-block-variant-2-begin-line-re
-                 html-block-variant-3-begin-line-re]]
+                 html-block-variant-3-begin-line-re
+                 html-block-variant-4-begin-line-re]]
     (some->> line
              ((util/some-re-fn-indexed regexps))
              (apply #(hash-map :variant (inc %1) :content %2))
@@ -330,23 +334,37 @@ OK  followed by either a . character or a ) character.
 (def html-block-variant-3-end-line-re
   (re-pattern (str #"^ {0,3}(?! ).*?" html/processing-instruction-end-re ".*")))
 
+(def html-block-variant-4-end-line-re
+  (re-pattern (str #"^ {0,3}(?! ).*?" html/declaration-end-re ".*")))
+
 (defn html-block-end
   [line]
   (let [regexps [html-block-variant-1-end-line-re
                  html-block-variant-2-end-line-re
-                 html-block-variant-3-end-line-re]]
+                 html-block-variant-3-end-line-re
+                 html-block-variant-4-end-line-re]]
     (some->> line
              ((util/some-re-fn-indexed regexps))
              (apply #(hash-map :variant (inc %1) :content %2))
              (merge {:tag :html-block-end}))))
 
+(defn html-block-pair?
+  "Returns true if line1 is the beginning of an HTML block and line2 is the end
+   of an HTML block of the same variant."
+  [line1 line2]
+  (->> [line1 line2]
+       ((ufn/knit html-block-begin html-block-end))
+       (map :variant)
+       (reduce =)))
+
 (defn html-block
   [line]
   (let [begin (html-block-begin line)
         end (html-block-end line)
-        info (or begin end)]
+        info (or begin end)
+        pair? (and begin end (html-block-pair? line line))]
     (cond
-      (and begin end) (assoc info :tag :html-block)
+      pair? (assoc info :tag :html-block)
       info (assoc info :tag :html-block-unpaired))))
 
 (defn tagger
@@ -431,13 +449,4 @@ OK  followed by either a . character or a ) character.
   [current previous]
   (or (->> current tagger :tag (= :bq))
       (paragraph-continuation-text? current previous)))
-
-(defn html-block-pair?
-  "Returns true if line1 is the beginning of an HTML block and line2 is the end
-   of an HTML block of the same variant."
-  [line1 line2]
-  (->> [line1 line2]
-       ((ufn/knit html-block-begin html-block-end))
-       (map :variant)
-       (reduce =)))
 
