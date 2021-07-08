@@ -1,5 +1,8 @@
 (ns commonmark.block
-  (:require [clojure.string :as string]))
+  (:require [clojure.string :as string]
+            [flatland.useful.fn :as ufn]
+            [commonmark.html :as html]
+            [commonmark.util :as util]))
 
 (comment "ATX Headings
          
@@ -302,20 +305,41 @@ OK  followed by either a . character or a ) character.
 (def html-block-variant-1-begin-line-re
   (re-pattern (str #"^ {0,3}(?<!\\)<" html-block-variant-1-tag-re #"(?:\s|>|$).*")))
 
+(def html-block-variant-2-begin-line-re
+  (re-pattern (str #"^ {0,3}" html/comment-begin-re ".*")))
+
 (defn html-block-begin
   [line]
-  (some->> line
-           (re-find html-block-variant-1-begin-line-re)
-           (hash-map :tag :html-block-begin :variant 1 :content)))
+  (let [regexps [html-block-variant-1-begin-line-re
+                 html-block-variant-2-begin-line-re]]
+    (some->> line
+             ((util/some-re-fn-indexed regexps))
+             (apply #(hash-map :variant (inc %1) :content %2))
+             (merge {:tag :html-block-begin}))))
 
 (def html-block-variant-1-end-line-re
   (re-pattern (str #"^ {0,3}(?! ).*?(?<!\\)</" html-block-variant-1-tag-re #">.*")))
 
+(def html-block-variant-2-end-line-re
+  (re-pattern (str #"^ {0,3}(?! ).*?" html/comment-end-re ".*")))
+
 (defn html-block-end
   [line]
-  (some->> line
-           (re-find html-block-variant-1-end-line-re)
-           (hash-map :tag :html-block-end :variant 1 :content)))
+  (let [regexps [html-block-variant-1-end-line-re
+                 html-block-variant-2-end-line-re]]
+    (some->> line
+             ((util/some-re-fn-indexed regexps))
+             (apply #(hash-map :variant (inc %1) :content %2))
+             (merge {:tag :html-block-end}))))
+
+(defn html-block
+  [line]
+  (let [begin (html-block-begin line)
+        end (html-block-end line)
+        info (or begin end)]
+    (cond
+      (and begin end) (assoc info :tag :html-block)
+      info (assoc info :tag :html-block-unpaired))))
 
 (defn tagger
   [line]
@@ -328,8 +352,7 @@ OK  followed by either a . character or a ) character.
               indented-chunk-line
               opening-code-fence
               closing-code-fence
-              html-block-begin
-              html-block-end
+              html-block
               blank-line
               paragraph-line) line)))
 
@@ -400,4 +423,13 @@ OK  followed by either a . character or a ) character.
   [current previous]
   (or (->> current tagger :tag (= :bq))
       (paragraph-continuation-text? current previous)))
+
+(defn html-block-pair?
+  "Returns true if line1 is the beginning of an HTML block and line2 is the end
+   of an HTML block of the same variant."
+  [line1 line2]
+  (->> [line1 line2]
+       ((ufn/knit html-block-begin html-block-end))
+       (map :variant)
+       (reduce =)))
 

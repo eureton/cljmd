@@ -43,3 +43,12 @@
   ([opener closer]
    (balanced-re opener closer {})))
 
+(defn some-re-fn-indexed
+  "Returns a function which, when called on string input s, returns
+   [index item], where item is the first regular expression parameter to match
+   s and index is its index in coll."
+  [regexps]
+  (->> regexps
+       (map-indexed #(fn [x] (some->> x (re-find %2) (vector %1))))
+       (apply some-fn)))
+

@@ -145,15 +145,22 @@
   [x y]
   (fuse-left x y))
 
-(defmethod add [:html-block-begin :html-block-end]
+(defmethod add [:html-block-unpaired :html-block-unpaired]
   [x y]
-  (fuse-left x y))
+  (if (->> [(last x) (first y)]
+           (map entry/origin)
+           (apply block/html-block-pair?))
+    (fuse-split (retag x :last :html-block) y 1)
+    (fuse-split x y 1)))
 
-(defmethod add [:html-block-begin :_]
+(defmethod add [:html-block-unpaired :_]
   [x y]
-  (if (block/html-block-end (-> x last second first))
-    (concat x y)
-    (fuse-left x y)))
+  (let [origin (->> x last entry/origin)]
+    (if (and (block/html-block-begin origin)
+             (not (block/html-block-end origin)))
+      (add (fuse-left x (take 1 y))
+           (rest y))
+      (concat x y))))
 
 (defmethod add :default
   ([] zero)
@@ -165,6 +172,7 @@
          y-tag (first y-entry)
          left-handler ((methods add) [x-tag :_])]
      (cond
+       (empty? y)      x
        left-handler    (left-handler x y)
        (= x-tag y-tag) (fuse-left x y)
        :else           (concat x y)))))

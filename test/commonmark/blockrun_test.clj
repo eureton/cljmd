@@ -483,5 +483,34 @@
       (testing "empty"
         (let [s "<pre></pre>"]
           (= (parse s)
-             [[:html-block [s]]]))))))
+             [[:html-block [s]]]))))
+
+    (testing "variant 2"
+      (testing "single line"
+        (let [s "<!--abc-->"]
+          (is (= (parse s)
+                 [[:html-block [s]]]))))
+
+      (testing "multiline"
+        (is (= (parse "<!--\nabc\nxyz\n-->")
+               [[:html-block ["<!--" "abc" "xyz" "-->"]]])))
+
+      (testing "empty"
+        (let [s "<!---->"]
+          (= (parse s)
+             [[:html-block [s]]]))))
+
+    (testing "nesting"
+      (testing "different variants"
+        (is (= (parse "0\n<!--\n1\n<pre>\n2\n</pre>\n3\n-->\n4")
+               [[:p          ["0"]]
+                [:html-block ["<!--" "1" "<pre>" "2" "</pre>" "3" "-->"]]
+                [:p          ["4"]]]))))
+
+    (testing "fuse iteratively"
+      (is (= (add (parse "0\n<!--\n1")
+                  (parse "2\n-->\n3"))
+             [[:p          ["0"]]
+              [:html-block ["<!--" "1" "2" "-->"]]
+              [:p          ["3"]]])))))
 

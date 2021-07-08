@@ -2,6 +2,10 @@
   (:require [clojure.string :as string]
             [commonmark.block :as block]))
 
+(def origin
+  "Returns the first line."
+  (comp first second))
+
 (defmulti content
   "Returns the content of the blockrun entry as a single string. If its contents
    span multiple lines, the lines are joined. If the entry represents a leaf

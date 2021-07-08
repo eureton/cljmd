@@ -26,7 +26,7 @@
 
 (def comment-begin-re #"(?<!\\)<!--")
 
-(def comment-end-re #"-->")
+(def comment-end-re #"(?<!\\)-->")
 
 (def processing-instruction-begin-re #"(?<!\\)<\?")
 
