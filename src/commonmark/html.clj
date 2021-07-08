@@ -30,7 +30,7 @@
 
 (def processing-instruction-begin-re #"(?<!\\)<\?")
 
-(def processing-instruction-end-re #"\?>")
+(def processing-instruction-end-re #"(?<!\\)\?>")
 
 (def declaration-begin-re #"(?<!\\)<!")
 

@@ -520,6 +520,31 @@
           (is (= (postprocess (from-string "xyz\n-->\nabc"))
                  [[:p ["xyz" "-->" "abc"]]])))))
 
+    (testing "variant 3"
+      (testing "single line"
+        (let [s "<?abc?>"]
+          (is (= (from-string s)
+                 [[:html-block [s]]]))))
+
+      (testing "multiline"
+        (is (= (from-string "<?\nabc\nxyz\n?>")
+               [[:html-block ["<?" "abc" "xyz" "?>"]]])))
+
+      (testing "empty"
+        (let [s "<??>"]
+          (= (from-string s)
+             [[:html-block [s]]])))
+
+      (testing "unpaired"
+        (testing "opener"
+          (is (= (postprocess (from-string "xyz\n<?\nabc"))
+                 [[:p          ["xyz"]]
+                  [:html-block ["<?" "abc"]]])))
+
+        (testing "closer"
+          (is (= (postprocess (from-string "xyz\n?>\nabc"))
+                 [[:p ["xyz" "?>" "abc"]]])))))
+
     (testing "nesting"
       (testing "different variants"
         (is (= (from-string "0\n<!--\n1\n<pre>\n2\n</pre>\n3\n-->\n4")

@@ -308,10 +308,14 @@ OK  followed by either a . character or a ) character.
 (def html-block-variant-2-begin-line-re
   (re-pattern (str #"^ {0,3}" html/comment-begin-re ".*")))
 
+(def html-block-variant-3-begin-line-re
+  (re-pattern (str #"^ {0,3}" html/processing-instruction-begin-re ".*")))
+
 (defn html-block-begin
   [line]
   (let [regexps [html-block-variant-1-begin-line-re
-                 html-block-variant-2-begin-line-re]]
+                 html-block-variant-2-begin-line-re
+                 html-block-variant-3-begin-line-re]]
     (some->> line
              ((util/some-re-fn-indexed regexps))
              (apply #(hash-map :variant (inc %1) :content %2))
@@ -323,10 +327,14 @@ OK  followed by either a . character or a ) character.
 (def html-block-variant-2-end-line-re
   (re-pattern (str #"^ {0,3}(?! ).*?" html/comment-end-re ".*")))
 
+(def html-block-variant-3-end-line-re
+  (re-pattern (str #"^ {0,3}(?! ).*?" html/processing-instruction-end-re ".*")))
+
 (defn html-block-end
   [line]
   (let [regexps [html-block-variant-1-end-line-re
-                 html-block-variant-2-end-line-re]]
+                 html-block-variant-2-end-line-re
+                 html-block-variant-3-end-line-re]]
     (some->> line
              ((util/some-re-fn-indexed regexps))
              (apply #(hash-map :variant (inc %1) :content %2))
