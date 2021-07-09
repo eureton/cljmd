@@ -631,6 +631,26 @@
                [[:p          ["xyz"]]
                 [:html-block ["<p" "abc"]]]))))
 
+    (testing "variant 7"
+      (testing "standard"
+        (is (= (from-string "<a qpr=\"klm\">abc\nxyz\n\n123")
+               [[:html-block ["<a qpr=\"klm\">abc" "xyz"]]
+                [:blank      [""]]
+                [:p          ["123"]]])))
+
+      (testing "empty"
+        (let [s "<a qpr=\"klm\">\n\n123"]
+          (= (from-string s)
+             [[:html-block ["<a qpr=\"klm\">"]]
+              [:blank      [""]]
+              [:p          ["123"]]])))
+
+      (testing "unpaired"
+        (is (= (postprocess (from-string "xyz\n\n<a qpr=\"klm\">\nabc"))
+               [[:p          ["xyz"]]
+                [:blank      [""]]
+                [:html-block ["<a qpr=\"klm\">" "abc"]]]))))
+
     (testing "nesting"
       (testing "different variants"
         (is (= (from-string "0\n<!--\n1\n<pre>\n2\n</pre>\n3\n-->\n4")

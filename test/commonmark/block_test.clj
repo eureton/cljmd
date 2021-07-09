@@ -578,7 +578,80 @@
         (are [s] (nil? (html-block-begin s))
              "    <p"
              "     <p"
-             "      <p")))))
+             "      <p"))))
+
+  (testing "variant 7"
+    (testing "tags"
+      (testing "valid"
+        (are [s] (contains? (-> s html-block-begin :variant)
+                            7)
+             "<a>"
+             "<a >"
+             "<a href>"
+             "<a href=\"xyz\">"
+             "<a href=\"xyz\" >"
+             "<a/>"
+             "<a />"
+             "<a href/>"
+             "<a href=\"xyz\"/>"
+             "<a href=\"xyz\" />"
+             "</a>"
+             "</a >"
+             "</script>"
+             "</style>"
+             "</pre>"
+             "</script >"
+             "</style >"
+             "</pre >"))
+
+      (testing "invalid"
+        (are [s] (not (contains? (-> s html-block-begin :variant)
+                                 7))
+             "<script>"
+             "<style>"
+             "<pre>"
+             "<script >"
+             "<style >"
+             "<pre >"
+             "<script abc>"
+             "<style abc>"
+             "<pre abc>"
+             "<script abc=\"xyz\">"
+             "<style abc=\"xyz\">"
+             "<pre abc=\"xyz\">"
+             "<script/>"
+             "<style/>"
+             "<pre/>"
+             "<script />"
+             "<style />"
+             "<pre />"
+             "<script abc/>"
+             "<style abc/>"
+             "<pre abc/>"
+             "<script abc=\"xyz\"/>"
+             "<style abc=\"xyz\"/>"
+             "<pre abc=\"xyz\"/>")))
+
+    (testing "capture"
+      (are [s] (let [res (html-block-begin s)]
+                 (and (contains? (:variant res) 7)
+                      (= s (:content res))))
+           "<p>"
+           "<p>xyz"
+           "<p> xyz"))
+
+    (testing "indentation"
+      (testing "valid"
+        (are [s] (some? (html-block-begin s))
+             " <p>"
+             "  <p>"
+             "   <p>"))
+
+      (testing "invalid"
+        (are [s] (nil? (html-block-begin s))
+             "    <p>"
+             "     <p>"
+             "      <p>")))))
 
 (deftest html-block-end-test
   (testing "pun nil"
@@ -797,6 +870,43 @@
     (testing "capture"
       (are [s] (let [res (html-block-end s)]
                  (and (contains? (:variant res) 6)
+                      (= s (:content res))))
+           ""
+           "   "
+           "   \t\t\t   ")))
+
+  (testing "variant 7"
+    (testing "valid"
+      (are [s] (contains? (-> s html-block-end :variant)
+                          7)
+           ""
+           " "
+           "  "
+           "   "
+           "\t"
+           "\t\t"
+           "\t\t\t"
+           "\n"
+           "\n\n"
+           "\n\n\n"
+           "\r"
+           "\r\r"
+           "\r\r\r"
+           "\r\n"
+           "\r\n\r\n"
+           "\r\n\r\n\r\n"
+           " \t\n\r \t\n\r \t\n\r"))
+
+    (testing "invalid"
+      (are [s] (not (contains? (-> s html-block-end :variant)
+                               7))
+           "x"
+           ">"
+           "\\"))
+
+    (testing "capture"
+      (are [s] (let [res (html-block-end s)]
+                 (and (contains? (:variant res) 7)
                       (= s (:content res))))
            ""
            "   "

@@ -5,21 +5,25 @@
 (def tag-name-re
   #"[a-zA-Z][\w-&&[^_]]*")
 
-(def open-tag-re
-  (let [attribute-name #"[a-zA-Z_:][\w.:-]*"
-        unquoted-value #"[^\s\"'=<>`]+"
-        single-quoted-value #"'[^']*'"
-        double-quoted-value #"\"[^\"]*\""
-        attribute-value (str "(?:" unquoted-value "|"
-                                   single-quoted-value "|"
-                                   double-quoted-value ")")
-        attribute-value-spec (str #"\s*=\s*" attribute-value)
-        attribute (str #"\s+" attribute-name "(?:" attribute-value-spec ")?")]
-    (re-pattern (str #"(?<!\\)<"
-                     tag-name-re
-                     "(?:" attribute ")*"
-                     #"\s*"
-                     "/?>"))))
+(defn open-tag-re
+  ([{:keys [exclude-tags]
+    :or {exclude-tags []}}]
+   (let [attribute-name #"[a-zA-Z_:][\w.:-]*"
+         unquoted-value #"[^\s\"'=<>`]+"
+         single-quoted-value #"'[^']*'"
+         double-quoted-value #"\"[^\"]*\""
+         attribute-value (str "(?:" unquoted-value "|"
+                                    single-quoted-value "|"
+                                    double-quoted-value ")")
+         attribute-value-spec (str #"\s*=\s*" attribute-value)
+         attribute (str #"\s+" attribute-name "(?:" attribute-value-spec ")?")]
+     (re-pattern (str #"(?<!\\)<"
+                      (reduce #(str "(?!" %2 "\\b)" %1) tag-name-re exclude-tags)
+                      "(?:" attribute ")*"
+                      #"\s*"
+                      "/?>"))))
+  ([]
+   (open-tag-re {})))
 
 (def closing-tag-re
   (re-pattern (str #"(?<!\\)</" tag-name-re #"\s*" ">")))
@@ -41,7 +45,7 @@
 (def cdata-section-end-re #"(?<!\\)\]\]>")
 
 (def tag-re
-  (re-pattern (str "(?:(?s)" open-tag-re "|"
+  (re-pattern (str "(?:(?s)" (open-tag-re) "|"
                              closing-tag-re "|"
                              comment-begin-re #"(?:|(?!>)(?!->)(?!.*--.*-->).*?(?<!-))" comment-end-re "|"
                              processing-instruction-begin-re ".*?" processing-instruction-end-re "|"

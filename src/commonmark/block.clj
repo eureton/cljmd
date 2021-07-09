@@ -322,6 +322,14 @@ OK  followed by either a . character or a ) character.
                    "(?:(?i)" (string/join "|" html/block-variant-6-tags) ")"
                    #"(?:\s+|/?>|$).*")))
 
+(def html-block-variant-7-begin-line-re
+  (re-pattern (str "^ {0,3}"
+                   "(?:"
+                     (html/open-tag-re {:exclude-tags ["script" "style" "pre"]}) "|"
+                     html/closing-tag-re
+                   ")"
+                   ".*")))
+
 (defn html-block-begin
   [line]
   (when line
@@ -330,7 +338,8 @@ OK  followed by either a . character or a ) character.
                    html-block-variant-3-begin-line-re 3
                    html-block-variant-4-begin-line-re 4
                    html-block-variant-5-begin-line-re 5
-                   html-block-variant-6-begin-line-re 6}]
+                   html-block-variant-6-begin-line-re 6
+                   html-block-variant-7-begin-line-re 7}]
       (->> (keys re-info)
            (filter #(re-find % line))
            (map re-info)
@@ -353,9 +362,6 @@ OK  followed by either a . character or a ) character.
 (def html-block-variant-5-end-line-re
   (re-pattern (str #"^ {0,3}(?! ).*?" html/cdata-section-end-re ".*")))
 
-(def html-block-variant-6-end-line-re
-  #"^\s*$")
-
 (defn html-block-end
   [line]
   (when line
@@ -364,10 +370,11 @@ OK  followed by either a . character or a ) character.
                    html-block-variant-3-end-line-re 3
                    html-block-variant-4-end-line-re 4
                    html-block-variant-5-end-line-re 5
-                   html-block-variant-6-end-line-re 6}]
+                   #"^\s*$" [6 7]}]
       (->> (keys re-info)
            (filter #(re-find % line))
            (map re-info)
+           flatten
            set
            (hash-map :content line :variant)
            ((ufn/validator (comp not-empty :variant)))))))
