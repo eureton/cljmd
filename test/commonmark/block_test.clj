@@ -1,6 +1,7 @@
 (ns commonmark.block-test
   (:require [clojure.test :refer :all]
-            [commonmark.block :refer :all]))
+            [commonmark.block :refer :all]
+            [commonmark.html :as html]))
 
 (deftest atx-heading-test
   (testing "minimal, 1-6"
@@ -513,7 +514,71 @@
         (are [s] (nil? (html-block-begin s))
              "    <![CDATA["
              "     <![CDATA["
-             "      <![CDATA[")))))
+             "      <![CDATA["))))
+
+  (testing "variant 6"
+    (testing "tags"
+      (testing "valid"
+        (let [v6? #(contains? (:variant %) 6)]
+          (are [pre suf] (every? #(->> (str pre % suf)
+                                       html-block-begin
+                                       v6?)
+                                 html/block-variant-6-tags)
+               "<"  " xyz"
+               "<"  ">"
+               "<"  "/>"
+               "<"  ""
+               "</" " xyz"
+               "</" ">"
+               "</" "/>"
+               "</" "")))
+
+      (testing "invalid"
+        (are [s] (not (contains? (-> s html-block-begin :variant)
+                                 6))
+             "< p"
+             "<px"
+             "< p>"
+             "< p/ >"
+             "< /p"
+             "</ p"
+             "</px"
+             "< /p x"
+             "</ p x"
+             "< /p>"
+             "</ p>"
+             "< /p/>"
+             "</ p/>"
+             "</p/ >")))
+
+    (testing "capture"
+      (are [s] (let [res (html-block-begin s)]
+                 (and (contains? (:variant res) 6)
+                      (= s (:content res))))
+           "<p>"
+           "<p>xyz"
+           "<p> xyz"
+           "<p xyz"
+           "<p>"
+           "<p/>"
+           "<p"
+           "</p xyz"
+           "</p>"
+           "</p/>"
+           "</p"))
+
+    (testing "indentation"
+      (testing "valid"
+        (are [s] (some? (html-block-begin s))
+             " <p"
+             "  <p"
+             "   <p"))
+
+      (testing "invalid"
+        (are [s] (nil? (html-block-begin s))
+             "    <p"
+             "     <p"
+             "      <p")))))
 
 (deftest html-block-end-test
   (testing "pun nil"
@@ -698,5 +763,42 @@
         (are [s] (nil? (html-block-end s))
              "    ]]>"
              "     ]]>"
-             "      ]]>")))))
+             "      ]]>"))))
+
+  (testing "variant 6"
+    (testing "valid"
+      (are [s] (contains? (-> s html-block-end :variant)
+                          6)
+           ""
+           " "
+           "  "
+           "   "
+           "\t"
+           "\t\t"
+           "\t\t\t"
+           "\n"
+           "\n\n"
+           "\n\n\n"
+           "\r"
+           "\r\r"
+           "\r\r\r"
+           "\r\n"
+           "\r\n\r\n"
+           "\r\n\r\n\r\n"
+           " \t\n\r \t\n\r \t\n\r"))
+
+    (testing "invalid"
+      (are [s] (not (contains? (-> s html-block-end :variant)
+                               6))
+           "x"
+           ">"
+           "\\"))
+
+    (testing "capture"
+      (are [s] (let [res (html-block-end s)]
+                 (and (contains? (:variant res) 6)
+                      (= s (:content res))))
+           ""
+           "   "
+           "   \t\t\t   "))))
 

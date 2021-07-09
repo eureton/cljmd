@@ -161,6 +161,14 @@
       (fuse-split (retag x :last :html-block) y 1)
       (concat x y))))
 
+(defmethod add [:html-block-unpaired :blank]
+  [x y]
+  (let [origin-x (->> x last entry/origin)
+        origin-y (->> y first entry/origin)]
+    (if (block/html-block-pair? origin-x origin-y)
+      (concat (retag x :last :html-block) y)
+      (concat x y))))
+
 (defmethod add [:html-block-unpaired :_]
   [x y]
   (let [origin (->> x last entry/origin)]

@@ -612,6 +612,25 @@
           (is (= (postprocess (from-string "xyz\n]]>\nabc"))
                  [[:p  ["xyz" "]]>" "abc"]]])))))
 
+    (testing "variant 6"
+      (testing "standard"
+        (is (= (from-string "<p abc\nxyz\n\n123")
+               [[:html-block ["<p abc" "xyz"]]
+                [:blank      [""]]
+                [:p          ["123"]]])))
+
+      (testing "empty"
+        (let [s "<p\n\n123"]
+          (= (from-string s)
+             [[:html-block ["<p"]]
+              [:blank      [""]]
+              [:p          ["123"]]])))
+
+      (testing "unpaired"
+        (is (= (postprocess (from-string "xyz\n<p\nabc"))
+               [[:p          ["xyz"]]
+                [:html-block ["<p" "abc"]]]))))
+
     (testing "nesting"
       (testing "different variants"
         (is (= (from-string "0\n<!--\n1\n<pre>\n2\n</pre>\n3\n-->\n4")

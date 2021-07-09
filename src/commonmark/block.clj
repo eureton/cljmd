@@ -317,6 +317,11 @@ OK  followed by either a . character or a ) character.
 (def html-block-variant-5-begin-line-re
   (re-pattern (str #"^ {0,3}" html/cdata-section-begin-re ".*")))
 
+(def html-block-variant-6-begin-line-re
+  (re-pattern (str #"^ {0,3}(?<!\\)</?"
+                   "(?:(?i)" (string/join "|" html/block-variant-6-tags) ")"
+                   #"(?:\s+|/?>|$).*")))
+
 (defn html-block-begin
   [line]
   (when line
@@ -324,7 +329,8 @@ OK  followed by either a . character or a ) character.
                    html-block-variant-2-begin-line-re 2
                    html-block-variant-3-begin-line-re 3
                    html-block-variant-4-begin-line-re 4
-                   html-block-variant-5-begin-line-re 5}]
+                   html-block-variant-5-begin-line-re 5
+                   html-block-variant-6-begin-line-re 6}]
       (->> (keys re-info)
            (filter #(re-find % line))
            (map re-info)
@@ -347,6 +353,9 @@ OK  followed by either a . character or a ) character.
 (def html-block-variant-5-end-line-re
   (re-pattern (str #"^ {0,3}(?! ).*?" html/cdata-section-end-re ".*")))
 
+(def html-block-variant-6-end-line-re
+  #"^\s*$")
+
 (defn html-block-end
   [line]
   (when line
@@ -354,7 +363,8 @@ OK  followed by either a . character or a ) character.
                    html-block-variant-2-end-line-re 2
                    html-block-variant-3-end-line-re 3
                    html-block-variant-4-end-line-re 4
-                   html-block-variant-5-end-line-re 5}]
+                   html-block-variant-5-end-line-re 5
+                   html-block-variant-6-end-line-re 6}]
       (->> (keys re-info)
            (filter #(re-find % line))
            (map re-info)
@@ -364,7 +374,7 @@ OK  followed by either a . character or a ) character.
 
 (defn html-block-pair?
   "Returns true if line1 is the beginning of an HTML block and line2 is the end
-   of an HTML block of the same variant."
+   of an HTML block of the same variant, false otherwise."
   [line1 line2]
   (->> [line1 line2]
        ((ufn/knit html-block-begin html-block-end))
@@ -393,8 +403,8 @@ OK  followed by either a . character or a ) character.
               indented-chunk-line
               opening-code-fence
               closing-code-fence
-              html-block
               blank-line
+              html-block
               paragraph-line) line)))
 
 (defn list-item-content
