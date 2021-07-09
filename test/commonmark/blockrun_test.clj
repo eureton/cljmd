@@ -485,6 +485,12 @@
           (= (from-string s)
              [[:html-block [s]]])))
 
+      (testing "interrupt paragraph"
+        (is (= (from-string "xyz\n<pre>\n123</pre>\nabc")
+               [[:p          ["xyz"]]
+                [:html-block ["<pre>" "123</pre>"]]
+                [:p          ["abc"]]])))
+
       (testing "unpaired"
         (testing "opener"
           (is (= (postprocess (from-string "xyz\n<pre>\nabc"))
@@ -509,6 +515,12 @@
         (let [s "<!---->"]
           (= (from-string s)
              [[:html-block [s]]])))
+
+      (testing "interrupt paragraph"
+        (is (= (from-string "xyz\n<!--\n123-->\nabc")
+               [[:p          ["xyz"]]
+                [:html-block ["<!--" "123-->"]]
+                [:p          ["abc"]]])))
 
       (testing "unpaired"
         (testing "opener"
@@ -535,6 +547,12 @@
           (= (from-string s)
              [[:html-block [s]]])))
 
+      (testing "interrupt paragraph"
+        (is (= (from-string "xyz\n<?\n123?>\nabc")
+               [[:p          ["xyz"]]
+                [:html-block ["<?" "123?>"]]
+                [:p          ["abc"]]])))
+
       (testing "unpaired"
         (testing "opener"
           (is (= (postprocess (from-string "xyz\n<?\nabc"))
@@ -559,6 +577,12 @@
         (let [s "<!W>"]
           (= (from-string s)
              [[:html-block [s]]])))
+
+      (testing "interrupt paragraph"
+        (is (= (from-string "xyz\n<!W\n123>\nabc")
+               [[:p          ["xyz"]]
+                [:html-block ["<!W" "123>"]]
+                [:p          ["abc"]]])))
 
       (testing "unpaired"
         (testing "opener"
@@ -602,6 +626,12 @@
           (= (from-string s)
              [[:html-block [s]]])))
 
+      (testing "interrupt paragraph"
+        (is (= (from-string "xyz\n<![CDATA[\n123]]>\nabc")
+               [[:p          ["xyz"]]
+                [:html-block ["<![CDATA[" "123]]>"]]
+                [:p          ["abc"]]])))
+
       (testing "unpaired"
         (testing "opener"
           (is (= (postprocess (from-string "xyz\n<![CDATA[\nabc"))
@@ -626,6 +656,13 @@
               [:blank      [""]]
               [:p          ["123"]]])))
 
+      (testing "interrupt paragraph"
+        (is (= (from-string "xyz\n<p\n\nabc")
+               [[:p          ["xyz"]]
+                [:html-block ["<p"]]
+                [:blank      [""]]
+                [:p          ["abc"]]])))
+
       (testing "unpaired"
         (is (= (postprocess (from-string "xyz\n<p\nabc"))
                [[:p          ["xyz"]]
@@ -644,6 +681,12 @@
              [[:html-block ["<a qpr=\"klm\">"]]
               [:blank      [""]]
               [:p          ["123"]]])))
+
+      (testing "interrupt paragraph"
+        (is (= (from-string "xyz\n<a qpr=\"klm\">\n\nabc")
+               [[:p          ["xyz" "<a qpr=\"klm\">"]]
+                [:blank      [""]]
+                [:p          ["abc"]]])))
 
       (testing "unpaired"
         (is (= (postprocess (from-string "xyz\n\n<a qpr=\"klm\">\nabc"))

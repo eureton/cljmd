@@ -137,6 +137,16 @@
   [x y]
   (fuse-left x y))
 
+(defmethod add [:p :html-block-unpaired]
+  [x y]
+  (if (->> y
+           first
+           entry/origin
+           ((juxt block/html-block-begin block/html-block-end))
+           (some (comp #(contains? % 7) :variant)))
+    (fuse-left x y)
+    (concat x y)))
+
 (defmethod add [:blank :icblk]
   [x y]
   (fuse-right x y))
