@@ -1,8 +1,8 @@
 (ns commonmark.block
   (:require [clojure.string :as string]
+            [clojure.set]
             [flatland.useful.fn :as ufn]
-            [commonmark.html :as html]
-            [commonmark.util :as util]))
+            [commonmark.html :as html]))
 
 (comment "ATX Headings
          
@@ -314,16 +314,23 @@ OK  followed by either a . character or a ) character.
 (def html-block-variant-4-begin-line-re
   (re-pattern (str #"^ {0,3}" html/declaration-begin-re ".*")))
 
+(def html-block-variant-5-begin-line-re
+  (re-pattern (str #"^ {0,3}" html/cdata-section-begin-re ".*")))
+
 (defn html-block-begin
   [line]
-  (let [regexps [html-block-variant-1-begin-line-re
-                 html-block-variant-2-begin-line-re
-                 html-block-variant-3-begin-line-re
-                 html-block-variant-4-begin-line-re]]
-    (some->> line
-             ((util/some-re-fn-indexed regexps))
-             (apply #(hash-map :variant (inc %1) :content %2))
-             (merge {:tag :html-block-begin}))))
+  (when line
+    (let [re-info {html-block-variant-1-begin-line-re 1
+                   html-block-variant-2-begin-line-re 2
+                   html-block-variant-3-begin-line-re 3
+                   html-block-variant-4-begin-line-re 4
+                   html-block-variant-5-begin-line-re 5}]
+      (->> (keys re-info)
+           (filter #(re-find % line))
+           (map re-info)
+           set
+           (hash-map :content line :variant)
+           ((ufn/validator (comp not-empty :variant)))))))
 
 (def html-block-variant-1-end-line-re
   (re-pattern (str #"^ {0,3}(?! ).*?(?<!\\)</" html-block-variant-1-tag-re #">.*")))
@@ -337,16 +344,23 @@ OK  followed by either a . character or a ) character.
 (def html-block-variant-4-end-line-re
   (re-pattern (str #"^ {0,3}(?! ).*?" html/declaration-end-re ".*")))
 
+(def html-block-variant-5-end-line-re
+  (re-pattern (str #"^ {0,3}(?! ).*?" html/cdata-section-end-re ".*")))
+
 (defn html-block-end
   [line]
-  (let [regexps [html-block-variant-1-end-line-re
-                 html-block-variant-2-end-line-re
-                 html-block-variant-3-end-line-re
-                 html-block-variant-4-end-line-re]]
-    (some->> line
-             ((util/some-re-fn-indexed regexps))
-             (apply #(hash-map :variant (inc %1) :content %2))
-             (merge {:tag :html-block-end}))))
+  (when line
+    (let [re-info {html-block-variant-1-end-line-re 1
+                   html-block-variant-2-end-line-re 2
+                   html-block-variant-3-end-line-re 3
+                   html-block-variant-4-end-line-re 4
+                   html-block-variant-5-end-line-re 5}]
+      (->> (keys re-info)
+           (filter #(re-find % line))
+           (map re-info)
+           set
+           (hash-map :content line :variant)
+           ((ufn/validator (comp not-empty :variant)))))))
 
 (defn html-block-pair?
   "Returns true if line1 is the beginning of an HTML block and line2 is the end
@@ -355,7 +369,8 @@ OK  followed by either a . character or a ) character.
   (->> [line1 line2]
        ((ufn/knit html-block-begin html-block-end))
        (map :variant)
-       (reduce =)))
+       (reduce clojure.set/intersection)
+       not-empty))
 
 (defn html-block
   [line]

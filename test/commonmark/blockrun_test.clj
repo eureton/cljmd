@@ -587,6 +587,31 @@
                   [:html-block-unpaired ["<!--" "1" "2"]]
                   [:bq                  ["> 3" "4"]]])))))
 
+    (testing "variant 5"
+      (testing "single line"
+        (let [s "<![CDATA[abc]]>"]
+          (is (= (from-string s)
+                 [[:html-block [s]]]))))
+
+      (testing "multiline"
+        (is (= (from-string "<![CDATA[\nabc\nxyz\n]]>")
+               [[:html-block ["<![CDATA[" "abc" "xyz" "]]>"]]])))
+
+      (testing "empty"
+        (let [s "<![CDATA[]]>"]
+          (= (from-string s)
+             [[:html-block [s]]])))
+
+      (testing "unpaired"
+        (testing "opener"
+          (is (= (postprocess (from-string "xyz\n<![CDATA[\nabc"))
+                 [[:p          ["xyz"]]
+                  [:html-block ["<![CDATA[" "abc"]]])))
+
+        (testing "closer"
+          (is (= (postprocess (from-string "xyz\n]]>\nabc"))
+                 [[:p  ["xyz" "]]>" "abc"]]])))))
+
     (testing "nesting"
       (testing "different variants"
         (is (= (from-string "0\n<!--\n1\n<pre>\n2\n</pre>\n3\n-->\n4")

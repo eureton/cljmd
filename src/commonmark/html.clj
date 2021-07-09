@@ -38,7 +38,7 @@
 
 (def cdata-section-begin-re #"(?<!\\)<!\[CDATA\[")
 
-(def cdata-section-end-re #"\]\]>")
+(def cdata-section-end-re #"(?<!\\)\]\]>")
 
 (def tag-re
   (re-pattern (str "(?:(?s)" open-tag-re "|"
