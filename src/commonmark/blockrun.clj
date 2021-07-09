@@ -89,7 +89,7 @@
   [x y]
   (let [block-lines (->> x last second)
         pair? (block/fenced-code-block-pair? (first block-lines)
-                                             (-> y first second first))
+                                             (-> y first entry/origin))
         closed? (and (> (count block-lines) 1)
                      (->> block-lines
                           ((juxt first last))
@@ -112,20 +112,20 @@
 
 (defmethod add [:bq :_]
   [x y]
-  (if (block/belongs-to-block-quote? (->> y first second first)
+  (if (block/belongs-to-block-quote? (->> y first entry/origin)
                                      (->> x last second reverse))
     (fuse-left x y)
     (concat x y)))
 
 (defmethod add [:p :tbr]
   [x y]
-  (if (some? (block/setext-heading (->> y first second first)))
+  (if (some? (block/setext-heading (->> y first entry/origin)))
     (fuse-split (retag x :last :stxh) y 1)
     (concat x y)))
 
 (defmethod add [:p :li]
   [x y]
-  (if (->> y first second first (re-find block/list-item-blank-lead-line-re) some?)
+  (if (->> y first entry/origin (re-find block/list-item-blank-lead-line-re) some?)
     (fuse-split (retag x :last :stxh) y 1)
     (concat x y)))
 
