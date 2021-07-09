@@ -570,7 +570,22 @@
           (is (= (from-string "xyz\n>\nabc")
                  [[:p  ["xyz"]]
                   [:bq [">"]]
-                  [:p  ["abc"]]])))))
+                  [:p  ["abc"]]]))))
+
+      (testing "blockquote as closer"
+        (testing "variant 4 opener"
+          (is (= (add (from-string "0\n<!W\n1")
+                      (from-string "2\n> 3\n4"))
+                 [[:p          ["0"]]
+                  [:html-block ["<!W" "1" "2" "> 3"]]
+                  [:p          ["4"]]])))
+
+        (testing "non-variant 4 opener"
+          (is (= (add (from-string "0\n<!--\n1")
+                      (from-string "2\n> 3\n4"))
+                 [[:p                   ["0"]]
+                  [:html-block-unpaired ["<!--" "1" "2"]]
+                  [:bq                  ["> 3" "4"]]])))))
 
     (testing "nesting"
       (testing "different variants"
