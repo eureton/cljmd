@@ -1,6 +1,7 @@
 (ns commonmark.block-test
   (:require [clojure.test :refer :all]
-            [commonmark.block :refer :all]))
+            [commonmark.block :refer :all]
+            [commonmark.html :as html]))
 
 (deftest atx-heading-test
   (testing "minimal, 1-6"
@@ -309,4 +310,607 @@
 
     (testing "both quoted and non-quoted indented code blocks"
       (is (false? (paragraph-continuation-text? "abc" ["    qpr" ">     xyz" "    123" ">     top"]))))))
+
+(deftest html-block-begin-test
+  (testing "pun nil"
+    (is (nil? (html-block-begin nil))))
+
+  (testing "variant 1"
+    (testing "tags"
+      (testing "valid"
+        (are [t] (contains? (-> (str t "xyz") html-block-begin :variant)
+                            1)
+             "<pre>"
+             "<script>"
+             "<style>"))
+
+      (testing "invalid"
+        (are [t] (not (contains? (-> (str t "xyz") html-block-begin :variant)
+                                 1))
+             "<abc>"
+             "<xyz>"
+             "<>"
+             "\\<pre>"
+             "\\<script>"
+             "\\<style>")))
+
+    (testing "capture"
+      (are [s] (let [res (html-block-begin s)]
+                 (and (contains? (:variant res) 1)
+                      (= s (:content res))))
+           "<pre"
+           "<script"
+           "<style"
+           "<pre>xyz"
+           "<script>xyz"
+           "<style>xyz"
+           "<pre xyz"
+           "<script xyz"
+           "<style xyz"))
+
+    (testing "indentation"
+      (testing "valid"
+        (are [s] (some? (html-block-begin s))
+             " <pre"
+             "  <pre"
+             "   <pre"))
+
+      (testing "invalid"
+        (are [s] (nil? (html-block-begin s))
+             "    <pre"
+             "     <pre"
+             "      <pre"))))
+
+  (testing "variant 2"
+    (testing "tags"
+      (testing "valid"
+        (is (contains? (-> "<!--xyz" html-block-begin :variant)
+                       2)))
+
+      (testing "invalid"
+        (are [t] (not (contains? (-> (str t "xyz") html-block-begin :variant)
+                                 2))
+             "< !--"
+             "<! --"
+             "<!- -"
+             "<!-"
+             "\\<!--")))
+
+    (testing "capture"
+      (are [s] (let [res (html-block-begin s)]
+                 (and (contains? (:variant res) 2)
+                      (= s (:content res))))
+           "<!--"
+           "<!--xyz"
+           "<!-- xyz"))
+
+    (testing "indentation"
+      (testing "valid"
+        (are [s] (some? (html-block-begin s))
+             " <!--"
+             "  <!--"
+             "   <!--"))
+
+      (testing "invalid"
+        (are [s] (nil? (html-block-begin s))
+             "    <!--"
+             "     <!--"
+             "      <!--"))))
+
+  (testing "variant 3"
+    (testing "tags"
+      (testing "valid"
+        (is (contains? (-> "<?xyz" html-block-begin :variant)
+                       3)))
+
+      (testing "invalid"
+        (are [t] (not (contains? (-> (str t "xyz") html-block-begin :variant)
+                                 3))
+             "< ?"
+             "\\<?"
+             "<\\?")))
+
+    (testing "capture"
+      (are [s] (let [res (html-block-begin s)]
+                 (and (contains? (:variant res) 3)
+                      (= s (:content res))))
+           "<?"
+           "<?xyz"
+           "<? xyz"))
+
+    (testing "indentation"
+      (testing "valid"
+        (are [s] (some? (html-block-begin s))
+             " <?"
+             "  <?"
+             "   <?"))
+
+      (testing "invalid"
+        (are [s] (nil? (html-block-begin s))
+             "    <?"
+             "     <?"
+             "      <?"))))
+
+  (testing "variant 4"
+    (testing "tags"
+      (testing "valid"
+        (is (contains? (-> "<!Wxyz" html-block-begin :variant)
+                       4)))
+
+      (testing "invalid"
+        (are [t] (not (contains? (-> (str t "xyz") html-block-begin :variant)
+                                 4))
+             "< !W"
+             "<! W"
+             "<! "
+             "\\<!W"
+             "<\\!W"
+             "<!\\W")))
+
+    (testing "capture"
+      (are [s] (let [res (html-block-begin s)]
+                 (and (contains? (:variant res) 4)
+                      (= s (:content res))))
+           "<!W"
+           "<!Wxyz"
+           "<!W xyz"))
+
+    (testing "indentation"
+      (testing "valid"
+        (are [s] (some? (html-block-begin s))
+             " <!W"
+             "  <!W"
+             "   <!W"))
+
+      (testing "invalid"
+        (are [s] (nil? (html-block-begin s))
+             "    <!W"
+             "     <!W"
+             "      <!W"))))
+
+  (testing "variant 5"
+    (testing "tags"
+      (testing "valid"
+        (is (contains? (-> "<![CDATA[xyz" html-block-begin :variant)
+                       5)))
+
+      (testing "invalid"
+        (are [t] (not (contains? (-> (str t "xyz") html-block-begin :variant)
+                                 5))
+             "< ![CDATA["
+             "<! [CDATA["
+             "<![ CDATA["
+             "<![C DATA["
+             "<![CD ATA["
+             "<![CDA TA["
+             "<![CDAT A["
+             "<![CDATA ["
+             "\\<![CDATA["
+             "<\\![CDATA["
+             "<!\\[CDATA["
+             "<![\\CDATA["
+             "<![C\\DATA["
+             "<![CD\\ATA["
+             "<![CDA\\TA["
+             "<![CDAT\\A["
+             "<![CDATA\\[")))
+
+    (testing "capture"
+      (are [s] (let [res (html-block-begin s)]
+                 (and (contains? (:variant res) 5)
+                      (= s (:content res))))
+           "<![CDATA["
+           "<![CDATA[xyz"
+           "<![CDATA[ xyz"))
+
+    (testing "indentation"
+      (testing "valid"
+        (are [s] (some? (html-block-begin s))
+             " <![CDATA["
+             "  <![CDATA["
+             "   <![CDATA["))
+
+      (testing "invalid"
+        (are [s] (nil? (html-block-begin s))
+             "    <![CDATA["
+             "     <![CDATA["
+             "      <![CDATA["))))
+
+  (testing "variant 6"
+    (testing "tags"
+      (testing "valid"
+        (let [v6? #(contains? (:variant %) 6)]
+          (are [pre suf] (every? #(->> (str pre % suf)
+                                       html-block-begin
+                                       v6?)
+                                 html/block-variant-6-tags)
+               "<"  " xyz"
+               "<"  ">"
+               "<"  "/>"
+               "<"  ""
+               "</" " xyz"
+               "</" ">"
+               "</" "/>"
+               "</" "")))
+
+      (testing "invalid"
+        (are [s] (not (contains? (-> s html-block-begin :variant)
+                                 6))
+             "< p"
+             "<px"
+             "< p>"
+             "< p/ >"
+             "< /p"
+             "</ p"
+             "</px"
+             "< /p x"
+             "</ p x"
+             "< /p>"
+             "</ p>"
+             "< /p/>"
+             "</ p/>"
+             "</p/ >")))
+
+    (testing "capture"
+      (are [s] (let [res (html-block-begin s)]
+                 (and (contains? (:variant res) 6)
+                      (= s (:content res))))
+           "<p>"
+           "<p>xyz"
+           "<p> xyz"
+           "<p xyz"
+           "<p>"
+           "<p/>"
+           "<p"
+           "</p xyz"
+           "</p>"
+           "</p/>"
+           "</p"))
+
+    (testing "indentation"
+      (testing "valid"
+        (are [s] (some? (html-block-begin s))
+             " <p"
+             "  <p"
+             "   <p"))
+
+      (testing "invalid"
+        (are [s] (nil? (html-block-begin s))
+             "    <p"
+             "     <p"
+             "      <p"))))
+
+  (testing "variant 7"
+    (testing "tags"
+      (testing "valid"
+        (are [s] (contains? (-> s html-block-begin :variant)
+                            7)
+             "<a>"
+             "<a >"
+             "<a href>"
+             "<a href=\"xyz\">"
+             "<a href=\"xyz\" >"
+             "<a/>"
+             "<a />"
+             "<a href/>"
+             "<a href=\"xyz\"/>"
+             "<a href=\"xyz\" />"
+             "</a>"
+             "</a >"
+             "</script>"
+             "</style>"
+             "</pre>"
+             "</script >"
+             "</style >"
+             "</pre >"))
+
+      (testing "invalid"
+        (are [s] (not (contains? (-> s html-block-begin :variant)
+                                 7))
+             "<script>"
+             "<style>"
+             "<pre>"
+             "<script >"
+             "<style >"
+             "<pre >"
+             "<script abc>"
+             "<style abc>"
+             "<pre abc>"
+             "<script abc=\"xyz\">"
+             "<style abc=\"xyz\">"
+             "<pre abc=\"xyz\">"
+             "<script/>"
+             "<style/>"
+             "<pre/>"
+             "<script />"
+             "<style />"
+             "<pre />"
+             "<script abc/>"
+             "<style abc/>"
+             "<pre abc/>"
+             "<script abc=\"xyz\"/>"
+             "<style abc=\"xyz\"/>"
+             "<pre abc=\"xyz\"/>"
+             "<a>xyz"
+             "<a> xyz")))
+
+    (testing "capture"
+      (are [s] (let [res (html-block-begin s)]
+                 (and (contains? (:variant res) 7)
+                      (= s (:content res))))
+           "<p>"
+           "<p class=\"xyz\">"
+           "<p> \t "))
+
+    (testing "indentation"
+      (testing "valid"
+        (are [s] (some? (html-block-begin s))
+             " <p>"
+             "  <p>"
+             "   <p>"))
+
+      (testing "invalid"
+        (are [s] (nil? (html-block-begin s))
+             "    <p>"
+             "     <p>"
+             "      <p>")))))
+
+(deftest html-block-end-test
+  (testing "pun nil"
+    (is (nil? (html-block-end nil))))
+
+  (testing "variant 1"
+    (testing "tags"
+      (testing "valid"
+        (are [t] (contains? (-> t html-block-end :variant)
+                            1)
+             "</pre>"
+             "</script>"
+             "</style>"))
+
+      (testing "invalid"
+        (are [t] (not (contains? (-> (str t "xyz") html-block-end :variant)
+                                 1))
+             "</abc>"
+             "</xyz>"
+             "</>"
+             "\\</pre>"
+             "\\</script>"
+             "\\</style>")))
+
+    (testing "capture"
+      (are [s] (let [res (html-block-end s)]
+                 (and (contains? (:variant res) 1)
+                      (= s (:content res))))
+           "</pre>"
+           "</script>"
+           "</style>"
+           "</pre> xyz"
+           "</script> xyz"
+           "</style> xyz"
+           "abc </pre> xyz"
+           "abc </script> xyz"
+           "abc </style> xyz"))
+
+    (testing "indentation"
+      (testing "valid"
+        (are [s] (some? (html-block-end s))
+             " </pre>"
+             "  </pre>"
+             "   </pre>"))
+
+      (testing "invalid"
+        (are [s] (nil? (html-block-end s))
+             "    </pre>"
+             "     </pre>"
+             "      </pre>"))))
+
+  (testing "variant 2"
+    (testing "tags"
+      (testing "valid"
+        (is (contains? (-> "-->" html-block-end :variant)
+                       2)))
+
+      (testing "invalid"
+        (are [t] (not (contains? (-> (str t "xyz") html-block-end :variant)
+                                 2))
+             "- ->"
+             "-- >"
+             "\\-->")))
+
+    (testing "capture"
+      (are [s] (let [res (html-block-end s)]
+                 (and (contains? (:variant res) 2)
+                      (= s (:content res))))
+           "-->"
+           "--> xyz"
+           "abc --> xyz"))
+
+    (testing "indentation"
+      (testing "valid"
+        (are [s] (some? (html-block-end s))
+             " -->"
+             "  -->"
+             "   -->"))
+
+      (testing "invalid"
+        (are [s] (nil? (html-block-end s))
+             "    -->"
+             "     -->"
+             "      -->"))))
+
+  (testing "variant 3"
+    (testing "tags"
+      (testing "valid"
+        (is (contains? (-> "?>" html-block-end :variant)
+                       3)))
+
+      (testing "invalid"
+        (are [t] (not (contains? (-> (str t "xyz") html-block-end :variant)
+                                 3))
+             "? >"
+             "?\\>"
+             "\\?>")))
+
+    (testing "capture"
+      (are [s] (let [res (html-block-end s)]
+                 (and (contains? (:variant res) 3)
+                      (= s (:content res))))
+           "?>"
+           "?> xyz"
+           "abc ?> xyz"))
+
+    (testing "indentation"
+      (testing "valid"
+        (are [s] (some? (html-block-end s))
+             " ?>"
+             "  ?>"
+             "   ?>"))
+
+      (testing "invalid"
+        (are [s] (nil? (html-block-end s))
+             "    ?>"
+             "     ?>"
+             "      ?>"))))
+
+  (testing "variant 4"
+    (testing "tags"
+      (testing "valid"
+        (is (contains? (-> ">" html-block-end :variant)
+                       4)))
+
+      (testing "invalid"
+        (is (not (contains? (-> "\\>xyz" html-block-end :variant)
+                            4)))))
+
+    (testing "capture"
+      (are [s] (let [res (html-block-end s)]
+                 (and (contains? (:variant res) 4)
+                      (= s (:content res))))
+           ">"
+           "> xyz"
+           "abc > xyz"))
+
+    (testing "indentation"
+      (testing "valid"
+        (are [s] (some? (html-block-end s))
+             " >"
+             "  >"
+             "   >"))
+
+      (testing "invalid"
+        (are [s] (nil? (html-block-end s))
+             "    >"
+             "     >"
+             "      >"))))
+
+  (testing "variant 5"
+    (testing "tags"
+      (testing "valid"
+        (is (contains? (-> "]]>" html-block-end :variant)
+                       5)))
+
+      (testing "invalid"
+        (are [s] (not (contains? (-> s html-block-end :variant)
+                                 5))
+             "] ]>xyz"
+             "]] >xyz"
+             "\\]]>xyz"
+             "]\\]>xyz"
+             "]]\\>xyz")))
+
+    (testing "capture"
+      (are [s] (let [res (html-block-end s)]
+                 (and (contains? (:variant res) 5)
+                      (= s (:content res))))
+           "]]>"
+           "]]> xyz"
+           "abc ]]> xyz"))
+
+    (testing "indentation"
+      (testing "valid"
+        (are [s] (some? (html-block-end s))
+             " ]]>"
+             "  ]]>"
+             "   ]]>"))
+
+      (testing "invalid"
+        (are [s] (nil? (html-block-end s))
+             "    ]]>"
+             "     ]]>"
+             "      ]]>"))))
+
+  (testing "variant 6"
+    (testing "valid"
+      (are [s] (contains? (-> s html-block-end :variant)
+                          6)
+           ""
+           " "
+           "  "
+           "   "
+           "\t"
+           "\t\t"
+           "\t\t\t"
+           "\n"
+           "\n\n"
+           "\n\n\n"
+           "\r"
+           "\r\r"
+           "\r\r\r"
+           "\r\n"
+           "\r\n\r\n"
+           "\r\n\r\n\r\n"
+           " \t\n\r \t\n\r \t\n\r"))
+
+    (testing "invalid"
+      (are [s] (not (contains? (-> s html-block-end :variant)
+                               6))
+           "x"
+           ">"
+           "\\"))
+
+    (testing "capture"
+      (are [s] (let [res (html-block-end s)]
+                 (and (contains? (:variant res) 6)
+                      (= s (:content res))))
+           ""
+           "   "
+           "   \t\t\t   ")))
+
+  (testing "variant 7"
+    (testing "valid"
+      (are [s] (contains? (-> s html-block-end :variant)
+                          7)
+           ""
+           " "
+           "  "
+           "   "
+           "\t"
+           "\t\t"
+           "\t\t\t"
+           "\n"
+           "\n\n"
+           "\n\n\n"
+           "\r"
+           "\r\r"
+           "\r\r\r"
+           "\r\n"
+           "\r\n\r\n"
+           "\r\n\r\n\r\n"
+           " \t\n\r \t\n\r \t\n\r"))
+
+    (testing "invalid"
+      (are [s] (not (contains? (-> s html-block-end :variant)
+                               7))
+           "x"
+           ">"
+           "\\"))
+
+    (testing "capture"
+      (are [s] (let [res (html-block-end s)]
+                 (and (contains? (:variant res) 7)
+                      (= s (:content res))))
+           ""
+           "   "
+           "   \t\t\t   "))))
 

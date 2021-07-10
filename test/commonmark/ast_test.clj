@@ -188,6 +188,34 @@
            "\r"
            "\r\n")))
 
+  (testing "markdown between HTML tags"
+    (testing "blank lines inbetween"
+      (is (= (-> "<del>\n\n*abc*\n\n</del>" from-string :children)
+             [(node {:tag :html-block
+                     :content "<del>"})
+              (node {:tag :blank})
+              (node {:tag :p}
+                    [(node {:tag :em}
+                           [(node {:tag :txt :content "abc"})])])
+              (node {:tag :blank})
+              (node {:tag :html-block
+                     :content "</del>"})])))
+
+    (testing "on adjacent lines"
+      (is (= (-> "<del>\n*abc*\n</del>" from-string :children)
+             [(node {:tag :html-block
+                     :content "<del>\r\n*abc*\r\n</del>"})])))
+
+    (testing "on the same line"
+      (is (= (-> "<del>*abc*</del>" from-string :children)
+             [(node {:tag :p}
+                    [(node {:tag :html-inline}
+                           [(node {:tag :txt :content "<del>"})])
+                     (node {:tag :em}
+                           [(node {:tag :txt :content "abc"})])
+                     (node {:tag :html-inline}
+                           [(node {:tag :txt :content "</del>"})])])]))))
+
   (testing "post-processing"
     (testing "hard line break at end of block"
       (are [s cs] (= cs (-> s from-string (get-in [:children 0 :children])))

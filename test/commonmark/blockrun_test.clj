@@ -72,16 +72,16 @@
         (is (= (map second result)
                [["xyz" "abc" "123" "==="]]))))))
 
-(deftest parse-test
+(deftest from-string-test
   (testing "setext heading"
     (testing "minimal"
-      (are [s ul] (= (parse s)
+      (are [s ul] (= (from-string s)
                      [[:stxh ["xyz" ul]]])
            "xyz\n===" "==="
            "xyz\n---" "---"))
 
     (testing "underline length"
-      (are [s ul] (= (parse s)
+      (are [s ul] (= (from-string s)
                      [[:stxh ["xyz" ul]]])
            "xyz\n=" "="
            "xyz\n==" "=="
@@ -101,19 +101,19 @@
            "xyz\n--------" "--------"))
 
     (testing "not preceded by blank"
-      (is (= (second (parse "# xyz\r\nabc\r\n==="))
+      (is (= (second (from-string "# xyz\r\nabc\r\n==="))
              [:stxh ["abc" "==="]])))
 
     (testing "multiline"
-      (is (= (first (parse "xyz\nabc\n==="))
+      (is (= (first (from-string "xyz\nabc\n==="))
              [:stxh ["xyz" "abc" "==="]])))
 
     (testing "not followed by blank"
-      (is (= (first (parse "abc\r\n===\r\n- xyz"))
+      (is (= (first (from-string "abc\r\n===\r\n- xyz"))
              [:stxh ["abc" "==="]])))
 
     (testing "separation from paragraph with blank"
-      (let [result (parse "abc\r\n\r\nxyz\r\n===")]
+      (let [result (from-string "abc\r\n\r\nxyz\r\n===")]
         (testing "tags"
           (is (= (map first result)
                  [:p :blank :stxh])))
@@ -123,16 +123,16 @@
                  [["abc"] [""] ["xyz" "==="]])))))
 
     (testing "multiple lines"
-      (is (= (parse "xyz\r\nabc\r\n===")
+      (is (= (from-string "xyz\r\nabc\r\n===")
              [[:stxh ["xyz" "abc" "==="]]]))))
 
   (testing "thematic break"
     (testing "minimal"
-      (is (= (parse "---")
+      (is (= (from-string "---")
              [[:tbr ["---"]]])))
 
     (testing "followed by block"
-      (are [s e] (= (parse s)
+      (are [s e] (= (from-string s)
                     [[:tbr ["---"]] e])
            "---\nxyz"    [:p ["xyz"]]
            "---\n# xyz"  [:atxh ["# xyz"]]
@@ -142,20 +142,20 @@
 
     (testing "preceded by paragraph"
       (testing "using -"
-        (is (= (parse "xyz\n---")
+        (is (= (from-string "xyz\n---")
                [[:stxh ["xyz" "---"]]])))
 
       (testing "using _"
-        (is (= (parse "xyz\n___")
+        (is (= (from-string "xyz\n___")
                [[:p ["xyz"]] [:tbr ["___"]]])))))
 
   (testing "fenced code block"
     (testing "minimal"
-      (is (= (parse "```\r\nxyz\r\n```")
+      (is (= (from-string "```\r\nxyz\r\n```")
              [[:ofcblk ["```" "xyz" "```"]]])))
 
     (testing "may interrupt paragraph"
-      (let [result (parse "abc\n```\n123\n```\nxyz")]
+      (let [result (from-string "abc\n```\n123\n```\nxyz")]
         (testing "tags"
           (is (= (map first result)
                  [:p :ofcblk :p])))
@@ -165,7 +165,7 @@
                  [["abc"] ["```" "123" "```"] ["xyz"]])))))
 
     (testing "no closing fence => contains all till end of input"
-      (let [result (parse "```\nabc\nxyz")]
+      (let [result (from-string "```\nabc\nxyz")]
         (testing "tags"
           (is (= (map first result)
                  [:ofcblk])))
@@ -178,7 +178,7 @@
       (let [s1 "```\nabc"
             s2 "```\n123\n```"
             s3 "xyz\n```"
-            [tm1 tm2 tm3] (map parse [s1 s2 s3])
+            [tm1 tm2 tm3] (map from-string [s1 s2 s3])
             result (add tm1 (add tm2 tm3))]
         (testing "tags"
           (is (= (map first result)
@@ -190,21 +190,21 @@
 
   (testing "indented code block"
     (testing "minimal"
-      (is (= (parse "    abc")
+      (is (= (from-string "    abc")
              [[:icblk ["    abc"]]])))
 
     (testing "multiple lines"
-      (is (= (parse "    abc\r\n    xyz")
+      (is (= (from-string "    abc\r\n    xyz")
              [[:icblk ["    abc" "    xyz"]]])))
 
     (testing "cannot interrupt paragraph"
-      (are [s ls] (= (parse s)
+      (are [s ls] (= (from-string s)
                      [[:p ls]])
            "abc\r\n    xyz"        ["abc" "    xyz"]
            "abc\r\n    xyz\r\n123" ["abc" "    xyz" "123"]))
 
     (testing "paragraph may follow without blank"
-      (let [result (parse "    xyz\r\nabc")]
+      (let [result (from-string "    xyz\r\nabc")]
         (testing "tags"
           (is (= (map first result)
                  [:icblk :p])))
@@ -214,11 +214,11 @@
                  [["    xyz"] ["abc"]])))))
 
     (testing "chunks"
-      (is (= (parse "    xyz\r\n    abc")
+      (is (= (from-string "    xyz\r\n    abc")
              [[:icblk ["    xyz" "    abc"]]])))
 
     (testing "chunks separated by blanks"
-      (are [s ls] (= (parse s)
+      (are [s ls] (= (from-string s)
                      [[:icblk ls]])
            "    1\n\n    2"          ["    1" "" "    2"]
            "    1\n\n\n    2"        ["    1" "" "" "    2"]
@@ -240,27 +240,27 @@
 
     (testing "basic case"
       (testing "absorb paragraph"
-        (is (= (parse (indent "- " "abc\nxyz"))
+        (is (= (from-string (indent "- " "abc\nxyz"))
                [[:li ["- abc" "  xyz"]]])))
 
       (testing "absorb atx heading"
-        (is (= (parse (indent "- " "abc\n# xyz"))
+        (is (= (from-string (indent "- " "abc\n# xyz"))
                [[:li ["- abc" "  # xyz"]]])))
 
       (testing "absorb indented code block"
-        (is (= (parse (indent "- " "abc\n    foo\n    bar"))
+        (is (= (from-string (indent "- " "abc\n    foo\n    bar"))
                [[:li ["- abc" "      foo" "      bar"]]])))
 
       (testing "absorb fenced code block"
-        (is (= (parse (indent "- " "abc\n```\nxyz\n```"))
+        (is (= (from-string (indent "- " "abc\n```\nxyz\n```"))
                [[:li ["- abc" "  ```" "  xyz" "  ```"]]])))
 
       (testing "absorb thematic break"
-        (is (= (parse (indent "- " "abc\n\n---"))
+        (is (= (from-string (indent "- " "abc\n\n---"))
                [[:li ["- abc" "" "  ---"]]])))
 
       (testing "blanks"
-        (are [s n] (= (parse s)
+        (are [s n] (= (from-string s)
                       [[:li (concat ["- abc"] (repeat n "") ["  xyz"])]])
              "- abc\n\n  xyz"       1
              "- abc\n\n\n  xyz"     2
@@ -268,7 +268,7 @@
              "- abc\n\n\n\n\n  xyz" 4))
 
       (testing "indentation"
-        (are [s] (= (parse s)
+        (are [s] (= (from-string s)
                       [[:li (string/split-lines s)]])
              "- abc\n\n  # foo\n  xyz\n  ```\n  opq\n  ```\n      bar"
              " - abc\n\n   # foo\n   xyz\n   ```\n   opq\n   ```\n       bar"
@@ -277,31 +277,31 @@
 
     (testing "starting with indented code"
       (testing "minimal"
-        (is (= (parse "-     abc")
+        (is (= (from-string "-     abc")
                [[:li ["-     abc"]]])))
 
       (testing "absorb paragraph"
-        (is (= (parse (indent "- " "    abc\nxyz"))
+        (is (= (from-string (indent "- " "    abc\nxyz"))
                [[:li ["-     abc" "  xyz"]]])))
 
       (testing "absorb atx heading"
-        (is (= (parse (indent "- " "    abc\n# xyz"))
+        (is (= (from-string (indent "- " "    abc\n# xyz"))
                [[:li ["-     abc" "  # xyz"]]])))
 
       (testing "absorb fenced code block"
-        (is (= (parse (indent "- " "    abc\n```\nxyz\n```"))
+        (is (= (from-string (indent "- " "    abc\n```\nxyz\n```"))
                [[:li ["-     abc" "  ```" "  xyz" "  ```"]]])))
 
       (testing "absorb blank"
-        (is (= (parse (indent "- " "    abc\n\nxyz"))
+        (is (= (from-string (indent "- " "    abc\n\nxyz"))
                [[:li ["-     abc" "" "  xyz"]]])))
 
       (testing "absorb thematic break"
-        (is (= (parse (indent "- " "    abc\n\n---"))
+        (is (= (from-string (indent "- " "    abc\n\n---"))
                [[:li ["-     abc" "" "  ---"]]])))
 
       (testing "blanks"
-        (are [s n] (= (parse s)
+        (are [s n] (= (from-string s)
                       [[:li (concat ["-     abc"] (repeat n "") ["  xyz"])]])
              "-     abc\n\n  xyz"       1
              "-     abc\n\n\n  xyz"     2
@@ -309,7 +309,7 @@
              "-     abc\n\n\n\n\n  xyz" 4))
 
       (testing "indentation"
-        (are [s] (= (parse s)
+        (are [s] (= (from-string s)
                     [[:li (string/split-lines s)]])
              "-     abc\n\n  # foo\n  xyz\n  ```\n  opq\n  ```"
              " -     abc\n\n   # foo\n   xyz\n   ```\n   opq\n   ```"
@@ -318,37 +318,37 @@
 
     (testing "starting with blank line"
       (testing "minimal"
-        (is (= (parse "-")
+        (is (= (from-string "-")
                [[:li ["-"]]])))
 
       (testing "absorb paragraph"
-        (is (= (parse "-\n  abc")
+        (is (= (from-string "-\n  abc")
                [[:li ["-" "  abc"]]])))
 
       (testing "absorb atx heading"
-        (is (= (parse (indent "- " "    abc\n# xyz"))
+        (is (= (from-string (indent "- " "    abc\n# xyz"))
                [[:li ["-     abc" "  # xyz"]]])))
 
       (testing "absorb fenced code block"
-        (is (= (parse (indent "- " "    abc\n```\nxyz\n```"))
+        (is (= (from-string (indent "- " "    abc\n```\nxyz\n```"))
                [[:li ["-     abc" "  ```" "  xyz" "  ```"]]])))
 
       (testing "absorb blank"
-        (is (= (parse (indent "- " "    abc\n\nxyz"))
+        (is (= (from-string (indent "- " "    abc\n\nxyz"))
                [[:li ["-     abc" "" "  xyz"]]])))
 
       (testing "absorb thematic break"
-        (is (= (parse (indent "- " "    abc\n\n---"))
+        (is (= (from-string (indent "- " "    abc\n\n---"))
                [[:li ["-     abc" "" "  ---"]]])))
 
       (testing "don't absorb unindented"
-        (are [s] (= (first (parse s))
+        (are [s] (= (first (from-string s))
                     [:li ["-"]])
              "-\nabc"
              "-\n abc"))
 
       (testing "blanks"
-        (are [s n] (= (parse s)
+        (are [s n] (= (from-string s)
                       [[:li (concat ["-" "  abc"] (repeat n "") ["  xyz"])]])
              "-\n  abc\n\n  xyz"       1
              "-\n  abc\n\n\n  xyz"     2
@@ -356,7 +356,7 @@
              "-\n  abc\n\n\n\n\n  xyz" 4))
 
       (testing "indentation"
-        (are [s] (= (parse s)
+        (are [s] (= (from-string s)
                       [[:li (string/split-lines s)]])
              "-\n  abc\n  # foo\n  ```\n  xyz\n  ```\n      bar"
              " -\n   abc\n   # foo\n   ```\n   xyz\n   ```\n       bar"
@@ -366,22 +366,22 @@
   (testing "block quote"
     (testing "basic case"
       (testing "minimal"
-        (is (= (parse "> xyz")
+        (is (= (from-string "> xyz")
                [[:bq ["> xyz"]]])))
 
       (testing "indentation"
-        (are [s] (= (parse s)
+        (are [s] (= (from-string s)
                     [[:bq [s]]])
              " > xyz"
              "  > xyz"
              "   > xyz"))
 
       (testing "multiline"
-        (is (= (parse "> xyz\n> # abc\n> foo")
+        (is (= (from-string "> xyz\n> # abc\n> foo")
                [[:bq ["> xyz" "> # abc" "> foo"]]])))
 
       (testing "empty"
-        (are [s ls] (= (parse s)
+        (are [s ls] (= (from-string s)
                        [[:bq ls]])
              ">"           [">"]
              ">\n>"        [">" ">"]
@@ -391,35 +391,35 @@
              ">\n> xyz"    [">" "> xyz"]))
 
       (testing "blank line separates"
-        (is (= (parse "> xyz\n\n> abc")
+        (is (= (from-string "> xyz\n\n> abc")
                [[:bq ["> xyz"]] [:blank [""]] [:bq ["> abc"]]])))
 
       (testing "can interrupt paragraphs"
-        (is (= (parse "xyz\n> abc")
+        (is (= (from-string "xyz\n> abc")
                [[:p ["xyz"]] [:bq ["> abc"]]])))
 
       (testing "no need for blank line before"
-        (is (= (parse "***\n> abc")
+        (is (= (from-string "***\n> abc")
                [[:tbr ["***"]] [:bq ["> abc"]]])))
 
       (testing "no need for blank line after"
-        (is (= (parse "> abc\n***")
+        (is (= (from-string "> abc\n***")
                [[:bq ["> abc"]] [:tbr ["***"]]]))))
 
     (testing "laziness"
       (testing "minimal"
-        (is (= (parse "> xyz\nabc")
+        (is (= (from-string "> xyz\nabc")
                [[:bq ["> xyz" "abc"]]])))
 
       (testing "marker omission"
         (testing "before paragraph continuation text"
-          (are [s ls] (= (parse s)
+          (are [s ls] (= (from-string s)
                          [[:bq ls]])
                "> xyz\nabc\n> foo\nbar" ["> xyz" "abc" "> foo" "bar"]
                "> xyz\n    abc"         ["> xyz" "    abc"]))
 
         (testing "before non-paragraph-continuation text"
-          (are [s e] (= e (second (parse s)))
+          (are [s e] (= e (second (from-string s)))
                "> xyz\n---"         [:tbr ["---"]]
                "> xyz\n- abc"       [:li ["- abc"]]
                ">     xyz\n    abc" [:icblk ["    abc"]]
@@ -427,24 +427,24 @@
                "> # xyz\n    abc"   [:icblk ["    abc"]])))
 
       (testing "whitespace before paragraph continuation text"
-        (are [s] (= (parse (str "> xyz\n" s))
+        (are [s] (= (from-string (str "> xyz\n" s))
                     [[:bq ["> xyz" s]]])
              " abc"
              "  abc"
              "   abc"))
 
       (testing "separation from following paragraph"
-        (are [s r] (= r (parse s))
+        (are [s r] (= r (from-string s))
              "> abc\n\nxyz"  [[:bq ["> abc"]] [:blank [""]] [:p ["xyz"]]]
              "> abc\n>\nxyz" [[:bq ["> abc" ">"]] [:p ["xyz"]]]))
 
       (testing "multiple levels of nesting"
-        (is (= (parse "> > > abc\nxyz")
+        (is (= (from-string "> > > abc\nxyz")
                [[:bq ["> > > abc" "xyz"]]]))))
 
     (testing "paragraph continuation text"
       (testing "not lazy"
-        (are [s ls] (= (parse s)
+        (are [s ls] (= (from-string s)
                        [[:bq ls]])
              "> xyz\nabc"                       ["> xyz" "abc"]
              "> xyz\n    abc"                   ["> xyz" "    abc"]
@@ -452,10 +452,273 @@
              "> xyz\n>     abc\n>     pqr\n123" ["> xyz" ">     abc" ">     pqr" "123"]))
 
       (testing "lazy"
-        (are [s ls] (= (parse s)
+        (are [s ls] (= (from-string s)
                        [[:bq ls]])
              "> xyz\nabc"                   ["> xyz" "abc"]
              "> xyz\n    abc"               ["> xyz" "    abc"]
              "> xyz\n    abc\npqr"          ["> xyz" "    abc" "pqr"]
-             "> xyz\n    abc\n    pqr\n123" ["> xyz" "    abc" "    pqr" "123"])))))
+             "> xyz\n    abc\n    pqr\n123" ["> xyz" "    abc" "    pqr" "123"]))))
+
+  (testing "html block"
+    (testing "variant 1"
+      (testing "single line"
+        (let [s "<pre>abc</pre>"]
+          (is (= (from-string s)
+                 [[:html-block [s]]]))))
+
+      (testing "multiline"
+        (is (= (from-string "<pre>\nabc\nxyz\n</pre>")
+               [[:html-block ["<pre>" "abc" "xyz" "</pre>"]]])))
+
+      (testing "tag interchangability"
+        (are [t1 t2] (= (from-string (str t1 "\nabc\n" t2))
+                        [[:html-block [t1 "abc" t2]]])
+             "<pre>"    "</script>"
+             "<pre>"    "</style>"
+             "<script>" "</pre>"
+             "<script>" "</style>"
+             "<style>"  "</pre>"
+             "<style>"  "</script>"))
+
+      (testing "empty"
+        (let [s "<pre></pre>"]
+          (= (from-string s)
+             [[:html-block [s]]])))
+
+      (testing "interrupt paragraph"
+        (is (= (from-string "xyz\n<pre>\n123</pre>\nabc")
+               [[:p          ["xyz"]]
+                [:html-block ["<pre>" "123</pre>"]]
+                [:p          ["abc"]]])))
+
+      (testing "unpaired"
+        (testing "opener"
+          (is (= (postprocess (from-string "xyz\n<pre>\nabc"))
+                 [[:p          ["xyz"]]
+                  [:html-block ["<pre>" "abc"]]])))
+
+        (testing "closer"
+          (is (= (postprocess (from-string "xyz\n</pre>\nabc"))
+                 [[:p ["xyz" "</pre>" "abc"]]])))))
+
+    (testing "variant 2"
+      (testing "single line"
+        (let [s "<!--abc-->"]
+          (is (= (from-string s)
+                 [[:html-block [s]]]))))
+
+      (testing "multiline"
+        (is (= (from-string "<!--\nabc\nxyz\n-->")
+               [[:html-block ["<!--" "abc" "xyz" "-->"]]])))
+
+      (testing "empty"
+        (let [s "<!---->"]
+          (= (from-string s)
+             [[:html-block [s]]])))
+
+      (testing "interrupt paragraph"
+        (is (= (from-string "xyz\n<!--\n123-->\nabc")
+               [[:p          ["xyz"]]
+                [:html-block ["<!--" "123-->"]]
+                [:p          ["abc"]]])))
+
+      (testing "unpaired"
+        (testing "opener"
+          (is (= (postprocess (from-string "xyz\n<!--\nabc"))
+                 [[:p          ["xyz"]]
+                  [:html-block ["<!--" "abc"]]])))
+
+        (testing "closer"
+          (is (= (postprocess (from-string "xyz\n-->\nabc"))
+                 [[:p ["xyz" "-->" "abc"]]])))))
+
+    (testing "variant 3"
+      (testing "single line"
+        (let [s "<?abc?>"]
+          (is (= (from-string s)
+                 [[:html-block [s]]]))))
+
+      (testing "multiline"
+        (is (= (from-string "<?\nabc\nxyz\n?>")
+               [[:html-block ["<?" "abc" "xyz" "?>"]]])))
+
+      (testing "empty"
+        (let [s "<??>"]
+          (= (from-string s)
+             [[:html-block [s]]])))
+
+      (testing "interrupt paragraph"
+        (is (= (from-string "xyz\n<?\n123?>\nabc")
+               [[:p          ["xyz"]]
+                [:html-block ["<?" "123?>"]]
+                [:p          ["abc"]]])))
+
+      (testing "unpaired"
+        (testing "opener"
+          (is (= (postprocess (from-string "xyz\n<?\nabc"))
+                 [[:p          ["xyz"]]
+                  [:html-block ["<?" "abc"]]])))
+
+        (testing "closer"
+          (is (= (postprocess (from-string "xyz\n?>\nabc"))
+                 [[:p ["xyz" "?>" "abc"]]])))))
+
+    (testing "variant 4"
+      (testing "single line"
+        (let [s "<!Wabc>"]
+          (is (= (from-string s)
+                 [[:html-block [s]]]))))
+
+      (testing "multiline"
+        (is (= (from-string "<!W\nabc\nxyz\n>")
+               [[:html-block ["<!W" "abc" "xyz" ">"]]])))
+
+      (testing "empty"
+        (let [s "<!W>"]
+          (= (from-string s)
+             [[:html-block [s]]])))
+
+      (testing "interrupt paragraph"
+        (is (= (from-string "xyz\n<!W\n123>\nabc")
+               [[:p          ["xyz"]]
+                [:html-block ["<!W" "123>"]]
+                [:p          ["abc"]]])))
+
+      (testing "unpaired"
+        (testing "opener"
+          (is (= (postprocess (from-string "xyz\n<!W\nabc"))
+                 [[:p          ["xyz"]]
+                  [:html-block ["<!W" "abc"]]])))
+
+        (testing "closer"
+          (is (= (from-string "xyz\n>\nabc")
+                 [[:p  ["xyz"]]
+                  [:bq [">"]]
+                  [:p  ["abc"]]]))))
+
+      (testing "blockquote as closer"
+        (testing "variant 4 opener"
+          (is (= (add (from-string "0\n<!W\n1")
+                      (from-string "2\n> 3\n4"))
+                 [[:p          ["0"]]
+                  [:html-block ["<!W" "1" "2" "> 3"]]
+                  [:p          ["4"]]])))
+
+        (testing "non-variant 4 opener"
+          (is (= (add (from-string "0\n<!--\n1")
+                      (from-string "2\n> 3\n4"))
+                 [[:p                   ["0"]]
+                  [:html-block-unpaired ["<!--" "1" "2"]]
+                  [:bq                  ["> 3" "4"]]])))))
+
+    (testing "variant 5"
+      (testing "single line"
+        (let [s "<![CDATA[abc]]>"]
+          (is (= (from-string s)
+                 [[:html-block [s]]]))))
+
+      (testing "multiline"
+        (is (= (from-string "<![CDATA[\nabc\nxyz\n]]>")
+               [[:html-block ["<![CDATA[" "abc" "xyz" "]]>"]]])))
+
+      (testing "empty"
+        (let [s "<![CDATA[]]>"]
+          (= (from-string s)
+             [[:html-block [s]]])))
+
+      (testing "interrupt paragraph"
+        (is (= (from-string "xyz\n<![CDATA[\n123]]>\nabc")
+               [[:p          ["xyz"]]
+                [:html-block ["<![CDATA[" "123]]>"]]
+                [:p          ["abc"]]])))
+
+      (testing "unpaired"
+        (testing "opener"
+          (is (= (postprocess (from-string "xyz\n<![CDATA[\nabc"))
+                 [[:p          ["xyz"]]
+                  [:html-block ["<![CDATA[" "abc"]]])))
+
+        (testing "closer"
+          (is (= (postprocess (from-string "xyz\n]]>\nabc"))
+                 [[:p  ["xyz" "]]>" "abc"]]])))))
+
+    (testing "variant 6"
+      (testing "standard"
+        (is (= (from-string "<p abc\nxyz\n\n123")
+               [[:html-block ["<p abc" "xyz"]]
+                [:blank      [""]]
+                [:p          ["123"]]])))
+
+      (testing "empty"
+        (let [s "<p\n\n123"]
+          (= (from-string s)
+             [[:html-block ["<p"]]
+              [:blank      [""]]
+              [:p          ["123"]]])))
+
+      (testing "interrupt paragraph"
+        (is (= (from-string "xyz\n<p\n\nabc")
+               [[:p          ["xyz"]]
+                [:html-block ["<p"]]
+                [:blank      [""]]
+                [:p          ["abc"]]])))
+
+      (testing "unpaired"
+        (is (= (postprocess (from-string "xyz\n<p\nabc"))
+               [[:p          ["xyz"]]
+                [:html-block ["<p" "abc"]]]))))
+
+    (testing "variant 7"
+      (testing "standard"
+        (is (= (from-string "<a href=\"abc\">\nxyz\n\n123")
+               [[:html-block ["<a href=\"abc\">" "xyz"]]
+                [:blank      [""]]
+                [:p          ["123"]]])))
+
+      (testing "empty"
+        (let [s "<a qpr=\"klm\">\n\n123"]
+          (= (from-string s)
+             [[:html-block ["<a qpr=\"klm\">"]]
+              [:blank      [""]]
+              [:p          ["123"]]])))
+
+      (testing "interrupt paragraph"
+        (testing "exclusively variant 7"
+          (is (= (from-string "xyz\n<a qpr=\"klm\">\n\nabc")
+                 [[:p     ["xyz" "<a qpr=\"klm\">"]]
+                  [:blank [""]]
+                  [:p     ["abc"]]])))
+
+        (testing "variant is both 6 and 7"
+          (is (= (from-string "xyz\n<td>\n123\n\nabc")
+                 [[:p          ["xyz"]]
+                  [:html-block ["<td>" "123"]]
+                  [:blank      [""]]
+                  [:p          ["abc"]]]))))
+
+      (testing "unpaired"
+        (is (= (postprocess (from-string "xyz\n\n<a qpr=\"klm\">\nabc"))
+               [[:p          ["xyz"]]
+                [:blank      [""]]
+                [:html-block ["<a qpr=\"klm\">" "abc"]]]))))
+
+    (testing "nesting"
+      (testing "different variants"
+        (is (= (from-string "0\n<!--\n1\n<pre>\n2\n</pre>\n3\n-->\n4")
+               [[:p          ["0"]]
+                [:html-block ["<!--" "1" "<pre>" "2" "</pre>" "3" "-->"]]
+                [:p          ["4"]]])))
+
+      (testing "same variant"
+        (is (= (postprocess (from-string "0\n<!--\n1\n<!--\n2\n-->\n3\n-->\n4"))
+               [[:p          ["0"]]
+                [:html-block ["<!--" "1" "<!--" "2" "-->"]]
+                [:p          ["3" "-->" "4"]]]))))
+
+    (testing "fuse iteratively"
+      (is (= (add (from-string "0\n<!--\n1")
+                  (from-string "2\n-->\n3"))
+             [[:p          ["0"]]
+              [:html-block ["<!--" "1" "2" "-->"]]
+              [:p          ["3"]]])))))
 

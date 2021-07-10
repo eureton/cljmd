@@ -1,5 +1,8 @@
 (ns commonmark.block
-  (:require [clojure.string :as string]))
+  (:require [clojure.string :as string]
+            [clojure.set]
+            [flatland.useful.fn :as ufn]
+            [commonmark.html :as html]))
 
 (comment "ATX Headings
          
@@ -297,6 +300,105 @@ OK  followed by either a . character or a ) character.
            (concat [:bq])
            (zipmap [:tag :indent :space :content])))
 
+(def html-block-variant-1-tag-re #"(?:(?i)script|pre|style)")
+
+(def html-block-variant-1-begin-line-re
+  (re-pattern (str #"^ {0,3}(?<!\\)<" html-block-variant-1-tag-re #"(?:\s|>|$).*")))
+
+(def html-block-variant-2-begin-line-re
+  (re-pattern (str #"^ {0,3}" html/comment-begin-re ".*")))
+
+(def html-block-variant-3-begin-line-re
+  (re-pattern (str #"^ {0,3}" html/processing-instruction-begin-re ".*")))
+
+(def html-block-variant-4-begin-line-re
+  (re-pattern (str #"^ {0,3}" html/declaration-begin-re ".*")))
+
+(def html-block-variant-5-begin-line-re
+  (re-pattern (str #"^ {0,3}" html/cdata-section-begin-re ".*")))
+
+(def html-block-variant-6-begin-line-re
+  (re-pattern (str #"^ {0,3}(?<!\\)</?"
+                   "(?:(?i)" (string/join "|" html/block-variant-6-tags) ")"
+                   #"(?:\s+|/?>|$).*")))
+
+(def html-block-variant-7-begin-line-re
+  (re-pattern (str "^ {0,3}"
+                   "(?:"
+                     (html/open-tag-re {:exclude-tags ["script" "style" "pre"]}) "|"
+                     html/closing-tag-re
+                   ")"
+                   #"\s*$")))
+
+(defn html-block-begin
+  [line]
+  (when line
+    (let [re-info {html-block-variant-1-begin-line-re 1
+                   html-block-variant-2-begin-line-re 2
+                   html-block-variant-3-begin-line-re 3
+                   html-block-variant-4-begin-line-re 4
+                   html-block-variant-5-begin-line-re 5
+                   html-block-variant-6-begin-line-re 6
+                   html-block-variant-7-begin-line-re 7}]
+      (->> (keys re-info)
+           (filter #(re-find % line))
+           (map re-info)
+           set
+           (hash-map :content line :variant)
+           ((ufn/validator (comp not-empty :variant)))))))
+
+(def html-block-variant-1-end-line-re
+  (re-pattern (str #"^ {0,3}(?! ).*?(?<!\\)</" html-block-variant-1-tag-re #">.*")))
+
+(def html-block-variant-2-end-line-re
+  (re-pattern (str #"^ {0,3}(?! ).*?" html/comment-end-re ".*")))
+
+(def html-block-variant-3-end-line-re
+  (re-pattern (str #"^ {0,3}(?! ).*?" html/processing-instruction-end-re ".*")))
+
+(def html-block-variant-4-end-line-re
+  (re-pattern (str #"^ {0,3}(?! ).*?" html/declaration-end-re ".*")))
+
+(def html-block-variant-5-end-line-re
+  (re-pattern (str #"^ {0,3}(?! ).*?" html/cdata-section-end-re ".*")))
+
+(defn html-block-end
+  [line]
+  (when line
+    (let [re-info {html-block-variant-1-end-line-re 1
+                   html-block-variant-2-end-line-re 2
+                   html-block-variant-3-end-line-re 3
+                   html-block-variant-4-end-line-re 4
+                   html-block-variant-5-end-line-re 5
+                   #"^\s*$" [6 7]}]
+      (->> (keys re-info)
+           (filter #(re-find % line))
+           (map re-info)
+           flatten
+           set
+           (hash-map :content line :variant)
+           ((ufn/validator (comp not-empty :variant)))))))
+
+(defn html-block-pair?
+  "Returns true if line1 is the beginning of an HTML block and line2 is the end
+   of an HTML block of the same variant, false otherwise."
+  [line1 line2]
+  (->> [line1 line2]
+       ((ufn/knit html-block-begin html-block-end))
+       (map :variant)
+       (reduce clojure.set/intersection)
+       not-empty))
+
+(defn html-block
+  [line]
+  (let [begin (html-block-begin line)
+        end (html-block-end line)
+        info (or begin end)
+        pair? (and begin end (html-block-pair? line line))]
+    (cond
+      pair? (assoc info :tag :html-block)
+      info (assoc info :tag :html-block-unpaired))))
+
 (defn tagger
   [line]
   (when line
@@ -309,6 +411,7 @@ OK  followed by either a . character or a ) character.
               opening-code-fence
               closing-code-fence
               blank-line
+              html-block
               paragraph-line) line)))
 
 (defn list-item-content

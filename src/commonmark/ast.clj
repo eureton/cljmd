@@ -13,7 +13,7 @@
   "Returns true if the node has inline content which may be expanded into AST
    form, false otherwise."
   (every-pred common/leaf?
-              (comp not #{:txt :hbr :sbr :blank} :tag :data)))
+              (comp not #{:txt :hbr :sbr :blank :html-block} :tag :data)))
 
 (defn expand-inline
   "Assuming node contains inline Markdown content:
@@ -29,7 +29,8 @@
   [string]
   (reduce #(treeduce/map %2 %1)
           (->> string
-               blockrun/parse
+               blockrun/from-string
+               blockrun/postprocess
                block/from-blockrun
                (treeduce/map (ufn/to-fix has-inline? expand-inline)))
           postp/queue))

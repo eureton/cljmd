@@ -2,6 +2,10 @@
   (:require [clojure.string :as string]
             [commonmark.block :as block]))
 
+(def origin
+  "Returns the first line."
+  (comp first second))
+
 (defmulti content
   "Returns the content of the blockrun entry as a single string. If its contents
    span multiple lines, the lines are joined. If the entry represents a leaf
@@ -29,4 +33,16 @@
 (defmethod content :default
   [[_ lines]]
   (string/join "\r\n" lines))
+
+(defmulti promote
+  "Hook for performing transformations after the blockrun has been compiled."
+  first)
+
+(defmethod promote :html-block-unpaired
+  [x]
+  (assoc x 0 (if (block/html-block-begin (origin x))
+               :html-block
+               :p)))
+
+(defmethod promote :default [x] x)
 

@@ -1,6 +1,7 @@
 (ns commonmark.blockrun
   (:require [clojure.string :as string]
-            [commonmark.block :as block]))
+            [commonmark.block :as block]
+            [commonmark.blockrun.entry :as entry]))
 
 (def zero
   "Identity element of the add binary operation."
@@ -88,7 +89,7 @@
   [x y]
   (let [block-lines (->> x last second)
         pair? (block/fenced-code-block-pair? (first block-lines)
-                                             (-> y first second first))
+                                             (-> y first entry/origin))
         closed? (and (> (count block-lines) 1)
                      (->> block-lines
                           ((juxt first last))
@@ -111,20 +112,20 @@
 
 (defmethod add [:bq :_]
   [x y]
-  (if (block/belongs-to-block-quote? (->> y first second first)
+  (if (block/belongs-to-block-quote? (->> y first entry/origin)
                                      (->> x last second reverse))
     (fuse-left x y)
     (concat x y)))
 
 (defmethod add [:p :tbr]
   [x y]
-  (if (some? (block/setext-heading (->> y first second first)))
+  (if (some? (block/setext-heading (->> y first entry/origin)))
     (fuse-split (retag x :last :stxh) y 1)
     (concat x y)))
 
 (defmethod add [:p :li]
   [x y]
-  (if (->> y first second first (re-find block/list-item-blank-lead-line-re) some?)
+  (if (->> y first entry/origin (re-find block/list-item-blank-lead-line-re) some?)
     (fuse-split (retag x :last :stxh) y 1)
     (concat x y)))
 
@@ -136,6 +137,16 @@
   [x y]
   (fuse-left x y))
 
+(defmethod add [:p :html-block-unpaired]
+  [x y]
+  (if (->> y
+           first
+           entry/origin
+           ((juxt block/html-block-begin block/html-block-end))
+           (some (comp #(= % #{7}) :variant)))
+    (fuse-left x y)
+    (concat x y)))
+
 (defmethod add [:blank :icblk]
   [x y]
   (fuse-right x y))
@@ -143,6 +154,38 @@
 (defmethod add [:icblk :blank]
   [x y]
   (fuse-left x y))
+
+(defmethod add [:html-block-unpaired :html-block-unpaired]
+  [x y]
+  (if (->> [(last x) (first y)]
+           (map entry/origin)
+           (apply block/html-block-pair?))
+    (fuse-split (retag x :last :html-block) y 1)
+    (fuse-split x y 1)))
+
+(defmethod add [:html-block-unpaired :bq]
+  [x y]
+  (let [origin-x (->> x last entry/origin)
+        origin-y (->> y first entry/origin)]
+    (if (block/html-block-pair? origin-x origin-y)
+      (fuse-split (retag x :last :html-block) y 1)
+      (concat x y))))
+
+(defmethod add [:html-block-unpaired :blank]
+  [x y]
+  (let [origin-x (->> x last entry/origin)
+        origin-y (->> y first entry/origin)]
+    (if (block/html-block-pair? origin-x origin-y)
+      (concat (retag x :last :html-block) y)
+      (concat x y))))
+
+(defmethod add [:html-block-unpaired :_]
+  [x y]
+  (let [origin (->> x last entry/origin)]
+    (if (block/html-block-pair? origin origin)
+      (concat x y)
+      (add (fuse-left x (take 1 y))
+           (rest y)))))
 
 (defmethod add :default
   ([] zero)
@@ -154,13 +197,14 @@
          y-tag (first y-entry)
          left-handler ((methods add) [x-tag :_])]
      (cond
+       (empty? y)      x
        left-handler    (left-handler x y)
        (= x-tag y-tag) (fuse-left x y)
        :else           (concat x y)))))
 
 (defn tokenize
   [string]
-  (let [lines (string/split-lines (str "_" string "_"))]
+  (let [lines (string/split (str "_" string "_") #"(?:\r\n|\r|\n)")]
     (if (= 1 (count lines))
       [string]
       (->> lines
@@ -169,8 +213,26 @@
                   (comp list #(subs % 0 (dec (count %))) last)))
            (reduce concat)))))
 
-(defn parse
-  "Parses the given input into a flat list of hashes. Each of these hashes
+(defn coalesce
+  "Merges adjacent entries of the same type."
+  [blockrun]
+  (reduce (fn [acc x]
+            (let [left (last acc)]
+              (if (= (first left) (first x))
+                (-> acc pop (conj (update left 1 (comp vec concat) (second x))))
+                (conj acc x))))
+          []
+          blockrun))
+
+(defn postprocess
+  "Hook for performing transformations after the blockrun has been compiled."
+  [blockrun]
+  (->> blockrun
+       (map entry/promote)
+       coalesce))
+
+(defn from-string
+  "Parses the given input into a list of blockrun entries. Each of these entries
    represents a top-level block."
   [string]
   (->> string
