@@ -683,10 +683,18 @@
               [:p          ["123"]]])))
 
       (testing "interrupt paragraph"
-        (is (= (from-string "xyz\n<a qpr=\"klm\">\n\nabc")
-               [[:p          ["xyz" "<a qpr=\"klm\">"]]
-                [:blank      [""]]
-                [:p          ["abc"]]])))
+        (testing "variant exclusively 7"
+          (is (= (from-string "xyz\n<a qpr=\"klm\">\n\nabc")
+                 [[:p     ["xyz" "<a qpr=\"klm\">"]]
+                  [:blank [""]]
+                  [:p     ["abc"]]])))
+
+        (testing "variant is both 6 and 7"
+          (is (= (from-string "xyz\n<td>\n123\n\nabc")
+                 [[:p          ["xyz"]]
+                  [:html-block ["<td>" "123"]]
+                  [:blank      [""]]
+                  [:p          ["abc"]]]))))
 
       (testing "unpaired"
         (is (= (postprocess (from-string "xyz\n\n<a qpr=\"klm\">\nabc"))

@@ -143,7 +143,7 @@
            first
            entry/origin
            ((juxt block/html-block-begin block/html-block-end))
-           (some (comp #(contains? % 7) :variant)))
+           (some (comp #(= % #{7}) :variant)))
     (fuse-left x y)
     (concat x y)))
 
