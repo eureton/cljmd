@@ -670,8 +670,8 @@
 
     (testing "variant 7"
       (testing "standard"
-        (is (= (from-string "<a qpr=\"klm\">abc\nxyz\n\n123")
-               [[:html-block ["<a qpr=\"klm\">abc" "xyz"]]
+        (is (= (from-string "<a href=\"abc\">\nxyz\n\n123")
+               [[:html-block ["<a href=\"abc\">" "xyz"]]
                 [:blank      [""]]
                 [:p          ["123"]]])))
 
@@ -683,7 +683,7 @@
               [:p          ["123"]]])))
 
       (testing "interrupt paragraph"
-        (testing "variant exclusively 7"
+        (testing "exclusively variant 7"
           (is (= (from-string "xyz\n<a qpr=\"klm\">\n\nabc")
                  [[:p     ["xyz" "<a qpr=\"klm\">"]]
                   [:blank [""]]

@@ -630,15 +630,17 @@
              "<pre abc/>"
              "<script abc=\"xyz\"/>"
              "<style abc=\"xyz\"/>"
-             "<pre abc=\"xyz\"/>")))
+             "<pre abc=\"xyz\"/>"
+             "<a>xyz"
+             "<a> xyz")))
 
     (testing "capture"
       (are [s] (let [res (html-block-begin s)]
                  (and (contains? (:variant res) 7)
                       (= s (:content res))))
            "<p>"
-           "<p>xyz"
-           "<p> xyz"))
+           "<p class=\"xyz\">"
+           "<p> \t "))
 
     (testing "indentation"
       (testing "valid"

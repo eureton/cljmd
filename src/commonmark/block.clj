@@ -328,7 +328,7 @@ OK  followed by either a . character or a ) character.
                      (html/open-tag-re {:exclude-tags ["script" "style" "pre"]}) "|"
                      html/closing-tag-re
                    ")"
-                   ".*")))
+                   #"\s*$")))
 
 (defn html-block-begin
   [line]
