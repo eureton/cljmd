@@ -535,7 +535,11 @@
         (are [t] (nil? (-> (str "[abc](xyz '" t "')") inline-link))
              "1'23"
              "12'3"
-             "1'2'3")))
+             "1'2'3"))
+
+      (testing "contains line breaks"
+        (is (= (-> "[abc](xyz '12\n34\n56')" inline-link :title)
+               "12\n34\n56"))))
 
     (testing "\"-delimited"
       (testing "minimal"
@@ -556,7 +560,11 @@
         (are [t] (nil? (-> (str "[abc](xyz \"" t "\")") inline-link))
              "1\"23"
              "12\"3"
-             "1\"2\"3")))
+             "1\"2\"3"))
+
+      (testing "contains line breaks"
+        (is (= (-> "[abc](xyz \"12\n34\n56\")" inline-link :title)
+               "12\n34\n56"))))
 
     (testing "()-delimited"
       (testing "minimal"
@@ -596,6 +604,10 @@
              "1)2)3"
              "1(2)3"
              "1)2(3"))
+
+      (testing "contains line breaks"
+        (is (= (-> "[abc](xyz (12\n34\n56))" inline-link :title)
+               "12\n34\n56")))
 
       (testing "contains backslash escapes"
         (is (= (-> "[abc](xyz \"be there in 5\\\"\")" inline-link :title)

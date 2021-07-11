@@ -305,17 +305,16 @@ OK  The beginning and the end of the line count as Unicode whitespace.
                    ")")))
 
 (def inline-link-quoted-title-re
-  (re-pattern #"(?<delim>['\\\"])((?:\\\k<delim>|(?!\k<delim>)\p{Print})*)\k<delim>"))
+  (re-pattern #"(?s)(?<delim>['\\\"])((?:\\\k<delim>|(?!\k<delim>).)*)\k<delim>"))
 
 (def inline-link-parenthesized-title-re
   (let [inner (str "("
                      "(?:"
-                       #"\\[()]"
-                       "|"
-                       #"[\p{Print}&&[^()]]"
+                       #"\\[()]" "|"
+                       #"[^()]"
                      ")*"
                    ")")]
-    (re-pattern (str "(?:"
+    (re-pattern (str "(?s)(?:"
                        #"\({1}" inner #"\){1}" "|"
                        #"\({2}" inner #"\){2}" "|"
                        #"\({3}" inner #"\){3}" "|"
