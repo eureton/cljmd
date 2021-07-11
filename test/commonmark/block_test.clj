@@ -914,3 +914,55 @@
            "   "
            "   \t\t\t   "))))
 
+(deftest link-reference-definition-test
+  (testing "complete"
+    (let [{:keys [label destination title]} (link-reference-definition "[abc]: xyz '123'")]
+      (is (and (= "abc" label)
+               (= "xyz" destination)
+               (= "123" title)))))
+
+  (testing "no title"
+    (let [{:keys [label destination title]} (link-reference-definition "[abc]: xyz")]
+      (is (and (= "abc" label)
+               (= "xyz" destination)
+               (nil? title)))))
+
+  (testing "no destination, no title"
+    (let [{:keys [label destination title]} (link-reference-definition "[abc]:")]
+      (is (and (= "abc" label)
+               (nil? destination)
+               (nil? title)))))
+
+  (testing "whitespace"
+    (are [s] (some? (link-reference-definition s))
+         "[abc]:xyz"
+         "[abc]: xyz"
+         "[abc]: xyz "
+         "[abc]: xyz '123'"
+         "[abc]: xyz '123' "))
+
+  (testing "invalid"
+    (are [s] (nil? (link-reference-definition s))
+         "\\[abc]: xyz"
+         "[abc] xyz"
+         "[abc] : xyz"
+         "xyz"
+         "<xyz>"
+         "\"123\""
+         "'123'"
+         "(123)"
+         "((123))"))
+
+  (testing "indentation"
+    (testing "valid"
+      (are [s] (some? (link-reference-definition s))
+           " [abc]: xyz"
+           "  [abc]: xyz"
+           "   [abc]: xyz"))
+
+    (testing "invalid"
+      (are [s] (nil? (link-reference-definition s))
+           "    [abc]: xyz"
+           "     [abc]: xyz"
+           "      [abc]: xyz"))))
+

@@ -720,5 +720,40 @@
                   (from-string "2\n-->\n3"))
              [[:p          ["0"]]
               [:html-block ["<!--" "1" "2" "-->"]]
-              [:p          ["3"]]])))))
+              [:p          ["3"]]]))))
+
+  (testing "link reference definition"
+    (testing "one line"
+      (is (= (from-string "[abc]: xyz '123'")
+             [[:aref ["[abc]: xyz '123'"]]])))
+
+    (testing "two lines"
+      (testing "label and destination"
+        (is (= (from-string "[abc]: xyz\n'123'")
+             [[:aref ["[abc]: xyz" "'123'"]]])))
+
+      (testing "destination and title"
+        (is (= (from-string "[abc]:\nxyz '123'")
+             [[:aref ["[abc]:" "xyz '123'"]]]))))
+
+    (testing "three lines"
+      (is (= (from-string "[abc]:\nxyz\n'123'")
+             [[:aref ["[abc]:" "xyz" "'123'"]]])))
+
+    (testing "interrupt paragraph"
+      (is (= (from-string "qpr\n[abc]: xyz '123'")
+             [[:p ["qpr" "[abc]: xyz '123'"]]])))
+
+    (testing "followed by paragraph"
+      (is (= (from-string "[abc]: xyz '123'\nqpr")
+             [[:aref ["[abc]: xyz '123'"]]
+              [:p    ["qpr"]]])))
+
+    (testing "no title"
+      (is (= (from-string "[abc]: xyz")
+             [[:aref ["[abc]: xyz"]]])))
+
+    (testing "no destination, no title"
+      (is (= (postprocess (from-string "[abc]:"))
+             [[:p ["[abc]:"]]])))))
 

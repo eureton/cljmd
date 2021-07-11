@@ -2,7 +2,8 @@
   (:require [clojure.string :as string]
             [clojure.set]
             [flatland.useful.fn :as ufn]
-            [commonmark.html :as html]))
+            [commonmark.html :as html]
+            [commonmark.inline :as inline]))
 
 (comment "ATX Headings
          
@@ -399,6 +400,34 @@ OK  followed by either a . character or a ) character.
       pair? (assoc info :tag :html-block)
       info (assoc info :tag :html-block-unpaired))))
 
+(def link-reference-definition-destination-and-title-re
+  (re-pattern (str "^" #"\s*(?=\S+(?:\s|$))" inline/inline-link-destination-re
+                   "(?:" #"\s+" inline/inline-link-title-re ")?"
+                   #"\s*$")))
+
+(def link-reference-definition-title-re
+  (re-pattern (str #"^\s*" inline/inline-link-title-re #"\s*$")))
+
+(def link-reference-definition-label-re
+  (re-pattern (str #"^ {0,3}\[" "(" inline/link-label-re ")" #"\]:"
+                   "(?:" #"\s*(?=\S+(?:\s|$))" inline/inline-link-destination-re ")?"
+                   "(?:" #"\s+" inline/inline-link-title-re ")?"
+                   #"\s*$")))
+
+(defn link-reference-definition
+  [line]
+  (when line
+    (if-some [[_ label wrapped
+               unwrapped _ quoted
+               & parenthesized] (re-find link-reference-definition-label-re line)]
+      (->> {:tag :aref
+            :label label
+            :destination (or wrapped unwrapped)
+            :title (or quoted (->> parenthesized (remove nil?) first))}
+           (remove (comp nil? val))
+           flatten
+           (apply hash-map)))))
+
 (defn tagger
   [line]
   (when line
@@ -412,6 +441,7 @@ OK  followed by either a . character or a ) character.
               closing-code-fence
               blank-line
               html-block
+              link-reference-definition
               paragraph-line) line)))
 
 (defn list-item-content
@@ -481,4 +511,16 @@ OK  followed by either a . character or a ) character.
   [current previous]
   (or (->> current tagger :tag (= :bq))
       (paragraph-continuation-text? current previous)))
+
+(defn belongs-to-link-reference-definition?
+  ""
+  [current previous]
+  (let [info (tagger (string/join " " previous))
+        complete? ((every-pred :label :destination :title) info)]
+    (or (and (not complete?)
+             (contains? info :destination)
+             (re-find link-reference-definition-title-re current))
+        (and (not complete?)
+             (not (contains? info :destination))
+             (re-find link-reference-definition-destination-and-title-re current)))))
 

@@ -44,5 +44,11 @@
                :html-block
                :p)))
 
+(defmethod promote :aref
+  [[tag lines]]
+  (let [sufficient? ((every-pred :label :destination)
+                     (block/tagger (string/join " " lines)))]
+    [(if sufficient? tag :p) lines]))
+
 (defmethod promote :default [x] x)
 

@@ -345,7 +345,7 @@ OK  The beginning and the end of the line count as Unicode whitespace.
   [string]
   (when string
     (when-let [[_ img? text destination-wrapped
-                destination-unwrapped full-title _
+                destination-unwrapped _ _
                 quoted-title & parenthesized-title] (re-find inline-link-re string)]
       (if-let [inner (and (not img?)
                           (inline-link text))]
