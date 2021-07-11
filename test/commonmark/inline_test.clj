@@ -538,8 +538,12 @@
              "1'2'3"))
 
       (testing "contains line breaks"
-        (is (= (-> "[abc](xyz '12\n34\n56')" inline-link :title)
-               "12\n34\n56"))))
+        (testing "single"
+          (is (= (-> "[abc](xyz '12\n34\n56')" inline-link :title)
+                 "12\n34\n56")))
+
+        (testing "multiple"
+          (is (nil? (inline-link "[abc](xyz '12\n\n34')"))))))
 
     (testing "\"-delimited"
       (testing "minimal"
@@ -563,25 +567,17 @@
              "1\"2\"3"))
 
       (testing "contains line breaks"
-        (is (= (-> "[abc](xyz \"12\n34\n56\")" inline-link :title)
-               "12\n34\n56"))))
+        (testing "single"
+          (is (= (-> "[abc](xyz \"12\n34\n56\")" inline-link :title)
+                 "12\n34\n56")))
+
+        (testing "multiple"
+          (is (nil? (inline-link "[abc](xyz \"12\n\n34\")"))))))
 
     (testing "()-delimited"
       (testing "minimal"
-        (are [t] (= (-> (str "[abc](xyz " t ")") inline-link :title)
-                    "123")
-             "(123)"
-             "((123))"
-             "(((123)))"
-             "((((123))))"))
-
-      (testing "unbalanced delimeters"
-        (are [t] (nil? (-> (str "[abc](xyz " t ")") inline-link))
-             "(123"
-             "123)"
-             "((123)"
-             "(((123))"
-             "((((123)))"))
+        (is (= (-> (str "[abc](xyz (123))") inline-link :title)
+               "123")))
 
       (testing "contains escaped delimeters"
         (are [t] (= t (-> (str "[abc](xyz (" t "))") inline-link :title))
@@ -606,8 +602,12 @@
              "1)2(3"))
 
       (testing "contains line breaks"
-        (is (= (-> "[abc](xyz (12\n34\n56))" inline-link :title)
-               "12\n34\n56")))
+        (testing "single"
+          (is (= (-> "[abc](xyz (12\n34\n56))" inline-link :title)
+                 "12\n34\n56")))
+
+        (testing "multiple"
+          (is (nil? (inline-link "[abc](xyz (12\n\n34))")))))
 
       (testing "contains backslash escapes"
         (is (= (-> "[abc](xyz \"be there in 5\\\"\")" inline-link :title)

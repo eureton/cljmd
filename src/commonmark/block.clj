@@ -417,13 +417,13 @@ OK  followed by either a . character or a ) character.
 (defn link-reference-definition
   [line]
   (when line
-    (if-some [[_ label wrapped
-               unwrapped _ quoted
-               & parenthesized] (re-find link-reference-definition-label-re line)]
+    (if-some [[_ label wrapped unwrapped
+               _ single-quoted double-quoted
+               parenthesized] (re-find link-reference-definition-label-re line)]
       (->> {:tag :aref
             :label label
             :destination (or wrapped unwrapped)
-            :title (or quoted (->> parenthesized (remove nil?) first))}
+            :title (or single-quoted double-quoted parenthesized)}
            (remove (comp nil? val))
            flatten
            (apply hash-map)))))

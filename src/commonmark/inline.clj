@@ -304,30 +304,21 @@ OK  The beginning and the end of the line count as Unicode whitespace.
                      "(" inline-link-unwrapped-destination-re ")"
                    ")")))
 
-(def inline-link-quoted-title-re
-  (re-pattern #"(?s)(?<delim>['\\\"])((?:\\\k<delim>|(?!\k<delim>).)*)\k<delim>"))
-
-(def inline-link-parenthesized-title-re
-  (let [inner (str "("
-                     "(?:"
-                       #"\\[()]" "|"
-                       #"[^()]"
-                     ")*"
-                   ")")]
-    (re-pattern (str "(?s)(?:"
-                       #"\({1}" inner #"\){1}" "|"
-                       #"\({2}" inner #"\){2}" "|"
-                       #"\({3}" inner #"\){3}" "|"
-                       #"\({4}" inner #"\){4}" "|"
-                       #"\({5}" inner #"\){5}"
-                     ")"))))
+(defn no-blank-line-till
+  [character]
+  (re-pattern (str "(?!.*" line-ending-re #"\s*" line-ending-re ".*" character ")")))
 
 (def inline-link-title-re
-  (re-pattern (str "(?:"
-                     inline-link-quoted-title-re
-                     "|"
-                     inline-link-parenthesized-title-re
-                   ")")))
+  (let [escape #(string/escape (str %) {\( #"\(" \) #"\)"})
+        inner #(str (escape %1)
+                    (no-blank-line-till (escape %2))
+                    "(" (util/but-unescaped-re %1 %2) "*)"
+                    (escape %2))]
+    (re-pattern (str "(?s)(?:"
+                       (inner \' \') "|"
+                       (inner \" \") "|"
+                       (inner \( \))
+                     ")"))))
 
 (def inline-link-re
   (re-pattern (str #"(?<!\\)(!)?(?<!\\)\[" "(" link-text-re ")" #"\]"
@@ -344,8 +335,9 @@ OK  The beginning and the end of the line count as Unicode whitespace.
   [string]
   (when string
     (when-let [[_ img? text destination-wrapped
-                destination-unwrapped _ _
-                quoted-title & parenthesized-title] (re-find inline-link-re string)]
+                destination-unwrapped _
+                single-quoted-title double-quoted-title
+                parenthesized-title] (re-find inline-link-re string)]
       (if-let [inner (and (not img?)
                           (inline-link text))]
         (update inner
@@ -357,7 +349,9 @@ OK  The beginning and the end of the line count as Unicode whitespace.
                      (subs text 0)
                      util/escape-re-delimiter))
         (let [destination (or destination-wrapped destination-unwrapped)
-              title (or quoted-title (->> parenthesized-title (remove nil?) first))]
+              title (or single-quoted-title
+                        double-quoted-title
+                        parenthesized-title)]
           (cond-> {:text text
                    :tag (if img? :img :a)
                    :pattern inline-link-re}

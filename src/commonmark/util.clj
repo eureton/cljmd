@@ -43,3 +43,12 @@
   ([opener closer]
    (balanced-re opener closer {})))
 
+(defn but-unescaped-re
+  ""
+  [& cs]
+  (let [cs (->> cs
+                distinct
+                (map (comp #(string/escape % {\" "\""}) str))
+                string/join)]
+    (re-pattern (str "(?:" #"\\" "[" cs "]|[^" cs "])"))))
+
