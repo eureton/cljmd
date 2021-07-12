@@ -4,7 +4,7 @@
             [commonmark.util :as util]))
 
 (def line-ending-re
-  #"(?:\r\n|\n|\r|$)")
+  #"(?:\r\n|\n|\r)")
 
 (comment "Code spans
 
@@ -379,7 +379,7 @@ OK  The beginning and the end of the line count as Unicode whitespace.
     and title are provided by the matching link reference definition [876].)")
 
 (def link-label-re
-  (re-pattern (str #"(?=.*\S)"
+  (re-pattern (str #"(?=.*\S.*(?<!\\)\])"
                    "(?:"
                      #"\\[\[\]]" "|"
                      #"[^\[\]]"

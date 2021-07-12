@@ -137,10 +137,6 @@
   [x y]
   (fuse-left x y))
 
-(defmethod add [:p :aref]
-  [x y]
-  (fuse-left x y))
-
 (defmethod add [:p :html-block-unpaired]
   [x y]
   (if (->> y
@@ -191,13 +187,6 @@
       (add (fuse-left x (take 1 y))
            (rest y)))))
 
-(defmethod add [:aref :_]
-  [x y]
-  (if (block/belongs-to-link-reference-definition? (entry/origin (first y))
-                                                   (second (last x)))
-    (fuse-split x y 1)
-    (concat x y)))
-
 (defmethod add :default
   ([] zero)
   ([x] x)
@@ -240,6 +229,8 @@
   [blockrun]
   (->> blockrun
        (map entry/promote)
+       (mapcat entry/fragment)
+       vec
        coalesce))
 
 (defn from-string

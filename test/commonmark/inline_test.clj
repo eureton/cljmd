@@ -416,6 +416,16 @@
            "[[]]]()"
            "[[[]]]]()"))
 
+    (testing "contains line breaks"
+      (testing "single"
+        (is (= "ab\ncd" (->> "[ab\ncd](xyz)" inline-link :text))))
+
+      (testing "multiple"
+        (is (= "ab\ncd\nef" (->> "[ab\ncd\nef](xyz)" inline-link :text)))))
+
+    (testing "contains blank line"
+      (is (nil? (inline-link "[ab\n\ncd](xyz)"))))
+
     (testing "nested links"
       (is (let [res (inline-link "[[inner](inner.com)](outer.com)")
                 {:keys [text destination title]} res]

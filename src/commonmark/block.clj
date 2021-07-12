@@ -400,17 +400,9 @@ OK  followed by either a . character or a ) character.
       pair? (assoc info :tag :html-block)
       info (assoc info :tag :html-block-unpaired))))
 
-(def link-reference-definition-destination-and-title-re
-  (re-pattern (str "^" #"\s*(?=\S+(?:\s|$))" inline/inline-link-destination-re
-                   "(?:" #"\s+" inline/inline-link-title-re ")?"
-                   #"\s*$")))
-
-(def link-reference-definition-title-re
-  (re-pattern (str #"^\s*" inline/inline-link-title-re #"\s*$")))
-
-(def link-reference-definition-label-re
-  (re-pattern (str #"^ {0,3}\[" "(" inline/link-label-re ")" #"\]:"
-                   "(?:" #"\s*(?=\S+(?:\s|$))" inline/inline-link-destination-re ")?"
+(def link-reference-definition-re
+  (re-pattern (str #"(?m)^ {0,3}\[" "(" inline/link-label-re ")" #"\]:"
+                   #"\s*(?=\S+(?:\s|$))" inline/inline-link-destination-re
                    "(?:" #"\s+" inline/inline-link-title-re ")?"
                    #"\s*$")))
 
@@ -418,8 +410,8 @@ OK  followed by either a . character or a ) character.
   [line]
   (when line
     (if-some [[_ label wrapped unwrapped
-               _ single-quoted double-quoted
-               parenthesized] (re-find link-reference-definition-label-re line)]
+               single-quoted double-quoted
+               parenthesized] (re-find link-reference-definition-re line)]
       (->> {:tag :aref
             :label label
             :destination (or wrapped unwrapped)
@@ -441,7 +433,7 @@ OK  followed by either a . character or a ) character.
               closing-code-fence
               blank-line
               html-block
-              link-reference-definition
+;             link-reference-definition
               paragraph-line) line)))
 
 (defn list-item-content
@@ -511,16 +503,4 @@ OK  followed by either a . character or a ) character.
   [current previous]
   (or (->> current tagger :tag (= :bq))
       (paragraph-continuation-text? current previous)))
-
-(defn belongs-to-link-reference-definition?
-  ""
-  [current previous]
-  (let [info (tagger (string/join " " previous))
-        complete? ((every-pred :label :destination :title) info)]
-    (or (and (not complete?)
-             (contains? info :destination)
-             (re-find link-reference-definition-title-re current))
-        (and (not complete?)
-             (not (contains? info :destination))
-             (re-find link-reference-definition-destination-and-title-re current)))))
 

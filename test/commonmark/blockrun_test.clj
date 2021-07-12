@@ -724,24 +724,28 @@
 
   (testing "link reference definition"
     (testing "one line"
-      (is (= (from-string "[abc]: xyz '123'")
+      (is (= (postprocess (from-string "[abc]: xyz '123'"))
              [[:aref ["[abc]: xyz '123'"]]])))
 
     (testing "two lines"
       (testing "label and destination"
-        (is (= (from-string "[abc]: xyz\n'123'")
+        (is (= (postprocess (from-string "[abc]: xyz\n'123'"))
              [[:aref ["[abc]: xyz" "'123'"]]])))
 
       (testing "destination and title"
-        (is (= (from-string "[abc]:\nxyz '123'")
+        (is (= (postprocess (from-string "[abc]:\nxyz '123'"))
              [[:aref ["[abc]:" "xyz '123'"]]]))))
 
     (testing "three lines"
-      (is (= (from-string "[abc]:\nxyz\n'123'")
+      (is (= (postprocess (from-string "[abc]:\nxyz\n'123'"))
              [[:aref ["[abc]:" "xyz" "'123'"]]])))
 
+    (testing "multiline title"
+      (is (= (postprocess (from-string "[abc]:\nxyz\n'12\n34\n56'"))
+             [[:aref ["[abc]:" "xyz" "'12" "34" "56'"]]])))
+
     (testing "interrupt paragraph"
-      (is (= (from-string "qpr\n[abc]: xyz '123'")
+      (is (= (postprocess (from-string "qpr\n[abc]: xyz '123'"))
              [[:p ["qpr" "[abc]: xyz '123'"]]])))
 
     (testing "followed by paragraph"
