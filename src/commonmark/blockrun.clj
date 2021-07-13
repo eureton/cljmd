@@ -238,7 +238,7 @@
                    (not-empty definitions) (conj [:aref definitions])
                    (not-empty remainder) (conj [:p remainder])))]
     (->> blockrun
-         (mapcat (ufn/to-fix split? split))
+         (mapcat (ufn/to-fix split? split vector))
          vec)))
 
 (defn postprocess
