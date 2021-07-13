@@ -444,10 +444,10 @@ OK  The beginning and the end of the line count as Unicode whitespace.
        :label (java.net.URLDecoder/decode uri)})))
 
 (def hard-line-break-re
-  (re-pattern (str "(?:"
-                     #"(?<=\p{Print})  " line-ending-re "|"
-                     #"\\" line-ending-re
-                   ")")))
+  (let [end #"(?:\r\n|\n|\r(?!\n)|$)"]
+    (re-pattern (str "(?:" #"(?<=\p{Print})  " end "|"
+                           #"\\" end
+                     ")"))))
 
 (defn hard-line-break
   [string]
