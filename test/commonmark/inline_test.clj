@@ -994,7 +994,7 @@
          "abc\rxyz"    "\r"
          "abc\r\nxyz"  "\r\n"))
 
-  (testing "alone on a line"
+  (testing "by itself in a line"
     (is (nil? (soft-line-break "\nabc")))))
 
 (deftest text-test

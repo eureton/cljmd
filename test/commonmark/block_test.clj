@@ -928,10 +928,7 @@
                (nil? title)))))
 
   (testing "no destination, no title"
-    (let [{:keys [label destination title]} (link-reference-definition "[abc]:")]
-      (is (and (= "abc" label)
-               (nil? destination)
-               (nil? title)))))
+    (is (nil? (link-reference-definition "[abc]:"))))
 
   (testing "whitespace"
     (are [s] (some? (link-reference-definition s))
@@ -943,7 +940,7 @@
 
   (testing "invalid"
     (are [s] (nil? (link-reference-definition s))
-         "\\[abc]: xyz"
+         "\\[abc]: xyz" ; TODO
          "[abc] xyz"
          "[abc] : xyz"
          "xyz"
@@ -953,6 +950,7 @@
          "(123)"
          "((123))"))
 
+  ; TODO
   (testing "indentation"
     (testing "valid"
       (are [s] (some? (link-reference-definition s))

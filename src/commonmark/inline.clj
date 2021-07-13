@@ -283,8 +283,23 @@ OK  The beginning and the end of the line count as Unicode whitespace.
     described above. The link’s title consists of the link title, excluding its enclosing delimiters, with
     backslash-escapes in effect as described above.)")
 
+(defn blank-line-re
+  "Returns a RE which matches lines consisting of zero to limit characters, each
+   of which may be either a space or a tab."
+  ([limit]
+   (re-pattern (str "(?<="
+                      "(?:^|" line-ending-re ")"
+                    ")"
+                    #"[ \t]" "{0," limit "}"
+                    "(?="
+                      "(?:" line-ending-re "|$)"
+                    ")")))
+  ([] (blank-line-re 999)))
+
 (def link-text-re
-  (util/balanced-re \[ \]))
+  (re-pattern (str "(?s)"
+                   (util/balanced-re \[ \])
+                   (util/excluding-re (blank-line-re)))))
 
 (def inline-link-wrapped-destination-re
   (re-pattern (str "(?:"

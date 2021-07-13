@@ -43,6 +43,15 @@
   ([opener closer]
    (balanced-re opener closer {})))
 
+(defn excluding-re
+  "Returns a negative lookbehind RE which forbids match immediately prior to
+   match the given regular expression."
+  ([re limit]
+   (let [any (str ".{0," limit "}")]
+     (re-pattern (str "(?<!\\G" any re any ")"))))
+  ([re]
+   (excluding-re re 999)))
+
 (defn but-unescaped-re
   ""
   [& cs]
