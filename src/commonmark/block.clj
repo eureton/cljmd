@@ -401,10 +401,10 @@ OK  followed by either a . character or a ) character.
       info (assoc info :tag :html-block-unpaired))))
 
 (def link-reference-definition-re
-  (re-pattern (str #" {0,3}\[" "(" inline/link-label-re ")" #"\]:"
+  (re-pattern (str #"^ {0,3}" inline/link-label-re ":"
                    #"\s*(?=\S+(?:\s|$))" inline/inline-link-destination-re
                    "(?:" #"\s+" inline/inline-link-title-re ")?"
-                   #"\s*")))
+                   #"\s*$")))
 
 (def link-reference-definition-batch-re
   (re-pattern (str #"(?m)(?s)\A"

@@ -940,7 +940,7 @@
 
   (testing "invalid"
     (are [s] (nil? (link-reference-definition s))
-         "\\[abc]: xyz" ; TODO
+         "\\[abc]: xyz"
          "[abc] xyz"
          "[abc] : xyz"
          "xyz"
@@ -950,7 +950,6 @@
          "(123)"
          "((123))"))
 
-  ; TODO
   (testing "indentation"
     (testing "valid"
       (are [s] (some? (link-reference-definition s))

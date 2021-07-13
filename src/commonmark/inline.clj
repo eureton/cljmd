@@ -394,17 +394,19 @@ OK  The beginning and the end of the line count as Unicode whitespace.
     and title are provided by the matching link reference definition [876].)")
 
 (def link-label-re
-  (re-pattern (str #"(?=.*\S.*(?<!\\)\])"
-                   "(?:"
-                     #"\\[\[\]]" "|"
-                     #"[^\[\]]"
-                   "){1,999}")))
+  (re-pattern (str #"(?<!\\)\["
+                     #"(?=.*\S.*(?<!\\)\])"
+                     "("
+                       "(?:"
+                         #"\\[\[\]]" "|"
+                         #"[^\[\]]"
+                       "){0,999}"
+                     ")"
+                   #"(?<!\\)\]")))
 
 (def reference-link-re
   (re-pattern (str #"(!)?\[" "(" link-text-re ")" #"\]"
-                   "(?:"
-                     #"\[" "(" link-label-re ")?" #"\]"
-                   ")?")))
+                   link-label-re "?")))
 
 (defn reference-link
   [string]
