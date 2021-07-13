@@ -1,5 +1,6 @@
 (ns commonmark.blockrun
   (:require [clojure.string :as string]
+            [flatland.useful.fn :as ufn]
             [commonmark.block :as block]
             [commonmark.blockrun.entry :as entry]))
 
@@ -224,13 +225,28 @@
           []
           blockrun))
 
+(defn extract-link-reference-definitions
+  "Searches blockrun for link reference definitions and extracts them into
+   separate entries. The new entries are tagged :aref. The entries which the
+   definitions came from are split and each of the parts bears the tag of its
+   originator."
+  [blockrun]
+  (let [split? #(= :p (first %))
+        split #(let [definitions (vec (entry/link-reference-definition-batch %))
+                     remainder (vec (drop (count definitions) (second %)))]
+                 (cond-> []
+                   (not-empty definitions) (conj [:aref definitions])
+                   (not-empty remainder) (conj [:p remainder])))]
+    (->> blockrun
+         (mapcat (ufn/to-fix split? split))
+         vec)))
+
 (defn postprocess
   "Hook for performing transformations after the blockrun has been compiled."
   [blockrun]
   (->> blockrun
        (map entry/promote)
-       (mapcat entry/fragment)
-       vec
+       extract-link-reference-definitions
        coalesce))
 
 (defn from-string

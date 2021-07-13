@@ -4,7 +4,7 @@
             [commonmark.util :as util]))
 
 (def line-ending-re
-  #"(?:\r\n|\n|\r)")
+  #"(?:\r\n|\n|\r(?!\n))")
 
 (comment "Code spans
 
@@ -306,7 +306,7 @@ OK  The beginning and the end of the line count as Unicode whitespace.
 
 (defn no-blank-line-till
   [character]
-  (re-pattern (str "(?!.*" line-ending-re #"\s*" line-ending-re ".*" character ")")))
+  (re-pattern (str "(?!.*?" line-ending-re #"[ \t]*" line-ending-re ".*?" character ")")))
 
 (def inline-link-title-re
   (let [escape #(string/escape (str %) {\( #"\(" \) #"\)"})

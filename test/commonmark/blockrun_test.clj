@@ -744,17 +744,22 @@
       (is (= (postprocess (from-string "[abc]:\nxyz\n'12\n34\n56'"))
              [[:aref ["[abc]:" "xyz" "'12" "34" "56'"]]])))
 
+    (testing "multiple"
+      (is (= (postprocess (from-string "[abc]: xyz '123'\n[cba]: zyx '321'"))
+             [[:aref ["[abc]: xyz '123'"
+                      "[cba]: zyx '321'"]]])))
+
     (testing "interrupt paragraph"
       (is (= (postprocess (from-string "qpr\n[abc]: xyz '123'"))
              [[:p ["qpr" "[abc]: xyz '123'"]]])))
 
     (testing "followed by paragraph"
-      (is (= (from-string "[abc]: xyz '123'\nqpr")
+      (is (= (postprocess (from-string "[abc]: xyz '123'\nqpr"))
              [[:aref ["[abc]: xyz '123'"]]
               [:p    ["qpr"]]])))
 
     (testing "no title"
-      (is (= (from-string "[abc]: xyz")
+      (is (= (postprocess (from-string "[abc]: xyz"))
              [[:aref ["[abc]: xyz"]]])))
 
     (testing "no destination, no title"

@@ -34,38 +34,17 @@
   [[_ lines]]
   (string/join "\r\n" lines))
 
-(defn split-lines
-  ""
-  [f [tag lines]]
-  (let [retains? #(fn [coll] (f coll (% coll)))
-        without-prefix (->> lines
-                            (iterate rest)
-                            (drop-while (retains? rest))
-                            first)
-        aref (->> without-prefix
-                  (iterate butlast)
-                  (drop-while (retains? butlast))
-                  first)]
-    (->> [(->> lines (drop-last (count without-prefix)) vec)
-          (vec aref)
-          (->> without-prefix (drop (count aref)) vec)]
-         (remove empty?))))
-
-(defn split-link-reference-definition
-  ""
-  [x]
-  (let [score #(->> %
-                    (string/join "\n")
-                    block/link-reference-definition
-                    ((juxt :label :destination :title))
-                    (remove nil?)
-                    count)
-        undiminished? #(<= (score %1) (score %2))
-        [pre aref suf] (split-lines undiminished? x)
-        [tag _] x]
-    (->> [pre aref suf]
-         (remove empty?)
-         (map vector [tag :aref tag]))))
+(defn link-reference-definition-batch
+  "Returns a sequence containing the lines which comprise adjacent link
+   reference definitions. If no definitions exist, an empty sequence is
+   returned."
+  [[_ lines]]
+  (->> lines
+       (string/join "\n")
+       (re-find block/link-reference-definition-batch-re)
+       first
+       string/split-lines
+       (remove empty?)))
 
 (defmulti promote
   "Hook for changing the tag of an entry after the blockrun has been compiled."
@@ -78,32 +57,4 @@
                :p)))
 
 (defmethod promote :default [x] x)
-
-(defmulti fragment
-  "Hook for breaking up an entry after the blockrun has been compiled."
-  first)
-
-(defmethod fragment :p
-  [[_ lines]]
-  (let [score #(->> %
-                    (string/join "\n")
-                    block/link-reference-definition
-                    ((juxt :label :destination :title))
-                    (remove nil?)
-                    count)
-        undiminished? #(fn [coll] (<= (score coll) (score (% coll))))
-        without-prefix (->> lines
-                            (iterate rest)
-                            (drop-while (undiminished? rest))
-                            first)
-        aref (->> without-prefix
-                  (iterate butlast)
-                  (drop-while (undiminished? butlast))
-                  first)]
-    (->> [[:p    (->> lines (drop-last (count without-prefix)) vec)]
-          [:aref (vec aref)]
-          [:p    (->> without-prefix (drop (count aref)) vec)]]
-         (remove (comp empty? second)))))
-
-(defmethod fragment :default [x] [x])
 
