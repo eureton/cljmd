@@ -1040,3 +1040,96 @@
          "\\}" "}"
          "\\~" "~")))
 
+(deftest reference-link-test
+  (testing "pun nil"
+    (is (nil? (reference-link nil))))
+
+  (testing "full"
+    (testing "minimal"
+      (let [{:keys [text label]} (reference-link "[abc][xyz]")]
+        (is (and (= text "abc")
+                 (= label "xyz")))))
+
+    (testing "text"
+      (testing "empty"
+        (is (= (-> "[][xyz]" reference-link :text)
+               "")))
+
+      (testing "inline elements"
+        (is (= (-> "[*abc* `def` **ghi**][xyz]" reference-link :text)
+               "*abc* `def` **ghi**")))
+
+      (testing "brackets"
+        (testing "backslash-escaped"
+          (is (= (-> "[a\\]b\\[c][xyz]" reference-link :text)
+                 "a\\]b\\[c")))
+
+        (testing "matched"
+          (is (= (-> "[1[2[3]4]5][xyz]" reference-link :text)
+                 "1[2[3]4]5")))))
+
+    (testing "label"
+      (testing "empty"
+        (is (nil? (full-reference-link "[abc][]"))))
+
+      (testing "only whitespace"
+        (are [l] (nil? (full-reference-link (str "[abc][" l "]")))
+             " "
+             "  "
+             "   "
+             "\t"
+             "\t\t"
+             "\t\t\t"
+             " \t \t \t"))
+
+      (testing "brackets"
+        (testing "backslash-escaped"
+          (is (= (-> "[abc][x\\]y\\[z]" reference-link :label)
+                 "x\\]y\\[z"))))))
+
+  (testing "collapsed"
+    (testing "minimal"
+      (is (= (-> "[abc][]" reference-link :label)
+             "abc")))
+
+    (testing "empty"
+      (is (nil? (reference-link "[][]"))))
+
+    (testing "only whitespace"
+      (are [l] (nil? (reference-link (str "[" l "][]")))
+           " "
+           "  "
+           "   "
+           "\t"
+           "\t\t"
+           "\t\t\t"
+           " \t \t \t"))
+
+    (testing "brackets"
+      (testing "backslash-escaped"
+        (is (= (-> "[a\\]b\\[c][]" reference-link :label)
+               "a\\]b\\[c")))))
+
+  (testing "shortcut"
+    (testing "minimal"
+      (is (= (-> "[abc]" reference-link :label)
+             "abc")))
+
+    (testing "empty"
+      (is (nil? (reference-link "[]"))))
+
+    (testing "only whitespace"
+      (are [l] (nil? (reference-link (str "[" l "]")))
+           " "
+           "  "
+           "   "
+           "\t"
+           "\t\t"
+           "\t\t\t"
+           " \t \t \t"))
+
+    (testing "brackets"
+      (testing "backslash-escaped"
+        (is (= (-> "[a\\]b\\[c]" reference-link :label)
+               "a\\]b\\[c"))))))
+

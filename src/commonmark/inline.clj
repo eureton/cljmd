@@ -394,28 +394,46 @@ OK  The beginning and the end of the line count as Unicode whitespace.
     and title are provided by the matching link reference definition [876].)")
 
 (def link-label-re
-  (re-pattern (str #"(?<!\\)\["
-                     #"(?=.*\S.*(?<!\\)\])"
-                     "("
-                       "(?:"
-                         #"\\[\[\]]" "|"
-                         #"[^\[\]]"
-                       "){0,999}"
-                     ")"
-                   #"(?<!\\)\]")))
+  ; TODO build a util/non-backslash function
+  ; TODO use util/but-unescaped-re for \[ and \]
+  (re-pattern (str "(?:" #"(?<!\\)\["
+                           "(?=" #"\s*(?!\\\])[\S&&[^\]]].*?(?<!\\)\]" ")"
+                           "("
+                             "(?:"
+                               #"\\[\[\]]" "|"
+                               #"[^\[\]]"
+                             "){1,999}"
+                           ")"
+                         #"(?<!\\)\]"
+                   ")")))
 
-(def reference-link-re
+(def full-reference-link-re
+  ; TODO tuck ! and [] into link-text-re
   (re-pattern (str #"(!)?\[" "(" link-text-re ")" #"\]"
-                   link-label-re "?")))
+                   link-label-re)))
 
-(defn reference-link
+(defn full-reference-link
   [string]
   (when string
-    (when-let [[_ img? text label] (re-find reference-link-re string)]
-      (cond-> {:text text
-               :tag (if img? :img :a)
-               :pattern reference-link-re}
-        label (assoc :label label)))))
+    (when-some [[_ img? text label] (re-find full-reference-link-re string)]
+      {:tag (if img? :img :a)
+       :text text
+       :label label
+       :pattern full-reference-link-re})))
+
+(def textless-reference-link-re
+  (re-pattern (str link-label-re #"(?:\[\])?")))
+
+(defn textless-reference-link
+  [string]
+  (when string
+    (when-some [[_ label] (re-find textless-reference-link-re string)]
+      {:tag :a
+       :label label
+       :pattern textless-reference-link-re})))
+
+(def reference-link
+  (some-fn full-reference-link textless-reference-link))
 
 (def absolute-uri-re
   (re-pattern (str #"\p{Alpha}[\p{Alnum}+.-]{1,31}" ":"
