@@ -57,6 +57,26 @@
                    (node {:tag :doc}
                          [p-tree]))))))
 
+      (testing "full"
+        (testing "inline content"
+          (are [s t] (= (-> (str "[" s "][qpr]\n\n[qpr]: xyz '123'")
+                            from-string
+                            (get-in [:children 0 :children]))
+                        [(node {:tag :a :destination "xyz" :title "123"}
+                               [(node {:tag t}
+                                      [(node {:tag :txt :content "abc"})])])])
+               "*abc*"           :em
+               "`abc`"           :cs
+               "**abc**"         :strong))
+
+        (testing "inline image"
+          (is (= (-> "[![abc](abc.png)][qpr]\n\n[qpr]: xyz '123'"
+                     from-string
+                     (get-in [:children 0 :children]))
+                 [(node {:tag :a :destination "xyz" :title "123"}
+                        [(node {:tag :img :destination "abc.png"}
+                               [(node {:tag :txt :content "abc"})])])]))))
+
       (testing "no match"
         (are [s] (= (from-string s)
                     (node {:tag :doc}
