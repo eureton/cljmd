@@ -75,7 +75,48 @@
                      (get-in [:children 0 :children]))
                  [(node {:tag :a :destination "xyz" :title "123"}
                         [(node {:tag :img :destination "abc.png"}
-                               [(node {:tag :txt :content "abc"})])])]))))
+                               [(node {:tag :txt :content "abc"})])])])))
+
+        (testing "match"
+          (testing "case-insensitive"
+            (is (= (-> "[abc][QpR]\n\n[qpr]: xyz '123'"
+                       from-string
+                       (get-in [:children 0 :children 0 :data]))
+                   {:tag :a :destination "xyz" :title "123"})))
+
+          (testing "Unicode"
+            (is (= (-> "[abc][ÄÖÕ]\n\n[äöõ]: xyz '123'"
+                       from-string
+                       (get-in [:children 0 :children 0 :data]))
+                   {:tag :a :destination "xyz" :title "123"})))))
+
+      (testing "collapsed"
+        (testing "match"
+          (testing "case-insensitive"
+            (is (= (-> "[QpR][]\n\n[qpr]: xyz '123'"
+                       from-string
+                       (get-in [:children 0 :children 0 :data]))
+                   {:tag :a :destination "xyz" :title "123"})))
+
+          (testing "Unicode"
+            (is (= (-> "[ÄÖÕ][]\n\n[äöõ]: xyz '123'"
+                       from-string
+                       (get-in [:children 0 :children 0 :data]))
+                   {:tag :a :destination "xyz" :title "123"})))))
+
+      (testing "shortcut"
+        (testing "match"
+          (testing "case-insensitive"
+            (is (= (-> "[QpR][]\n\n[qpr]: xyz '123'"
+                       from-string
+                       (get-in [:children 0 :children 0 :data]))
+                   {:tag :a :destination "xyz" :title "123"})))
+
+          (testing "Unicode"
+            (is (= (-> "[ÄÖÕ][]\n\n[äöõ]: xyz '123'"
+                       from-string
+                       (get-in [:children 0 :children 0 :data]))
+                   {:tag :a :destination "xyz" :title "123"})))))
 
       (testing "no match"
         (are [s] (= (from-string s)

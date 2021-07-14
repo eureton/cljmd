@@ -39,14 +39,15 @@
    the information of the latter. Unmatched references are transformed into :txt
    nodes with the source text as content."
   [ast]
-  (let [definitions (tree/reduce #(cond-> %1
-                                    (= :adef (:tag %2)) (assoc (:label %2) %2))
+  (let [label (comp string/lower-case :label)
+        definitions (tree/reduce #(cond-> %1
+                                    (= :adef (:tag %2)) (assoc (label %2) %2))
                                  {}
                                  ast
                                  :depth-first)
         reference? (comp #{:aref} :tag :data)
         inflate (fn [{:as node :keys [data children]}]
-                  (let [lookup (-> data :label definitions)]
+                  (let [lookup (-> data label definitions)]
                     (if lookup
                       (assoc node :data {:tag :a
                                          :title (:title lookup)
