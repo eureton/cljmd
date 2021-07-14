@@ -1066,7 +1066,26 @@
 
         (testing "matched"
           (is (= (-> "[1[2[3]4]5][xyz]" reference-link :text)
-                 "1[2[3]4]5")))))
+                 "1[2[3]4]5"))))
+
+      (testing "bracket binding"
+        (testing "less tightly than backticks"
+          (is (= (-> "[ab`c][xyz]`" tagger :tag)
+                 :cs)))
+
+        (testing "less tightly than HTML tags"
+          (is (= (-> "[<abc attr=\"][xyz]\">" tagger :tag)
+                 :html-inline)))
+
+        (testing "less tightly than autolinks"
+          (is (= (-> "[abc<http://example.com?q=\"][xyz]\">" tagger :tag)
+                 :auto)))
+
+        (testing "more tightly than emphasis markers"
+          (are [s] (= (-> s tagger :tag)
+                      :aref)
+               "*[abc*][xyz]"
+               "[abc *xyz][123*]"))))
 
     (testing "label"
       (testing "empty"
@@ -1108,7 +1127,26 @@
     (testing "brackets"
       (testing "backslash-escaped"
         (is (= (-> "[a\\]b\\[c][]" reference-link :label)
-               "a\\]b\\[c")))))
+               "a\\]b\\[c"))))
+
+    (testing "bracket binding"
+      (testing "less tightly than backticks"
+        (is (= (-> "[ab`c][]`" tagger :tag)
+               :cs)))
+
+      (testing "less tightly than HTML tags"
+        (is (= (-> "[<abc attr=\"][]\">" tagger :tag)
+               :html-inline)))
+
+      (testing "less tightly than autolinks"
+        (is (= (-> "[abc<http://example.com?q=\"][]\">" tagger :tag)
+               :auto)))
+
+      (testing "more tightly than emphasis markers"
+        (are [s] (= (-> s tagger :tag)
+                    :aref)
+             "*[abc*][]"
+             "[abc *xyz][*]"))))
 
   (testing "shortcut"
     (testing "minimal"
@@ -1131,5 +1169,24 @@
     (testing "brackets"
       (testing "backslash-escaped"
         (is (= (-> "[a\\]b\\[c]" reference-link :label)
-               "a\\]b\\[c"))))))
+               "a\\]b\\[c"))))
+
+    (testing "bracket binding"
+      (testing "less tightly than backticks"
+        (is (= (-> "[ab`c]`" tagger :tag)
+               :cs)))
+
+      (testing "less tightly than HTML tags"
+        (is (= (-> "[<abc attr=\"]\">" tagger :tag)
+               :html-inline)))
+
+      (testing "less tightly than autolinks"
+        (is (= (-> "[abc<http://example.com?q=\"]\">" tagger :tag)
+               :auto)))
+
+      (testing "more tightly than emphasis markers"
+        (are [s] (= (-> s tagger :tag)
+                    :aref)
+             "*[abc*]"
+             "[abc *xyz]*")))))
 
