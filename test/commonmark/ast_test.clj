@@ -88,6 +88,12 @@
             (is (= (-> "[abc][ÄÖÕ]\n\n[äöõ]: xyz '123'"
                        from-string
                        (get-in [:children 0 :children 0 :data]))
+                   {:tag :a :destination "xyz" :title "123"})))
+
+          (testing "whitespace"
+            (is (= (-> "[abc][q p r]\n\n[q \t\r\n p \t\r\n r]: xyz '123'"
+                       from-string
+                       (get-in [:children 0 :children 0 :data]))
                    {:tag :a :destination "xyz" :title "123"})))))
 
       (testing "collapsed"
@@ -102,6 +108,12 @@
             (is (= (-> "[ÄÖÕ][]\n\n[äöõ]: xyz '123'"
                        from-string
                        (get-in [:children 0 :children 0 :data]))
+                   {:tag :a :destination "xyz" :title "123"})))
+
+          (testing "whitespace"
+            (is (= (-> "[q p r][]\n\n[q \t\r\n p \t\r\n r]: xyz '123'"
+                       from-string
+                       (get-in [:children 0 :children 0 :data]))
                    {:tag :a :destination "xyz" :title "123"})))))
 
       (testing "shortcut"
@@ -114,6 +126,12 @@
 
           (testing "Unicode"
             (is (= (-> "[ÄÖÕ][]\n\n[äöõ]: xyz '123'"
+                       from-string
+                       (get-in [:children 0 :children 0 :data]))
+                   {:tag :a :destination "xyz" :title "123"})))
+
+          (testing "whitespace"
+            (is (= (-> "[q p r]\n\n[q \t\r\n p \t\r\n r]: xyz '123'"
                        from-string
                        (get-in [:children 0 :children 0 :data]))
                    {:tag :a :destination "xyz" :title "123"})))))

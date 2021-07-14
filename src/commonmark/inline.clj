@@ -396,7 +396,7 @@ OK  The beginning and the end of the line count as Unicode whitespace.
 (def link-label-re
   ; TODO build a util/non-backslash function
   ; TODO use util/but-unescaped-re for \[ and \]
-  (re-pattern (str "(?:" #"(?<!\\)\["
+  (re-pattern (str "(?s)(?:" #"(?<!\\)\["
                            "(?=" #"\s*(?!\\\])[\S&&[^\]]].*?(?<!\\)\]" ")"
                            "("
                              "(?:"

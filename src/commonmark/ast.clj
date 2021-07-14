@@ -39,7 +39,7 @@
    the information of the latter. Unmatched references are transformed into :txt
    nodes with the source text as content."
   [ast]
-  (let [label (comp string/lower-case :label)
+  (let [label (comp #(string/replace % #"\s+" " ") string/lower-case :label)
         definitions (tree/reduce #(cond-> %1
                                     (= :adef (:tag %2)) (assoc (label %2) %2))
                                  {}
