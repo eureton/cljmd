@@ -725,29 +725,29 @@
   (testing "link reference definition"
     (testing "one line"
       (is (= (postprocess (from-string "[abc]: xyz '123'"))
-             [[:aref ["[abc]: xyz '123'"]]])))
+             [[:adef ["[abc]: xyz '123'"]]])))
 
     (testing "two lines"
       (testing "label and destination"
         (is (= (postprocess (from-string "[abc]: xyz\n'123'"))
-             [[:aref ["[abc]: xyz" "'123'"]]])))
+             [[:adef ["[abc]: xyz" "'123'"]]])))
 
       (testing "destination and title"
         (is (= (postprocess (from-string "[abc]:\nxyz '123'"))
-             [[:aref ["[abc]:" "xyz '123'"]]]))))
+             [[:adef ["[abc]:" "xyz '123'"]]]))))
 
     (testing "three lines"
       (is (= (postprocess (from-string "[abc]:\nxyz\n'123'"))
-             [[:aref ["[abc]:" "xyz" "'123'"]]])))
+             [[:adef ["[abc]:" "xyz" "'123'"]]])))
 
     (testing "multiline title"
       (is (= (postprocess (from-string "[abc]:\nxyz\n'12\n34\n56'"))
-             [[:aref ["[abc]:" "xyz" "'12" "34" "56'"]]])))
+             [[:adef ["[abc]:" "xyz" "'12" "34" "56'"]]])))
 
     (testing "multiple"
       (is (= (postprocess (from-string "[abc]: xyz '123'\n[cba]: zyx '321'"))
-             [[:aref ["[abc]: xyz '123'"
-                      "[cba]: zyx '321'"]]])))
+             [[:adef ["[abc]: xyz '123'"]]
+              [:adef ["[cba]: zyx '321'"]]])))
 
     (testing "interrupt paragraph"
       (is (= (postprocess (from-string "qpr\n[abc]: xyz '123'"))
@@ -755,12 +755,12 @@
 
     (testing "followed by paragraph"
       (is (= (postprocess (from-string "[abc]: xyz '123'\nqpr"))
-             [[:aref ["[abc]: xyz '123'"]]
+             [[:adef ["[abc]: xyz '123'"]]
               [:p    ["qpr"]]])))
 
     (testing "no title"
       (is (= (postprocess (from-string "[abc]: xyz"))
-             [[:aref ["[abc]: xyz"]]])))
+             [[:adef ["[abc]: xyz"]]])))
 
     (testing "no destination, no title"
       (is (= (postprocess (from-string "[abc]:"))

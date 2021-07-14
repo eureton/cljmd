@@ -415,11 +415,12 @@ OK  The beginning and the end of the line count as Unicode whitespace.
 (defn full-reference-link
   [string]
   (when string
-    (when-some [[_ img? text label] (re-find full-reference-link-re string)]
-      {:tag (if img? :img :a)
+    (when-some [[source img? text label] (re-find full-reference-link-re string)]
+      {:tag (if img? :img :aref)
        :text text
        :label label
-       :pattern full-reference-link-re})))
+       :pattern full-reference-link-re
+       :source source})))
 
 (def textless-reference-link-re
   (re-pattern (str link-label-re #"(?:\[\])?")))
@@ -427,10 +428,11 @@ OK  The beginning and the end of the line count as Unicode whitespace.
 (defn textless-reference-link
   [string]
   (when string
-    (when-some [[_ label] (re-find textless-reference-link-re string)]
-      {:tag :a
+    (when-some [[source label] (re-find textless-reference-link-re string)]
+      {:tag :aref
        :label label
-       :pattern textless-reference-link-re})))
+       :pattern textless-reference-link-re
+       :source source})))
 
 (def reference-link
   (some-fn full-reference-link textless-reference-link))

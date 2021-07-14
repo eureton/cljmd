@@ -32,7 +32,40 @@
                              (node {:tag :a
                                     :destination "xyz"}
                                    [(node {:tag :txt
-                                           :content "abc"})])])]))))))
+                                           :content "abc"})])])])))))
+
+    (testing "reference"
+      (testing "standard"
+        (let [p-tree (node {:tag :p}
+                           [(node {:tag :a
+                                   :destination "xyz"
+                                   :title "123"}
+                                  [(node {:tag :txt
+                                          :content "abc"})])])]
+          (testing "full"
+            (is (= (from-string "[abc][qpr]\n\n[qpr]: xyz '123'")
+                   (node {:tag :doc}
+                         [p-tree]))))
+
+          (testing "collapsed"
+            (is (= (from-string "[abc][]\n\n[abc]: xyz '123'")
+                   (node {:tag :doc}
+                         [p-tree]))))
+
+          (testing "shortcut"
+            (is (= (from-string "[abc]\n\n[abc]: xyz '123'")
+                   (node {:tag :doc}
+                         [p-tree]))))))
+
+      (testing "no match"
+        (are [s] (= (from-string s)
+                    (node {:tag :doc}
+                          [(node {:tag :p}
+                                 [(node {:tag :txt
+                                         :content s})])]))
+             "[abc][qpr]"
+             "[abc][]"
+             "[abc]"))))
 
   (testing "image"
     (testing "inline"
@@ -193,11 +226,9 @@
       (is (= (-> "<del>\n\n*abc*\n\n</del>" from-string :children)
              [(node {:tag :html-block
                      :content "<del>"})
-              (node {:tag :blank})
               (node {:tag :p}
                     [(node {:tag :em}
                            [(node {:tag :txt :content "abc"})])])
-              (node {:tag :blank})
               (node {:tag :html-block
                      :content "</del>"})])))
 

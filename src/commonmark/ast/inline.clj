@@ -60,6 +60,14 @@
     (node (select-keys input [:tag :destination :title])
           (:children (inflate rolled (merge overlooked tokens))))))
 
+(defmethod inflate :aref
+  [input tokens]
+  (let [{:keys [rolled] overlooked :tokens} (-> input
+                                                ((some-fn :text :label))
+                                                roll)]
+    (node (select-keys input [:tag :label :source])
+          (:children (inflate rolled (merge overlooked tokens))))))
+
 (defmethod inflate :break
   [input _]
   (node (select-keys input [:tag :content])))

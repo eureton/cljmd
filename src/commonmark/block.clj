@@ -401,7 +401,7 @@ OK  followed by either a . character or a ) character.
       info (assoc info :tag :html-block-unpaired))))
 
 (def link-reference-definition-re
-  (re-pattern (str #"^ {0,3}" inline/link-label-re ":"
+  (re-pattern (str #"(?m)^ {0,3}" inline/link-label-re ":"
                    #"\s*(?=\S+(?:\s|$))" inline/inline-link-destination-re
                    "(?:" #"\s+" inline/inline-link-title-re ")?"
                    #"\s*$")))
@@ -418,7 +418,7 @@ OK  followed by either a . character or a ) character.
     (if-some [[_ label wrapped unwrapped
                single-quoted double-quoted
                parenthesized] (re-find link-reference-definition-re line)]
-      (->> {:tag :aref
+      (->> {:tag :adef
             :label label
             :destination (or wrapped unwrapped)
             :title (or single-quoted double-quoted parenthesized)}

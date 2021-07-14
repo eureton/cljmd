@@ -218,8 +218,10 @@
   "Merges adjacent entries of the same type."
   [blockrun]
   (reduce (fn [acc x]
-            (let [left (last acc)]
-              (if (= (first left) (first x))
+            (let [left (last acc)
+                  tag (first x)]
+              (if (and (= (first left) tag)
+                       (not= tag :adef))
                 (-> acc pop (conj (update left 1 (comp vec concat) (second x))))
                 (conj acc x))))
           []
@@ -227,16 +229,20 @@
 
 (defn extract-link-reference-definitions
   "Searches blockrun for link reference definitions and extracts them into
-   separate entries. The new entries are tagged :aref. The entries which the
-   definitions came from are split and each of the parts bears the tag of its
-   originator."
+   separate entries. Each definition is awarded its own entry. The new entries
+   are tagged :adef. The entries which the definitions came from are split and
+   each of the parts bears the tag of its originator."
   [blockrun]
   (let [split? #(= :p (first %))
-        split #(let [definitions (vec (entry/link-reference-definition-batch %))
-                     remainder (vec (drop (count definitions) (second %)))]
-                 (cond-> []
-                   (not-empty definitions) (conj [:aref definitions])
-                   (not-empty remainder) (conj [:p remainder])))]
+        split #(let [batch (entry/link-reference-definition-batch %)
+                     items (->> batch
+                                (string/join "\r\n")
+                                (re-seq block/link-reference-definition-re)
+                                (map (comp string/split-lines first)))
+                     remainder (vec (drop (count batch) (second %)))]
+                 (concat
+                   (map vector (repeat :adef) items)
+                   (if (not-empty remainder) [[:p remainder]] [])))]
     (->> blockrun
          (mapcat (ufn/to-fix split? split vector))
          vec)))

@@ -2,7 +2,7 @@
   (:require [clojure.string :as string]
             [clojure.core.incubator :refer [dissoc-in]]
             [flatland.useful.fn :as ufn]
-            [treeduce.core :as treeduce]
+            [treeduce.core :as tree]
             [commonmark.blockrun :as blockrun]
             [commonmark.ast.common :as common]
             [commonmark.ast.block :as block]
@@ -24,14 +24,47 @@
   (apply common/add (dissoc-in node [:data :content])
                     (-> node :data :content inline/from-string :children)))
 
+(defn remove-link-reference-definitions
+  "Removes nodes tagged with :adef."
+  [ast]
+  (tree/map (fn [{:as node :keys [children]}]
+              (let [children (remove (comp #{:adef} :tag :data) children)]
+                (if (empty? children)
+                  (dissoc node :children)
+                  (assoc node :children (vec children)))))
+            ast))
+
+(defn inflate-link-references
+  "Matches link references with link definitions and completes the former with
+   the information of the latter. Unmatched references are transformed into :txt
+   nodes with the source text as content."
+  [ast]
+  (let [definitions (tree/reduce #(cond-> %1
+                                    (= :adef (:tag %2)) (assoc (:label %2) %2))
+                                 {}
+                                 ast
+                                 :depth-first)
+        reference? (comp #{:aref} :tag :data)
+        inflate (fn [{:as node :keys [data children]}]
+                  (let [lookup (-> data :label definitions)]
+                    (if lookup
+                      (assoc node :data {:tag :a
+                                         :title (:title lookup)
+                                         :destination (:destination lookup)})
+                      (common/node {:tag :txt
+                                    :content (:source data)}))))]
+    (tree/map (ufn/to-fix reference? inflate) ast)))
+
 (defn from-string
   "Parses markdown AST from string."
   [string]
-  (reduce #(treeduce/map %2 %1)
+  (reduce #(tree/map %2 %1)
           (->> string
                blockrun/from-string
                blockrun/postprocess
                block/from-blockrun
-               (treeduce/map (ufn/to-fix has-inline? expand-inline)))
+               (tree/map (ufn/to-fix has-inline? expand-inline))
+               inflate-link-references
+               remove-link-reference-definitions)
           postp/queue))
 

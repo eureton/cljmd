@@ -60,3 +60,10 @@
   [[_ _]]
   (common/node {:tag :blank}))
 
+(defmethod from-blockrun-entry :adef
+  [[_ lines]]
+  (->> lines
+       (string/join " ")
+       block/link-reference-definition
+       common/node))
+
