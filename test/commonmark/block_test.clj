@@ -938,6 +938,10 @@
          "[abc]: xyz '123'"
          "[abc]: xyz '123' "))
 
+  (testing "valid"
+    (are [s] (some? (link-reference-definition s))
+         "[abc\\\\]: xyz"))
+
   (testing "invalid"
     (are [s] (nil? (link-reference-definition s))
          "\\[abc]: xyz"

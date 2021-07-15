@@ -394,18 +394,19 @@ OK  The beginning and the end of the line count as Unicode whitespace.
     and title are provided by the matching link reference definition [876].)")
 
 (def link-label-re
-  ; TODO build a util/non-backslash function
+  ; TODO refactor all else to use util/non-backslash
   ; TODO use util/but-unescaped-re for \[ and \]
-  (re-pattern (str "(?s)(?:" #"(?<!\\)\["
-                           "(?=" #"\s*(?!\\\])[\S&&[^\]]].*?(?<!\\)\]" ")"
-                           "("
-                             "(?:"
-                               #"\\[\[\]]" "|"
-                               #"[^\[\]]"
-                             "){1,999}"
-                           ")"
-                         #"(?<!\\)\]"
-                   ")")))
+  (let [open (util/non-backslash-re \[)
+        close (util/non-backslash-re \])]
+    (re-pattern (str "(?s)(?:" open
+                             "(?=" #"\s*(?!\\\])[\S&&[^\]]].*?" close ")"
+                             "("
+                               "(?:"
+                                 #"\\[\[\]]" "|"
+                                 #"[^\[\]]"
+                               "){1,999}"
+                             ")"
+                           close ")"))))
 
 (def full-reference-link-re
   ; TODO tuck ! and [] into link-text-re

@@ -61,3 +61,8 @@
                 string/join)]
     (re-pattern (str "(?:" #"\\" "[" cs "]|[^" cs "])"))))
 
+(defn non-backslash-re
+  ""
+  [character]
+  (re-pattern (str #"(?<!(?<!\\)\\)" (escape-re-delimiter (str character)))))
+
