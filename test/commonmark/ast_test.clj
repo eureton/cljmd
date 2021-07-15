@@ -65,9 +65,9 @@
                         [(node {:tag :a :destination "xyz" :title "123"}
                                [(node {:tag t}
                                       [(node {:tag :txt :content "abc"})])])])
-               "*abc*"           :em
-               "`abc`"           :cs
-               "**abc**"         :strong))
+               "*abc*"   :em
+               "`abc`"   :cs
+               "**abc**" :strong))
 
         (testing "inline image"
           (is (= (-> "[![abc](abc.png)][qpr]\n\n[qpr]: xyz '123'"
@@ -94,6 +94,12 @@
             (is (= (-> "[abc][q p r]\n\n[q \t\r\n p \t\r\n r]: xyz '123'"
                        from-string
                        (get-in [:children 0 :children 0 :data]))
+                   {:tag :a :destination "xyz" :title "123"})))
+
+          (testing "multiple"
+            (is (= (-> "[abc][qpr]\n\n[qpr]: xyz '123'\n[qpr]: zyx '321'"
+                       from-string
+                       (get-in [:children 0 :children 0 :data]))
                    {:tag :a :destination "xyz" :title "123"})))))
 
       (testing "collapsed"
@@ -114,6 +120,12 @@
             (is (= (-> "[q p r][]\n\n[q \t\r\n p \t\r\n r]: xyz '123'"
                        from-string
                        (get-in [:children 0 :children 0 :data]))
+                   {:tag :a :destination "xyz" :title "123"})))
+
+          (testing "multiple"
+            (is (= (-> "[qpr][]\n\n[qpr]: xyz '123'\n[qpr]: zyx '321'"
+                       from-string
+                       (get-in [:children 0 :children 0 :data]))
                    {:tag :a :destination "xyz" :title "123"})))))
 
       (testing "shortcut"
@@ -132,6 +144,12 @@
 
           (testing "whitespace"
             (is (= (-> "[q p r]\n\n[q \t\r\n p \t\r\n r]: xyz '123'"
+                       from-string
+                       (get-in [:children 0 :children 0 :data]))
+                   {:tag :a :destination "xyz" :title "123"})))
+
+          (testing "multiple"
+            (is (= (-> "[qpr]\n\n[qpr]: xyz '123'\n[qpr]: zyx '321'"
                        from-string
                        (get-in [:children 0 :children 0 :data]))
                    {:tag :a :destination "xyz" :title "123"})))))

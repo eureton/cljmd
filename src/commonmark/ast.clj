@@ -40,8 +40,11 @@
    nodes with the source text as content."
   [ast]
   (let [label (comp #(string/replace % #"\s+" " ") string/lower-case :label)
+        overwrite #(or %1 %2)
         definitions (tree/reduce #(cond-> %1
-                                    (= :adef (:tag %2)) (assoc (label %2) %2))
+                                    (= :adef (:tag %2)) (update (label %2)
+                                                                overwrite
+                                                                %2))
                                  {}
                                  ast
                                  :depth-first)
