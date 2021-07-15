@@ -72,14 +72,25 @@
                 (map escape-re-delimiter)
                 string/join)
         char-classes (cond-> [(str "[^" cs (string/join exclude) "]")]
-                       allow (conj (str "[" (string/join allow) "]")))]
+                       allow (conj (str "[" (string/join "&&" allow) "]")))]
     (re-pattern (str "(?:" #"(?<!\\)\\" "[" cs "]"
                            "|"
                            "[" (string/join "&&" char-classes) "]"
                      ")"))))
 
 (defn non-backslash-re
-  ""
-  [character]
-  (re-pattern (str #"(?<!(?<!\\)\\)" (escape-re-delimiter (str character)))))
+  "Returns a RE to match the input, not preceded by a backslash. Expects input
+   to be either a character, a string or a RE."
+  [input]
+  (let [split (fn [x]
+                (let [x (str x)]
+                  [(first x)
+                   (subs x (min 1 (count x)))]))
+        splittable? (some-fn string?
+                             #(= java.util.regex.Pattern (type %)))]
+    (when-some [[x trail] (cond (splittable? input) (split input)
+                                (char? input) [input])]
+      (re-pattern (str #"(?<!(?<!\\)\\)"
+                       (escape-re-delimiter x)
+                       trail)))))
 

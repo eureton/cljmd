@@ -3,7 +3,8 @@
             [clojure.set]
             [flatland.useful.fn :as ufn]
             [commonmark.html :as html]
-            [commonmark.inline :as inline]))
+            [commonmark.inline :as inline]
+            [commonmark.util :as util]))
 
 (comment "ATX Headings
          
@@ -304,7 +305,8 @@ OK  followed by either a . character or a ) character.
 (def html-block-variant-1-tag-re #"(?:(?i)script|pre|style)")
 
 (def html-block-variant-1-begin-line-re
-  (re-pattern (str #"^ {0,3}(?<!\\)<" html-block-variant-1-tag-re #"(?:\s|>|$).*")))
+  (re-pattern (str #"^ {0,3}" (util/non-backslash-re \<)
+                   html-block-variant-1-tag-re #"(?:\s|>|$).*")))
 
 (def html-block-variant-2-begin-line-re
   (re-pattern (str #"^ {0,3}" html/comment-begin-re ".*")))
@@ -319,7 +321,7 @@ OK  followed by either a . character or a ) character.
   (re-pattern (str #"^ {0,3}" html/cdata-section-begin-re ".*")))
 
 (def html-block-variant-6-begin-line-re
-  (re-pattern (str #"^ {0,3}(?<!\\)</?"
+  (re-pattern (str #"^ {0,3}" (util/non-backslash-re "</?")
                    "(?:(?i)" (string/join "|" html/block-variant-6-tags) ")"
                    #"(?:\s+|/?>|$).*")))
 
@@ -349,7 +351,8 @@ OK  followed by either a . character or a ) character.
            ((ufn/validator (comp not-empty :variant)))))))
 
 (def html-block-variant-1-end-line-re
-  (re-pattern (str #"^ {0,3}(?! ).*?(?<!\\)</" html-block-variant-1-tag-re #">.*")))
+  (re-pattern (str #"^ {0,3}(?! ).*?" (util/non-backslash-re "</")
+                   html-block-variant-1-tag-re #">.*")))
 
 (def html-block-variant-2-end-line-re
   (re-pattern (str #"^ {0,3}(?! ).*?" html/comment-end-re ".*")))

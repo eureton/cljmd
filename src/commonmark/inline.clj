@@ -298,8 +298,9 @@ OK  The beginning and the end of the line count as Unicode whitespace.
 
 (def link-text-re
   (re-pattern (str "(?s)"
-                   #"(?<!\\)\[" "(" (util/balanced-re \[ \])
-                                    (util/excluding-re (blank-line-re))
+                   (util/non-backslash-re #"\[") "("
+                     (util/balanced-re \[ \])
+                     (util/excluding-re (blank-line-re))
                    ")" #"\]")))
 
 (def inline-link-wrapped-destination-re
