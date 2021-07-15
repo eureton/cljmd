@@ -302,11 +302,8 @@ OK  The beginning and the end of the line count as Unicode whitespace.
                    (util/excluding-re (blank-line-re)))))
 
 (def inline-link-wrapped-destination-re
-  (re-pattern (str "(?:"
-                     #"\\[<>]"
-                     "|"
-                     #"[\p{Print}&&[^\r\n<>]]"
-                   ")*?")))
+  (re-pattern (str (util/but-unescaped-re \< \> {:exclude ["\r" "\n"]})
+                   "*?")))
 
 (def inline-link-unwrapped-destination-re
   (re-pattern (str "(?!<)"
@@ -395,17 +392,11 @@ OK  The beginning and the end of the line count as Unicode whitespace.
 
 (def link-label-re
   ; TODO refactor all else to use util/non-backslash
-  ; TODO use util/but-unescaped-re for \[ and \]
   (let [open (util/non-backslash-re \[)
         close (util/non-backslash-re \])]
     (re-pattern (str "(?s)(?:" open
                              "(?=" #"\s*(?!\\\])[\S&&[^\]]].*?" close ")"
-                             "("
-                               "(?:"
-                                 #"\\[\[\]]" "|"
-                                 #"[^\[\]]"
-                               "){1,999}"
-                             ")"
+                             "(" (util/but-unescaped-re \[ \]) "{1,999})"
                            close ")"))))
 
 (def full-reference-link-re

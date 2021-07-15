@@ -13,13 +13,13 @@
          vec)))
 
 (def re-delimiter-escape-hash
-  (->> "()[]{}"
+  (->> "()[]{}\""
        ((juxt identity #(map (partial str "\\") %)))
        (apply zipmap)))
 
 (defn escape-re-delimiter
-  [string]
-  (string/escape string re-delimiter-escape-hash))
+  [in]
+  (string/escape (str in) re-delimiter-escape-hash))
 
 (defn balanced-re
   ([opener closer {:keys [intersect]}]
@@ -53,13 +53,30 @@
    (excluding-re re 999)))
 
 (defn but-unescaped-re
-  ""
+  "Returns a RE which matches any character except the ones given. The last
+   argument may be an options hash. Valid options are :allow and :exclude.
+
+     :allow is expected to be one or more character classes to match. When
+     omitted, all characters except the arguments are matched.
+
+     :exclude is expected to be one or more character classes to not match.
+     When omitted, only the arguments are forbidden to match. Providing a value
+     here extends, not replaces, the blocklist."
   [& cs]
-  (let [cs (->> cs
+  (let [{:as opts :keys [allow exclude]} ((ufn/validator map?) (last cs))
+        vectorize (ufn/to-fix (every-pred some? (complement vector?)) vector)
+        [allow exclude] (map vectorize [allow exclude])
+        cs (cond-> cs opts butlast)
+        cs (->> cs
                 distinct
-                (map (comp #(string/escape % {\" "\""}) str))
-                string/join)]
-    (re-pattern (str "(?:" #"\\" "[" cs "]|[^" cs "])"))))
+                (map escape-re-delimiter)
+                string/join)
+        char-classes (cond-> [(str "[^" cs (string/join exclude) "]")]
+                       allow (conj (str "[" (string/join allow) "]")))]
+    (re-pattern (str "(?:" #"(?<!\\)\\" "[" cs "]"
+                           "|"
+                           "[" (string/join "&&" char-classes) "]"
+                     ")"))))
 
 (defn non-backslash-re
   ""
