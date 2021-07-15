@@ -33,26 +33,53 @@
       (if (contains? tokens string)
         {:rolled string
          :tokens tokens}
-        (let [info (inline/tagger string)
-              digest (str (hash info))]
-            (recur (string/replace-first string (:pattern info) digest)
+        (let [{:as info :keys [pattern]} (inline/tagger string)
+              digest (str (hash info))
+              info (assoc info :source (ufn/fix (re-find pattern string)
+                                                vector? first))]
+            (recur (string/replace-first string pattern digest)
                    (assoc tokens digest info)))))))
 
 (defn unroll
-  "Transforms string into a vector of ASTs corresponding to inline Markdown
-   tokens. Assumes string and tokens have been produced by the roll function."
-  [string tokens]
+  "Iteratively replaces the tokens found in string according to the stepf.
+   Each time a token is detected in string, (stepf digest items) is returned,
+   where items is the result of splitting the string wrt the token.
+   When no token can be detected in string, (basef string) is returned."
+  [string tokens basef stepf]
   (if-some [[digest token] (->> tokens
                                 (filter (comp #(string/includes? string %) key))
                                 first)]
-    (->> (util/split string (re-pattern digest))
-         (interpose token)
-         (remove empty?)
-         (map #(inflate % (dissoc tokens digest)))
-         (mapcat (ufn/to-fix degenerate? :children vector))
-         vec)
+    (stepf digest (util/split string (re-pattern digest)))
     (when string
-      [(node {:tag :txt :content string})])))
+      (basef string))))
+
+(defn unroll-ast
+  "Transforms string into a vector of ASTs corresponding to inline Markdown
+   tokens."
+  [string tokens]
+  (unroll string
+          tokens
+          #(vector (node {:tag :txt :content %1}))
+          (fn [digest items]
+            (->> items
+                 (interpose (tokens digest))
+                 (remove empty?)
+                 (map #(inflate % (dissoc tokens digest)))
+                 (mapcat (ufn/to-fix degenerate? :children vector))
+                 vec))))
+
+(defn unroll-original
+  "Transforms string into what is was before the roll process."
+  [string tokens]
+  (unroll string
+          tokens
+          identity
+          (fn [digest items]
+            (->> items
+                 (interpose (:source (tokens digest)))
+                 (remove empty?)
+                 (map #(unroll-original % (dissoc tokens digest)))
+                 string/join))))
 
 (defmethod inflate :link
   [input tokens]
@@ -61,12 +88,13 @@
           (:children (inflate rolled (merge overlooked tokens))))))
 
 (defmethod inflate :aref
-  [input tokens]
-  (let [{:keys [rolled] overlooked :tokens} (-> input
-                                                ((some-fn :text :label))
-                                                roll)]
-    (node (select-keys input [:tag :label :source])
-          (:children (inflate rolled (merge overlooked tokens))))))
+  [{:keys [tag label source text]} tokens]
+  (let [{:keys [rolled] overlooked :tokens} (roll (or text label))
+        tokens (merge overlooked tokens)]
+    (node {:tag tag
+           :label (unroll-original label tokens)
+           :source (unroll-original source tokens)}
+          (:children (inflate rolled tokens)))))
 
 (defmethod inflate :break
   [input _]
@@ -75,18 +103,18 @@
 (defmethod inflate :string
   [input tokens]
   (node {:tag :txt}
-        (unroll input tokens)))
+        (unroll-ast input tokens)))
 
 (defmethod inflate :default
   [{:keys [tag content]} tokens]
   (node {:tag tag}
-        (unroll content tokens)))
+        (unroll-ast content tokens)))
 
 (defn from-string
   "Parses string into an AST. Assumes string contains inline Markdown entities.
    Returns an AST whose root node is tagged :doc."
   [string]
   (let [{:keys [rolled tokens]} (roll string)]
-    (some->> (unroll rolled tokens)
+    (some->> (unroll-ast rolled tokens)
              (node {:tag :doc}))))
 

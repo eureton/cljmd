@@ -109,6 +109,17 @@
                    {:tag :txt :content "[abc][qpr\\!]"})))))
 
       (testing "collapsed"
+        (testing "inline content"
+          (are [s t] (= (-> (str "[" s "][]\n\n[" s "]: xyz '123'")
+                            from-string
+                            (get-in [:children 0 :children]))
+                        [(node {:tag :a :destination "xyz" :title "123"}
+                               [(node {:tag t}
+                                      [(node {:tag :txt :content "abc"})])])])
+               "*abc*"   :em
+               "`abc`"   :cs
+               "**abc**" :strong))
+
         (testing "match"
           (testing "case-insensitive"
             (is (= (-> "[QpR][]\n\n[qpr]: xyz '123'"
@@ -141,6 +152,17 @@
                    {:tag :txt :content "[qpr\\!][]"})))))
 
       (testing "shortcut"
+        (testing "inline content"
+          (are [s t] (= (-> (str "[" s "]\n\n[" s "]: xyz '123'")
+                            from-string
+                            (get-in [:children 0 :children]))
+                        [(node {:tag :a :destination "xyz" :title "123"}
+                               [(node {:tag t}
+                                      [(node {:tag :txt :content "abc"})])])])
+               "*abc*"   :em
+               "`abc`"   :cs
+               "**abc**" :strong))
+
         (testing "match"
           (testing "case-insensitive"
             (is (= (-> "[QpR][]\n\n[qpr]: xyz '123'"
@@ -180,7 +202,10 @@
                                          :content s})])]))
              "[abc][qpr]"
              "[abc][]"
-             "[abc]"))))
+             "[abc]"
+             "[abc][*qpr* `klm`]"
+             "[*abc* `klm`][]"
+             "[*abc* `klm`]"))))
 
   (testing "image"
     (testing "inline"
