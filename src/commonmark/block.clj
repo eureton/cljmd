@@ -2,8 +2,8 @@
   (:require [clojure.string :as string]
             [clojure.set]
             [flatland.useful.fn :as ufn]
-            [commonmark.html :as html]
-            [commonmark.inline :as inline]
+            [commonmark.re.html :as re.html]
+            [commonmark.re.link :as re.link]
             [commonmark.util :as util]))
 
 (comment "ATX Headings
@@ -309,27 +309,27 @@ OK  followed by either a . character or a ) character.
                    html-block-variant-1-tag-re #"(?:\s|>|$).*")))
 
 (def html-block-variant-2-begin-line-re
-  (re-pattern (str #"^ {0,3}" html/comment-begin-re ".*")))
+  (re-pattern (str #"^ {0,3}" re.html/comment-begin-re ".*")))
 
 (def html-block-variant-3-begin-line-re
-  (re-pattern (str #"^ {0,3}" html/processing-instruction-begin-re ".*")))
+  (re-pattern (str #"^ {0,3}" re.html/processing-instruction-begin-re ".*")))
 
 (def html-block-variant-4-begin-line-re
-  (re-pattern (str #"^ {0,3}" html/declaration-begin-re ".*")))
+  (re-pattern (str #"^ {0,3}" re.html/declaration-begin-re ".*")))
 
 (def html-block-variant-5-begin-line-re
-  (re-pattern (str #"^ {0,3}" html/cdata-section-begin-re ".*")))
+  (re-pattern (str #"^ {0,3}" re.html/cdata-section-begin-re ".*")))
 
 (def html-block-variant-6-begin-line-re
   (re-pattern (str #"^ {0,3}" (util/non-backslash-re "</?")
-                   "(?:(?i)" (string/join "|" html/block-variant-6-tags) ")"
+                   "(?:(?i)" (string/join "|" re.html/block-variant-6-tags) ")"
                    #"(?:\s+|/?>|$).*")))
 
 (def html-block-variant-7-begin-line-re
   (re-pattern (str "^ {0,3}"
                    "(?:"
-                     (html/open-tag-re {:exclude-tags ["script" "style" "pre"]}) "|"
-                     html/closing-tag-re
+                     (re.html/open-tag-re {:exclude-tags ["script" "style" "pre"]}) "|"
+                     re.html/closing-tag-re
                    ")"
                    #"\s*$")))
 
@@ -355,16 +355,18 @@ OK  followed by either a . character or a ) character.
                    html-block-variant-1-tag-re #">.*")))
 
 (def html-block-variant-2-end-line-re
-  (re-pattern (str #"^ {0,3}(?! ).*?" html/comment-end-re ".*")))
+  (re-pattern (str #"^ {0,3}(?! ).*?" re.html/comment-end-re ".*")))
 
 (def html-block-variant-3-end-line-re
-  (re-pattern (str #"^ {0,3}(?! ).*?" html/processing-instruction-end-re ".*")))
+  (re-pattern (str #"^ {0,3}(?! ).*?"
+                   re.html/processing-instruction-end-re
+                   ".*")))
 
 (def html-block-variant-4-end-line-re
-  (re-pattern (str #"^ {0,3}(?! ).*?" html/declaration-end-re ".*")))
+  (re-pattern (str #"^ {0,3}(?! ).*?" re.html/declaration-end-re ".*")))
 
 (def html-block-variant-5-end-line-re
-  (re-pattern (str #"^ {0,3}(?! ).*?" html/cdata-section-end-re ".*")))
+  (re-pattern (str #"^ {0,3}(?! ).*?" re.html/cdata-section-end-re ".*")))
 
 (defn html-block-end
   [line]
@@ -403,24 +405,12 @@ OK  followed by either a . character or a ) character.
       pair? (assoc info :tag :html-block)
       info (assoc info :tag :html-block-unpaired))))
 
-(def link-reference-definition-re
-  (re-pattern (str #"(?m)^ {0,3}" inline/link-label-re ":"
-                   #"\s*(?=\S+(?:\s|$))" inline/inline-link-destination-re
-                   "(?:" #"\s+" inline/inline-link-title-re ")?"
-                   #"\s*$")))
-
-(def link-reference-definition-batch-re
-  (re-pattern (str #"(?m)(?s)\A"
-                   "(?:^" link-reference-definition-re "$"
-                          inline/line-ending-re "?"
-                   ")*")))
-
 (defn link-reference-definition
   [line]
   (when line
     (if-some [[_ label wrapped unwrapped
                single-quoted double-quoted
-               parenthesized] (re-find link-reference-definition-re line)]
+               parenthesized] (re-find re.link/reference-definition-re line)]
       (->> {:tag :adef
             :label label
             :destination (or wrapped unwrapped)

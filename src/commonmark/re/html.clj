@@ -1,4 +1,4 @@
-(ns commonmark.html
+(ns commonmark.re.html
   (:require [clojure.string :as string]
             [commonmark.util :as util]))
 

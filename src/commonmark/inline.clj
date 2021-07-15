@@ -1,10 +1,9 @@
 (ns commonmark.inline
   (:require [clojure.string :as string]
-            [commonmark.html :as html]
-            [commonmark.util :as util]))
-
-(def line-ending-re
-  #"(?:\r\n|\n|\r(?!\n))")
+            [commonmark.util :as util]
+            [commonmark.re.html :as re.html]
+            [commonmark.re.link :as re.link]
+            [commonmark.re.common :as re.common]))
 
 (comment "Code spans
 
@@ -283,75 +282,13 @@ OK  The beginning and the end of the line count as Unicode whitespace.
     described above. The link’s title consists of the link title, excluding its enclosing delimiters, with
     backslash-escapes in effect as described above.)")
 
-(defn blank-line-re
-  "Returns a RE which matches lines consisting of zero to limit characters, each
-   of which may be either a space or a tab."
-  ([limit]
-   (re-pattern (str "(?<="
-                      "(?:^|" line-ending-re ")"
-                    ")"
-                    #"[ \t]" "{0," limit "}"
-                    "(?="
-                      "(?:" line-ending-re "|$)"
-                    ")")))
-  ([] (blank-line-re 999)))
-
-(def link-text-re
-  (re-pattern (str "(?s)"
-                   (util/non-backslash-re #"\[") "("
-                     (util/balanced-re \[ \])
-                     (util/excluding-re (blank-line-re))
-                   ")" #"\]")))
-
-(def inline-link-wrapped-destination-re
-  (re-pattern (str (util/but-unescaped-re \< \> {:exclude ["\r" "\n"]})
-                   "*?")))
-
-(def inline-link-unwrapped-destination-re
-  (re-pattern (str "(?!<)"
-                   (util/balanced-re \( \) {:intersect #"[^ \p{Cntrl}]"}))))
-
-(def inline-link-destination-re
-  (re-pattern (str "(?:"
-                     "<(" inline-link-wrapped-destination-re ")>"
-                     "|"
-                     "(" inline-link-unwrapped-destination-re ")"
-                   ")")))
-
-(defn no-blank-line-till
-  [character]
-  (re-pattern (str "(?!.*?" line-ending-re #"[ \t]*" line-ending-re ".*?" character ")")))
-
-(def inline-link-title-re
-  (let [escape #(string/escape (str %) {\( #"\(" \) #"\)"})
-        inner #(str (escape %1)
-                    (no-blank-line-till (escape %2))
-                    "(" (util/but-unescaped-re %1 %2) "*)"
-                    (escape %2))]
-    (re-pattern (str "(?s)(?:"
-                       (inner \' \') "|"
-                       (inner \" \") "|"
-                       (inner \( \))
-                     ")"))))
-
-(def inline-link-re
-  (re-pattern (str #"(?<!\\)(!)?" link-text-re
-                   #"\("
-                     #"\s*"
-                     inline-link-destination-re "?"
-                     "(?:"
-                       #"\s+" "(" inline-link-title-re ")"
-                     ")?"
-                     #"\s*"
-                   #"\)")))
-
 (defn inline-link
   [string]
   (when string
     (when-let [[_ img? text destination-wrapped
                 destination-unwrapped _
                 single-quoted-title double-quoted-title
-                parenthesized-title] (re-find inline-link-re string)]
+                parenthesized-title] (re-find re.link/inline-re string)]
       (if-let [inner (and (not img?)
                           (inline-link text))]
         (update inner
@@ -368,7 +305,7 @@ OK  The beginning and the end of the line count as Unicode whitespace.
                         parenthesized-title)]
           (cond-> {:text text
                    :tag (if img? :img :a)
-                   :pattern inline-link-re}
+                   :pattern re.link/inline-re}
             destination (assoc :destination destination)
             title (assoc :title title)))))))
 
@@ -392,59 +329,32 @@ OK  The beginning and the end of the line count as Unicode whitespace.
     The contents of the first link label are parsed as inlines, which are used as the link’s text. The link’s URI
     and title are provided by the matching link reference definition [876].)")
 
-(def link-label-re
-  ; TODO refactor all else to use util/non-backslash
-  (let [open (util/non-backslash-re \[)
-        close (util/non-backslash-re \])]
-    (re-pattern (str "(?s)(?:" open
-                             "(?=" #"\s*(?!\\\])[\S&&[^\]]].*?" close ")"
-                             "(" (util/but-unescaped-re \[ \]) "{1,999})"
-                           close ")"))))
-
-(def full-reference-link-re
-  (re-pattern (str #"(!)?" link-text-re link-label-re)))
-
 (defn full-reference-link
   [string]
   (when string
-    (when-some [[source img? text label] (re-find full-reference-link-re string)]
+    (when-some [[source img? text label] (re-find re.link/full-reference-re string)]
       {:tag (if img? :img :aref)
        :text text
        :label label
-       :pattern full-reference-link-re
+       :pattern re.link/full-reference-re
        :source source})))
-
-(def textless-reference-link-re
-  (re-pattern (str link-label-re #"(?:\[\])?")))
 
 (defn textless-reference-link
   [string]
   (when string
-    (when-some [[source label] (re-find textless-reference-link-re string)]
+    (when-some [[source label] (re-find re.link/textless-reference-re string)]
       {:tag :aref
        :label label
-       :pattern textless-reference-link-re
+       :pattern re.link/textless-reference-re
        :source source})))
 
 (def reference-link
   (some-fn full-reference-link textless-reference-link))
 
-(def absolute-uri-re
-  (re-pattern (str #"\p{Alpha}[\p{Alnum}+.-]{1,31}" ":"
-                   #"[\S&&[^\p{Cntrl}<>]]*")))
-
-(def email-address-re
-  (re-pattern (str "[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+"
-                   "@"
-                   "[a-zA-Z0-9]"
-                   "(?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?"
-                   "(?:"
-                     #"\.[a-zA-Z0-9]"
-                     "(?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?"
-                   ")*")))
-
 (def autolink-re
-  (re-pattern (str "<(" absolute-uri-re "|" email-address-re ")>")))
+  (re-pattern (str (util/non-backslash-re \<) "("
+                     re.common/absolute-uri-re "|" re.common/email-address-re
+                   ")>")))
 
 (defn autolink
   [string]
@@ -468,7 +378,9 @@ OK  The beginning and the end of the line count as Unicode whitespace.
            (hash-map :tag :hbr :pattern hard-line-break-re :content)))
 
 (def soft-line-break-re
-  (re-pattern (str #"(?<=.)(?<!(?:[ ]{2,}|\\))" line-ending-re #"(?=.)")))
+  (re-pattern (str #"(?<=.)(?<!(?:[ ]{2,}|\\))"
+                   re.common/line-ending-re
+                   #"(?=.)")))
 
 (defn soft-line-break
   [string]
@@ -479,9 +391,9 @@ OK  The beginning and the end of the line count as Unicode whitespace.
 (defn html
   [string]
   (when string
-    (when-some [html (re-find html/tag-re string)]
+    (when-some [html (re-find re.html/tag-re string)]
       {:tag :html-inline
-       :pattern html/tag-re
+       :pattern re.html/tag-re
        :content html})))
 
 (defn text

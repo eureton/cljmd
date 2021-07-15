@@ -1,7 +1,7 @@
 (ns commonmark.block-test
   (:require [clojure.test :refer :all]
             [commonmark.block :refer :all]
-            [commonmark.html :as html]))
+            [commonmark.re.html :as re.html]))
 
 (deftest atx-heading-test
   (testing "minimal, 1-6"
@@ -523,7 +523,7 @@
           (are [pre suf] (every? #(->> (str pre % suf)
                                        html-block-begin
                                        v6?)
-                                 html/block-variant-6-tags)
+                                 re.html/block-variant-6-tags)
                "<"  " xyz"
                "<"  ">"
                "<"  "/>"

@@ -1,6 +1,7 @@
 (ns commonmark.blockrun.entry
   (:require [clojure.string :as string]
-            [commonmark.block :as block]))
+            [commonmark.block :as block]
+            [commonmark.re.link :as re.link]))
 
 (def origin
   "Returns the first line."
@@ -41,7 +42,7 @@
   [[_ lines]]
   (->> lines
        (string/join "\n")
-       (re-find block/link-reference-definition-batch-re)
+       (re-find re.link/reference-definition-batch-re)
        first
        string/split-lines
        (remove empty?)))

@@ -2,7 +2,8 @@
   (:require [clojure.string :as string]
             [flatland.useful.fn :as ufn]
             [commonmark.block :as block]
-            [commonmark.blockrun.entry :as entry]))
+            [commonmark.blockrun.entry :as entry]
+            [commonmark.re.link :as re.link]))
 
 (def zero
   "Identity element of the add binary operation."
@@ -237,7 +238,7 @@
         split #(let [batch (entry/link-reference-definition-batch %)
                      items (->> batch
                                 (string/join "\r\n")
-                                (re-seq block/link-reference-definition-re)
+                                (re-seq re.link/reference-definition-re)
                                 (map (comp string/split-lines first)))
                      remainder (vec (drop (count batch) (second %)))]
                  (concat
