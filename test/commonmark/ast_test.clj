@@ -100,7 +100,13 @@
             (is (= (-> "[abc][qpr]\n\n[qpr]: xyz '123'\n[qpr]: zyx '321'"
                        from-string
                        (get-in [:children 0 :children 0 :data]))
-                   {:tag :a :destination "xyz" :title "123"})))))
+                   {:tag :a :destination "xyz" :title "123"})))
+
+          (testing "backslash escapes"
+            (is (= (-> "[abc][qpr\\!]\n\n[qpr!]: xyz '123'"
+                       from-string
+                       (get-in [:children 0 :children 0 :data]))
+                   {:tag :txt :content "[abc][qpr\\!]"})))))
 
       (testing "collapsed"
         (testing "match"
@@ -126,7 +132,13 @@
             (is (= (-> "[qpr][]\n\n[qpr]: xyz '123'\n[qpr]: zyx '321'"
                        from-string
                        (get-in [:children 0 :children 0 :data]))
-                   {:tag :a :destination "xyz" :title "123"})))))
+                   {:tag :a :destination "xyz" :title "123"})))
+
+          (testing "backslash escapes"
+            (is (= (-> "[qpr\\!][]\n\n[qpr!]: xyz '123'"
+                       from-string
+                       (get-in [:children 0 :children 0 :data]))
+                   {:tag :txt :content "[qpr\\!][]"})))))
 
       (testing "shortcut"
         (testing "match"
@@ -152,7 +164,13 @@
             (is (= (-> "[qpr]\n\n[qpr]: xyz '123'\n[qpr]: zyx '321'"
                        from-string
                        (get-in [:children 0 :children 0 :data]))
-                   {:tag :a :destination "xyz" :title "123"})))))
+                   {:tag :a :destination "xyz" :title "123"})))
+
+          (testing "backslash escapes"
+            (is (= (-> "[qpr\\!]\n\n[qpr!]: xyz '123'"
+                       from-string
+                       (get-in [:children 0 :children 0 :data]))
+                   {:tag :txt :content "[qpr\\!]"})))))
 
       (testing "no match"
         (are [s] (= (from-string s)
