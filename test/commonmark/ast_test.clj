@@ -205,7 +205,19 @@
              "[abc]"
              "[abc][*qpr* `klm`]"
              "[*abc* `klm`][]"
-             "[*abc* `klm`]"))))
+             "[*abc* `klm`]"))
+
+      (testing "surrounding inline content"
+        (are [r l] (= (from-string (str "before " r " after\n\n[" l "]: xyz '123'"))
+                    (node {:tag :doc}
+                          [(node {:tag :p}
+                                 [(node {:tag :txt :content "before "})
+                                  (node {:tag :a :destination "xyz" :title "123"}
+                                        [(node {:tag :txt :content "abc"})])
+                                  (node {:tag :txt :content " after"})])]))
+             "[abc][lbl]" "lbl"
+             "[abc][]"    "abc"
+             "[abc]"      "abc"))))
 
   (testing "image"
     (testing "inline"
