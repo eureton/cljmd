@@ -298,8 +298,9 @@ OK  The beginning and the end of the line count as Unicode whitespace.
 
 (def link-text-re
   (re-pattern (str "(?s)"
-                   (util/balanced-re \[ \])
-                   (util/excluding-re (blank-line-re)))))
+                   #"(?<!\\)\[" "(" (util/balanced-re \[ \])
+                                    (util/excluding-re (blank-line-re))
+                   ")" #"\]")))
 
 (def inline-link-wrapped-destination-re
   (re-pattern (str (util/but-unescaped-re \< \> {:exclude ["\r" "\n"]})
@@ -333,7 +334,7 @@ OK  The beginning and the end of the line count as Unicode whitespace.
                      ")"))))
 
 (def inline-link-re
-  (re-pattern (str #"(?<!\\)(!)?(?<!\\)\[" "(" link-text-re ")" #"\]"
+  (re-pattern (str #"(?<!\\)(!)?" link-text-re
                    #"\("
                      #"\s*"
                      inline-link-destination-re "?"
@@ -400,9 +401,7 @@ OK  The beginning and the end of the line count as Unicode whitespace.
                            close ")"))))
 
 (def full-reference-link-re
-  ; TODO tuck ! and [] into link-text-re
-  (re-pattern (str #"(!)?\[" "(" link-text-re ")" #"\]"
-                   link-label-re)))
+  (re-pattern (str #"(!)?" link-text-re link-label-re)))
 
 (defn full-reference-link
   [string]
