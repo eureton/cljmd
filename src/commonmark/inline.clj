@@ -329,27 +329,39 @@ OK  The beginning and the end of the line count as Unicode whitespace.
     The contents of the first link label are parsed as inlines, which are used as the link’s text. The link’s URI
     and title are provided by the matching link reference definition [876].)")
 
-(defn full-reference-link
-  [string]
-  (when string
-    (when-some [[source img? text label] (re-find re.link/full-reference-re string)]
-      {:tag (if img? :img :aref)
-       :text text
-       :label label
-       :pattern re.link/full-reference-re
-       :source source})))
+(defn full-reference-link-matcher
+  [definitions]
+  (let [pattern (re.link/full-reference-re (keys definitions))]
+    (fn [string]
+      (when-some [[_ img? text & labels] (some->> string (re-find pattern))]
+        (when-some [info (some->> labels
+                                  (some identity)
+                                  util/normalize-link-label
+                                  definitions)]
+          (-> info
+              (select-keys [:title :destination])
+              (assoc :text text :tag (if img? :img :a) :pattern pattern)))))))
 
-(defn textless-reference-link
-  [string]
-  (when string
-    (when-some [[source label] (re-find re.link/textless-reference-re string)]
-      {:tag :aref
-       :label label
-       :pattern re.link/textless-reference-re
-       :source source})))
+(defn textless-reference-link-matcher
+  [definitions]
+  (let [pattern (re.link/textless-reference-re (keys definitions))]
+    (fn [string]
+      (when-some [info (some->> string
+                                (re-find pattern)
+                                (drop 1)
+                                (some identity)
+                                util/normalize-link-label
+                                definitions)]
+        {:tag :a
+         :pattern pattern
+         :title (:title info)
+         :destination (:destination info)
+         :text (:label info)}))))
 
-(def reference-link
-  (some-fn full-reference-link textless-reference-link))
+(defn reference-link
+  [definitions]
+  (some-fn (full-reference-link-matcher definitions)
+           (textless-reference-link-matcher definitions)))
 
 (def autolink-re
   (re-pattern (str (util/non-backslash-re \<) "("
@@ -404,16 +416,18 @@ OK  The beginning and the end of the line count as Unicode whitespace.
      :content (string/replace string #"\\(?=\p{Punct})" "")}))
 
 (defn tagger
-  [string]
-  (some->> string
-           ((some-fn code-span
-                     html
-                     autolink
-                     inline-link
-                     reference-link
-                     emphasis
-                     strong-emphasis
-                     hard-line-break
-                     soft-line-break
-                     text))))
+  ([string {:keys [definitions] :or {definitions {}}}]
+   (some->> string
+            ((some-fn code-span
+                      html
+                      autolink
+                      inline-link
+                      (reference-link definitions)
+                      emphasis
+                      strong-emphasis
+                      hard-line-break
+                      soft-line-break
+                      text))))
+  ([string]
+   (tagger string {})))
 

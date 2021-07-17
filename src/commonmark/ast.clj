@@ -4,29 +4,14 @@
             [flatland.useful.fn :as ufn]
             [treeduce.core :as tree]
             [commonmark.blockrun :as blockrun]
-            [commonmark.ast.common :as common]
+            [commonmark.ast.node :as node]
             [commonmark.ast.block :as block]
-            [commonmark.ast.inline :as inline]
             [commonmark.ast.postprocessing :as postp]))
-
-(def has-inline?
-  "Returns true if the node has inline content which may be expanded into AST
-   form, false otherwise."
-  (every-pred common/leaf?
-              (comp not #{:txt :hbr :sbr :blank :html-block} :tag :data)))
-
-(defn expand-inline
-  "Assuming node contains inline Markdown content:
-     1. parses an AST from the inline content
-     2. appends the children of the AST to node
-     3. removes inline content from node."
-  [node]
-  (apply common/add (dissoc-in node [:data :content])
-                    (-> node :data :content inline/from-string :children)))
 
 (defn remove-link-reference-definitions
   "Removes nodes tagged with :adef."
   [ast]
+  ; TODO use update-children here
   (tree/map (fn [{:as node :keys [children]}]
               (let [children (remove (comp #{:adef} :tag :data) children)]
                 (if (empty? children)
@@ -34,30 +19,24 @@
                   (assoc node :children (vec children)))))
             ast))
 
-(defn inflate-link-references
+(defn blockphase-context
+  "Returns the context of the block phase of the parsing process."
+  [ast]
+  {:definitions (tree/reduce (fn [acc {:as x :keys [tag label]}]
+                               (cond-> acc
+                                 (= :adef tag) (update label #(or %1 %2) x)))
+                               {}
+                               ast
+                               :depth-first)})
+
+(defn expand-inline
   "Matches link references with link definitions and completes the former with
    the information of the latter. Unmatched references are transformed into :txt
    nodes with the source text as content."
   [ast]
-  (let [label (comp #(string/replace % #"\s+" " ") string/lower-case :label)
-        overwrite #(or %1 %2)
-        definitions (tree/reduce #(cond-> %1
-                                    (= :adef (:tag %2)) (update (label %2)
-                                                                overwrite
-                                                                %2))
-                                 {}
-                                 ast
-                                 :depth-first)
-        reference? (comp #{:aref} :tag :data)
-        inflate (fn [{:as node :keys [data children]}]
-                  (let [lookup (-> data label definitions)]
-                    (if lookup
-                      (assoc node :data {:tag :a
-                                         :title (:title lookup)
-                                         :destination (:destination lookup)})
-                      (common/node {:tag :txt
-                                    :content (:source data)}))))]
-    (tree/map (ufn/to-fix reference? inflate) ast)))
+  (let [contextful-expand #(node/expand-inline % (blockphase-context ast))]
+    (tree/map (ufn/to-fix node/has-inline? contextful-expand)
+              ast)))
 
 (defn from-string
   "Parses markdown AST from string."
@@ -67,8 +46,7 @@
                blockrun/from-string
                blockrun/postprocess
                block/from-blockrun
-               (tree/map (ufn/to-fix has-inline? expand-inline))
-               inflate-link-references
+               expand-inline
                remove-link-reference-definitions)
           postp/queue))
 

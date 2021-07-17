@@ -56,11 +56,24 @@
                      #"\s*"
                    #"\)")))
 
-(def full-reference-re
-  (re-pattern (str #"(!)?" text-re label-re)))
+(defn label-matcher
+  [label]
+  (as-> label v
+        (string/replace v #"([-\[\]{}()*+?.\\^$|#])" "\\\\$1")
+        (string/replace v #"(?<!\\)(\p{Punct})" "\\\\\\\\?$1")
+        (string/replace v #"\s+" "\\\\s+")
+        (str #"\[" "(" v ")" #"\]")
+        (re-pattern v)))
 
-(def textless-reference-re
-  (re-pattern (str label-re #"(?:\[\])?")))
+(defn full-reference-re
+  [labels]
+  (re-pattern (str #"(?u)(?i)(!)?" text-re
+                   (apply util/or-re (map label-matcher labels)))))
+
+(defn textless-reference-re
+  [labels]
+  (re-pattern (str "(?u)(?i)" (apply util/or-re (map label-matcher labels))
+                   #"(?:\[\])?")))
 
 (def reference-definition-re
   (re-pattern (str #"(?m)^ {0,3}" label-re ":"

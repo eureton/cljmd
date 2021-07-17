@@ -26,19 +26,24 @@
    single digest. Token meta-data are collected in a hashmap, keyed by digest.
    Returns the string and the meta-data in a hashmap under :rolled and :tokens,
    respectively."
-  [string]
-  (when string
-    (loop [string string
-           tokens {}]
-      (if (contains? tokens string)
-        {:rolled string
-         :tokens tokens}
-        (let [{:as info :keys [pattern]} (inline/tagger string)
-              digest (str (hash info))
-              info (assoc info :source (ufn/fix (re-find pattern string)
-                                                vector? first))]
-            (recur (string/replace-first string pattern digest)
-                   (assoc tokens digest info)))))))
+  ([string context]
+   (when string
+     (loop [string string
+            tokens {}
+            context context]
+       (if (contains? tokens string)
+         {:rolled string
+          :tokens tokens}
+         (let [{:as info :keys [pattern]} (inline/tagger string context)
+               digest (str (hash info))
+               match (ufn/fix (re-find pattern string) vector? first)
+               link (get-in context [:definitions match])]
+             (recur (string/replace-first string pattern digest)
+                    (assoc tokens digest (assoc info :source match))
+                    (cond-> context
+                      link (assoc-in [:definitions digest] link))))))))
+  ([string]
+   (roll string {})))
 
 (defn unroll
   "Iteratively replaces the tokens found in string according to the stepf.
@@ -83,18 +88,10 @@
 
 (defmethod inflate :link
   [input tokens]
-  (let [{:keys [rolled] overlooked :tokens} (roll (:text input))]
+  (let [content-fn (some-fn :text :label)
+        {:keys [rolled] overlooked :tokens} (roll (content-fn input))]
     (node (select-keys input [:tag :destination :title])
           (:children (inflate rolled (merge overlooked tokens))))))
-
-(defmethod inflate :aref
-  [{:keys [tag label source text]} tokens]
-  (let [{:keys [rolled] overlooked :tokens} (roll (or text label))
-        tokens (merge overlooked tokens)]
-    (node {:tag tag
-           :label (unroll-original label tokens)
-           :source (unroll-original source tokens)}
-          (:children (inflate rolled tokens)))))
 
 (defmethod inflate :break
   [input _]
@@ -113,8 +110,10 @@
 (defn from-string
   "Parses string into an AST. Assumes string contains inline Markdown entities.
    Returns an AST whose root node is tagged :doc."
-  [string]
-  (let [{:keys [rolled tokens]} (roll string)]
-    (some->> (unroll-ast rolled tokens)
-             (node {:tag :doc}))))
+  ([string context]
+   (let [{:keys [rolled tokens]} (roll string context)]
+     (some->> (unroll-ast rolled tokens)
+              (node {:tag :doc}))))
+  ([string]
+   (from-string string {})))
 

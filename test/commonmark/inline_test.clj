@@ -1041,152 +1041,146 @@
          "\\~" "~")))
 
 (deftest reference-link-test
+  (defn context [label]
+    {:definitions {label {:title "t"
+                          :destination "d"
+                          :label label}}})
+
+  (defn reference-link-for [label]
+    (reference-link (:definitions (context label))))
+
+  (defn full-reference-link-for [label]
+    (full-reference-link-matcher (:definitions (context label))))
+
+  (defn tagger-for [label]
+    #(tagger % (context label)))
+
   (testing "pun nil"
-    (is (nil? (reference-link nil))))
+    (is (nil? ((reference-link-for "") nil))))
 
   (testing "full"
     (testing "minimal"
-      (let [{:keys [text label]} (reference-link "[abc][xyz]")]
+      (let [{:keys [text destination title]} ((reference-link-for "xyz")
+                                              "[abc][xyz]")]
         (is (and (= text "abc")
-                 (= label "xyz")))))
+                 (= destination "d")
+                 (= title "t")))))
 
     (testing "text"
       (testing "empty"
-        (is (= (-> "[][xyz]" reference-link :text)
+        (is (= (-> "[][xyz]"
+                   ((reference-link-for "xyz"))
+                   :text)
                "")))
 
       (testing "inline elements"
-        (is (= (-> "[*abc* `def` **ghi**][xyz]" reference-link :text)
+        (is (= (-> "[*abc* `def` **ghi**][xyz]"
+                   ((reference-link-for "xyz"))
+                   :text)
                "*abc* `def` **ghi**")))
 
       (testing "brackets"
         (testing "backslash-escaped"
-          (is (= (-> "[a\\]b\\[c][xyz]" reference-link :text)
+          (is (= (-> "[a\\]b\\[c][xyz]"
+                     ((reference-link-for "xyz"))
+                     :text)
                  "a\\]b\\[c")))
 
         (testing "matched"
-          (is (= (-> "[1[2[3]4]5][xyz]" reference-link :text)
+          (is (= (-> "[1[2[3]4]5][xyz]"
+                     ((reference-link-for "xyz"))
+                     :text)
                  "1[2[3]4]5"))))
 
       (testing "bracket binding"
         (testing "less tightly than backticks"
-          (is (= (-> "[ab`c][xyz]`" tagger :tag)
+          (is (= (-> "[ab`c][xyz]`" ((tagger-for "xyz")) :tag)
                  :cs)))
 
         (testing "less tightly than HTML tags"
-          (is (= (-> "[<abc attr=\"][xyz]\">" tagger :tag)
+          (is (= (-> "[<abc attr=\"][xyz]\">" ((tagger-for "xyz")) :tag)
                  :html-inline)))
 
         (testing "less tightly than autolinks"
-          (is (= (-> "[abc<http://example.com?q=\"][xyz]\">" tagger :tag)
+          (is (= (-> "[abc<http://example.com?q=\"][xyz]\">"
+                     ((tagger-for "xyz"))
+                     :tag)
                  :auto)))
 
         (testing "more tightly than emphasis markers"
-          (are [s] (= (-> s tagger :tag)
-                      :aref)
-               "*[abc*][xyz]"
-               "[abc *xyz][123*]"))))
+          (are [s l] (= (-> s ((tagger-for l)) :tag)
+                        :a)
+               "*[abc*][xyz]"     "xyz"
+               "[abc *xyz][123*]" "123*"))))
 
     (testing "label"
-      (testing "empty"
-        (is (nil? (full-reference-link "[abc][]"))))
-
-      (testing "only whitespace"
-        (are [l] (nil? (full-reference-link (str "[abc][" l "]")))
-             " "
-             "  "
-             "   "
-             "\t"
-             "\t\t"
-             "\t\t\t"
-             " \t \t \t"))
-
       (testing "brackets"
         (testing "backslash-escaped"
-          (is (= (-> "[abc][x\\]y\\[z]" reference-link :label)
-                 "x\\]y\\[z"))))))
+          (is (some? ((reference-link-for "x\\]y\\[z") "[abc][x\\]y\\[z]")))))))
 
   (testing "collapsed"
     (testing "minimal"
-      (is (= (-> "[abc][]" reference-link :label)
-             "abc")))
-
-    (testing "empty"
-      (is (nil? (reference-link "[][]"))))
-
-    (testing "only whitespace"
-      (are [l] (nil? (reference-link (str "[" l "][]")))
-           " "
-           "  "
-           "   "
-           "\t"
-           "\t\t"
-           "\t\t\t"
-           " \t \t \t"))
+      (is (some? ((reference-link-for "abc") "[abc][]"))))
 
     (testing "brackets"
       (testing "backslash-escaped"
-        (is (= (-> "[a\\]b\\[c][]" reference-link :label)
-               "a\\]b\\[c"))))
+        (is (some? ((reference-link-for "a\\]b\\[c") "[a\\]b\\[c][]")))))
 
     (testing "bracket binding"
       (testing "less tightly than backticks"
-        (is (= (-> "[ab`c][]`" tagger :tag)
+        (is (= (-> "[ab`c][]`" ((tagger-for "ab`c")) :tag)
                :cs)))
 
       (testing "less tightly than HTML tags"
-        (is (= (-> "[<abc attr=\"][]\">" tagger :tag)
+        (is (= (-> "[<abc attr=\"][]\">"
+                   ((tagger-for "<abc attr=\""))
+                   :tag)
                :html-inline)))
 
       (testing "less tightly than autolinks"
-        (is (= (-> "[abc<http://example.com?q=\"][]\">" tagger :tag)
+        (is (= (-> "[abc<http://example.com?q=\"][]\">"
+                   ((tagger-for "abc<http://example.com?q=\""))
+                   :tag)
                :auto)))
 
       (testing "more tightly than emphasis markers"
-        (are [s] (= (-> s tagger :tag)
-                    :aref)
-             "*[abc*][]"
-             "[abc *xyz][*]"))))
+        (are [s l] (= (-> s ((tagger-for l)) :tag)
+                      :a)
+             "*[abc*][]" "abc*"
+             "[*abc][*]" "*abc"))))
 
   (testing "shortcut"
     (testing "minimal"
-      (is (= (-> "[abc]" reference-link :label)
-             "abc")))
-
-    (testing "empty"
-      (is (nil? (reference-link "[]"))))
-
-    (testing "only whitespace"
-      (are [l] (nil? (reference-link (str "[" l "]")))
-           " "
-           "  "
-           "   "
-           "\t"
-           "\t\t"
-           "\t\t\t"
-           " \t \t \t"))
+      (is (some? (-> "[abc]" ((reference-link-for "abc"))))))
 
     (testing "brackets"
       (testing "backslash-escaped"
-        (is (= (-> "[a\\]b\\[c]" reference-link :label)
-               "a\\]b\\[c"))))
+        (is (some? ((reference-link-for "a\\]b\\[c") "[a\\]b\\[c]")))))
 
     (testing "bracket binding"
       (testing "less tightly than backticks"
-        (is (= (-> "[ab`c]`" tagger :tag)
+        (is (= (-> "[ab`c]`"
+                   ((tagger-for "ab`c"))
+                   :tag)
                :cs)))
 
       (testing "less tightly than HTML tags"
-        (is (= (-> "[<abc attr=\"]\">" tagger :tag)
+        (is (= (-> "[<abc attr=\"]\">"
+                   ((tagger-for "<abc attr=\""))
+                   :tag)
                :html-inline)))
 
       (testing "less tightly than autolinks"
-        (is (= (-> "[abc<http://example.com?q=\"]\">" tagger :tag)
+        (is (= (-> "[abc<http://example.com?q=\"]\">"
+                   ((tagger-for "abc<http://example.com?q=\""))
+                   :tag)
                :auto)))
 
       (testing "more tightly than emphasis markers"
-        (are [s] (= (-> s tagger :tag)
-                    :aref)
-             "*[abc*]"
-             "[abc *xyz]*")))))
+        (are [s l] (= (-> s
+                          ((tagger-for l))
+                          :tag)
+                    :a)
+             "*[abc*]" "abc*"
+             "[*abc]*" "*abc")))))
 

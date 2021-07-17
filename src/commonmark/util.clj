@@ -94,3 +94,17 @@
                        (escape-re-delimiter x)
                        trail)))))
 
+(defn or-re
+  "Returns a RE which matches any of the given expressions."
+  [& exps]
+  (->> exps
+       (string/join "|")
+       (format "(?:%s)")
+       re-pattern))
+
+(defn normalize-link-label
+  [label]
+  (-> label
+      (string/replace #"\s+" " ")
+      string/lower-case))
+

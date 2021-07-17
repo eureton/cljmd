@@ -91,7 +91,7 @@
                    {:tag :a :destination "xyz" :title "123"})))
 
           (testing "whitespace"
-            (is (= (-> "[abc][q p r]\n\n[q \t\r\n p \t\r\n r]: xyz '123'"
+            (is (= (-> "[abc][q \t\r\n p \t\r\n r]\n\n[q p r]: xyz '123'"
                        from-string
                        (get-in [:children 0 :children 0 :data]))
                    {:tag :a :destination "xyz" :title "123"})))
@@ -106,7 +106,7 @@
             (is (= (-> "[abc][qpr\\!]\n\n[qpr!]: xyz '123'"
                        from-string
                        (get-in [:children 0 :children 0 :data]))
-                   {:tag :txt :content "[abc][qpr\\!]"})))))
+                   {:tag :txt :content "[abc][qpr!]"})))))
 
       (testing "collapsed"
         (testing "inline content"
@@ -134,7 +134,7 @@
                    {:tag :a :destination "xyz" :title "123"})))
 
           (testing "whitespace"
-            (is (= (-> "[q p r][]\n\n[q \t\r\n p \t\r\n r]: xyz '123'"
+            (is (= (-> "[q \t\r\n p \t\r\n r][]\n\n[q p r]: xyz '123'"
                        from-string
                        (get-in [:children 0 :children 0 :data]))
                    {:tag :a :destination "xyz" :title "123"})))
@@ -149,7 +149,7 @@
             (is (= (-> "[qpr\\!][]\n\n[qpr!]: xyz '123'"
                        from-string
                        (get-in [:children 0 :children 0 :data]))
-                   {:tag :txt :content "[qpr\\!][]"})))))
+                   {:tag :txt :content "[qpr!][]"})))))
 
       (testing "shortcut"
         (testing "inline content"
@@ -177,7 +177,7 @@
                    {:tag :a :destination "xyz" :title "123"})))
 
           (testing "whitespace"
-            (is (= (-> "[q p r]\n\n[q \t\r\n p \t\r\n r]: xyz '123'"
+            (is (= (-> "[q \t\r\n p \t\r\n r]\n\n[q p r]: xyz '123'"
                        from-string
                        (get-in [:children 0 :children 0 :data]))
                    {:tag :a :destination "xyz" :title "123"})))
@@ -192,7 +192,7 @@
             (is (= (-> "[qpr\\!]\n\n[qpr!]: xyz '123'"
                        from-string
                        (get-in [:children 0 :children 0 :data]))
-                   {:tag :txt :content "[qpr\\!]"})))))
+                   {:tag :txt :content "[qpr!]"})))))
 
       (testing "no match"
         (are [s] (= (from-string s)
@@ -200,12 +200,9 @@
                           [(node {:tag :p}
                                  [(node {:tag :txt
                                          :content s})])]))
-             "[abc][qpr]"
+             "[abc][xyz]"
              "[abc][]"
-             "[abc]"
-             "[abc][*qpr* `klm`]"
-             "[*abc* `klm`][]"
-             "[*abc* `klm`]"))
+             "[abc]"))
 
       (testing "surrounding inline content"
         (are [r l] (= (from-string (str "before " r " after\n\n[" l "]: xyz '123'"))
