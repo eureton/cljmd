@@ -70,10 +70,23 @@
   (re-pattern (str #"(?u)(?i)(!)?" text-re
                    (apply util/or-re (map label-matcher labels)))))
 
-(defn textless-reference-re
+(defn collapsed-reference-re
   [labels]
   (re-pattern (str "(?u)(?i)" (apply util/or-re (map label-matcher labels))
-                   #"(?:\[\])?")))
+                   #"\[\]")))
+
+(defn shortcut-reference-re
+  [labels]
+  (let [label (apply util/or-re (map label-matcher labels))]
+    (re-pattern (str "(?u)(?i)" label
+                     #"(?!\[\])"
+                     "(?!" label ")"))))
+
+(defn textless-reference-re
+  [labels]
+  (re-pattern (str "(?:" (collapsed-reference-re labels) "|"
+                         (shortcut-reference-re labels)
+                   ")")))
 
 (def reference-definition-re
   (re-pattern (str #"(?m)^ {0,3}" label-re ":"

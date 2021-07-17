@@ -192,7 +192,13 @@
             (is (= (-> "[qpr\\!]\n\n[qpr!]: xyz '123'"
                        from-string
                        (get-in [:children 0 :children 0 :data]))
-                   {:tag :txt :content "[qpr!]"})))))
+                   {:tag :txt :content "[qpr!]"}))))
+
+        (testing "followed by label"
+          (is (= (-> "[abc][xyz][123]\n\n[123]: dest-123 'title-123'\n[abc]: dest-abc 'title-abc'"
+                     from-string
+                     (get-in [:children 0 :children]))
+                 {:tag :txt :content "[qpr!]"}))))
 
       (testing "no match"
         (are [s] (= (from-string s)

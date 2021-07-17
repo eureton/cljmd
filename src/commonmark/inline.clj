@@ -346,6 +346,8 @@ OK  The beginning and the end of the line count as Unicode whitespace.
   [definitions]
   (let [pattern (re.link/textless-reference-re (keys definitions))]
     (fn [string]
+      (prn "___________   S" string)
+      (prn "___________   M" (re-find pattern string))
       (when-some [info (some->> string
                                 (re-find pattern)
                                 (drop 1)
