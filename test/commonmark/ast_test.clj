@@ -198,7 +198,9 @@
           (is (= (-> "[abc][xyz][123]\n\n[123]: dest-123 'title-123'\n[abc]: dest-abc 'title-abc'"
                      from-string
                      (get-in [:children 0 :children]))
-                 {:tag :txt :content "[qpr!]"}))))
+                 [(node {:tag :txt :content "[abc]"})
+                  (node {:tag :a :destination "dest-123" :title "title-123"}
+                        [(node {:tag :txt :content "xyz"})])]))))
 
       (testing "no match"
         (are [s] (= (from-string s)

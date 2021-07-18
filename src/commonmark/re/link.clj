@@ -6,7 +6,7 @@
 (def text-re
   (re-pattern (str "(?s)"
                    (util/non-backslash-re #"\[") "("
-                     (util/balanced-re \[ \])
+                     (util/balanced-unescaped-re \[ \])
                      (util/excluding-re (blank-line-re))
                    ")" #"\]")))
 
@@ -16,7 +16,7 @@
 
 (def unwrapped-destination-re
   (re-pattern (str "(?!<)"
-                   (util/balanced-re \( \) {:intersect #"[^ \p{Cntrl}]"}))))
+                   (util/balanced-unescaped-re \( \) {:intersect #"[^ \p{Cntrl}]"}))))
 
 (def destination-re
   (re-pattern (str "(?:"
@@ -80,7 +80,7 @@
   (let [label (apply util/or-re (map label-matcher labels))]
     (re-pattern (str "(?u)(?i)" label
                      #"(?!\[\])"
-                     "(?!" label ")"))))
+                     "(?!" label-re ")"))))
 
 (defn textless-reference-re
   [labels]

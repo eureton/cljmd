@@ -1,5 +1,6 @@
 (ns commonmark.inline
   (:require [clojure.string :as string]
+            [flatland.useful.fn :as ufn]
             [commonmark.util :as util]
             [commonmark.re.html :as re.html]
             [commonmark.re.link :as re.link]
@@ -170,15 +171,9 @@ OK  The beginning and the end of the line count as Unicode whitespace.
 
 (defn star-emphasis-re
   [delimeter]
-  (let [left (lfdr-re delimeter)
-        right (rfdr-re delimeter)]
-    (re-pattern (str left
-                     "("
-                       "(?:"
-                         "(?!" left ")" #"\p{Print}"
-                       ")*?"
-                     ")"
-                     right))))
+  (let [open (lfdr-re delimeter)
+        close (rfdr-re delimeter)]
+    (util/balanced-re open close)))
 
 (defn lobar-open-emphasis-re
   [delimeter]
@@ -206,13 +201,7 @@ OK  The beginning and the end of the line count as Unicode whitespace.
   [delimeter]
   (let [open (lobar-open-emphasis-re delimeter)
         close (lobar-close-emphasis-re delimeter)]
-    (re-pattern (str open
-                     "("
-                       "(?:"
-                         "(?!" open ")" #"\p{Print}"
-                       ")*?"
-                     ")"
-                     close))))
+    (util/balanced-re open close)))
 
 (defn emphasis-re
   [length]
@@ -221,21 +210,22 @@ OK  The beginning and the end of the line count as Unicode whitespace.
                      (lobar-emphasis-re (emphasis-delimeter-re \_ length))
                    ")")))
 
+(defn emphasis-matcher
+  [length tag]
+  (let [pattern (emphasis-re length)
+        trim #(subs % length (- (count %) length))]
+    #(some->> %
+              (re-find pattern)
+              trim
+              (hash-map :tag tag :pattern pattern :content))))
+
 (defn emphasis
   [string]
-  (let [pattern (emphasis-re 1)]
-    (when-some [[_ star-content lobar-content] (re-find pattern string)]
-      {:content (or star-content lobar-content)
-       :tag :em
-       :pattern pattern})))
+  ((emphasis-matcher 1 :em) string))
 
 (defn strong-emphasis
   [string]
-  (let [pattern (emphasis-re 2)]
-    (when-some [[_ star-content lobar-content] (re-find pattern string)]
-      {:content (or star-content lobar-content)
-       :tag :strong
-       :pattern pattern})))
+  ((emphasis-matcher 2 :strong) string))
 
 (comment "Links
 
@@ -346,11 +336,10 @@ OK  The beginning and the end of the line count as Unicode whitespace.
   [definitions]
   (let [pattern (re.link/textless-reference-re (keys definitions))]
     (fn [string]
-      (prn "___________   S" string)
-      (prn "___________   M" (re-find pattern string))
       (when-some [info (some->> string
                                 (re-find pattern)
                                 (drop 1)
+                                drop-last
                                 (some identity)
                                 util/normalize-link-label
                                 definitions)]
@@ -410,13 +399,6 @@ OK  The beginning and the end of the line count as Unicode whitespace.
        :pattern re.html/tag-re
        :content html})))
 
-(defn text
-  [string]
-  (when string
-    {:tag :txt
-     :pattern #"(?s).*"
-     :content (string/replace string #"\\(?=\p{Punct})" "")}))
-
 (defn tagger
   ([string {:keys [definitions] :or {definitions {}}}]
    (some->> string
@@ -428,8 +410,7 @@ OK  The beginning and the end of the line count as Unicode whitespace.
                       emphasis
                       strong-emphasis
                       hard-line-break
-                      soft-line-break
-                      text))))
+                      soft-line-break))))
   ([string]
    (tagger string {})))
 

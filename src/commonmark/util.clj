@@ -2,16 +2,6 @@
   (:require [clojure.string :as string]
             [flatland.useful.fn :as ufn]))
 
-(defn split
-  [string pattern]
-  (let [suffix (str (+ 10000 (rand-int 10000)))
-        desufficize #(subs % 0 (- (count %) (count suffix)))]
-    (->> (string/split (str string suffix) pattern)
-         ((juxt butlast
-                (comp vector desufficize peek)))
-         (apply concat)
-         vec)))
-
 (def re-delimiter-escape-hash
   (->> "()[]{}\""
        ((juxt identity #(map (partial str "\\") %)))
@@ -21,7 +11,7 @@
   [in]
   (string/escape (str in) re-delimiter-escape-hash))
 
-(defn balanced-re
+(defn balanced-unescaped-re
   ([opener closer {:keys [intersect]}]
    (let [[l r] (map re-delimiter-escape-hash [opener closer])
          non-delimeters (cond-> (str "[^" l r "]")
@@ -41,7 +31,21 @@
           (format "(?:%s)")
           re-pattern)))
   ([opener closer]
-   (balanced-re opener closer {})))
+   (balanced-unescaped-re opener closer {})))
+
+(defn balanced-re
+  [l r]
+  (let [fill (str "(?:(?:.(?!" l "|" r "))*.|)")
+        pad #(->> %& (interpose fill) string/join)]
+    (->> [;[l l l l r r r r] [l l l r l r r r] [l l l r r l r r] [l l r l r l r r]
+          ;[l l l r r r] [l l r l r r]
+          [l l r r]
+          [l r]]
+         (map #(apply pad %))
+         (interpose "|")
+         string/join
+         (format "(?:%s)")
+         re-pattern)))
 
 (defn excluding-re
   "Returns a negative lookbehind RE which forbids match immediately prior to

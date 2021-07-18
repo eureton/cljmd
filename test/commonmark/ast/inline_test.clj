@@ -33,6 +33,44 @@
                     (node {:tag :img
                            :destination "abc"} [txt-node]))))))
 
+  (testing "removes backslash escapes from ASCII punctuation"
+    (are [in out] (= (-> (str "abc" in "xyz")
+                         from-string
+                         (get-in [:children 0]))
+                     (node {:tag :txt :content (str "abc" out "xyz")}))
+         "\\!" "!"
+         "\\\"" "\""
+         "\\#" "#"
+         "\\$" "$"
+         "\\%" "%"
+         "\\&" "&"
+         "\\'" "'"
+         "\\(" "("
+         "\\)" ")"
+         "\\*" "*"
+         "\\+" "+"
+         "\\," ","
+         "\\-" "-"
+         "\\." "."
+         "\\/" "/"
+         "\\:" ":"
+         "\\;" ";"
+         "\\<" "<"
+         "\\=" "="
+         "\\>" ">"
+         "\\?" "?"
+         "\\@" "@"
+         "\\[" "["
+         "\\\\" "\\"
+         "\\]" "]"
+         "\\^" "^"
+         "\\_" "_"
+         "\\`" "`"
+         "\\{" "{"
+         "\\|" "|"
+         "\\}" "}"
+         "\\~" "~")))
+
   (testing "nested emphasis"
     (let [em-tree (node {:tag :em}
                         [(node {:tag :txt :content "("})

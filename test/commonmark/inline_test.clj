@@ -236,9 +236,9 @@
       (is (= (-> "*(xyz)*" emphasis :content)
              "(xyz)")))
 
-    (testing "nested => matches innermost"
+    (testing "nested"
       (is (= (-> "*(*xyz*)*" emphasis :content)
-             "xyz")))
+             "(*xyz*)")))
 
     (testing "intraword"
       (is (= (-> "*foo*bar" emphasis :content)
@@ -248,9 +248,9 @@
     (testing "preceded by whitespace => not emphasis"
       (is (nil? (emphasis "_foo bar _"))))
 
-    (testing "nested => matches innermost"
+    (testing "nested"
       (is (= (-> "_(_xyz_)_" emphasis :content)
-             "xyz")))
+             "(_xyz_)")))
 
     (testing "preceded by punctuation, followed by whitespace"
       (is (= (-> "_(xyz)_" emphasis :content)
@@ -285,9 +285,9 @@
       (is (= (-> "foo**bar**" strong-emphasis :content)
              "bar")))
 
-    (testing "nested => matches innermost"
+    (testing "nested"
       (is (= (-> "**(**xyz**)**" strong-emphasis :content)
-             "xyz"))))
+             "(**xyz**)"))))
 
   (testing "opening with __"
     (testing "minimal"
@@ -296,7 +296,7 @@
 
     (testing "nested => matches innermost"
       (is (= (-> "__(__xyz__)__" strong-emphasis :content)
-             "xyz")))
+             "(__xyz__)")))
 
     (testing "followed by whitespace => not strong emphasis"
       (are [s] (nil? (strong-emphasis s))
@@ -996,49 +996,6 @@
 
   (testing "by itself in a line"
     (is (nil? (soft-line-break "\nabc")))))
-
-(deftest text-test
-  (testing "puns nil"
-    (is (nil? (text nil))))
-
-  (testing "captures all"
-    (let [s "abc *def* **ghi** [jkl](mno 'pqr') ![stu](vwx) `yz0`"]
-      (is (= s (-> s text :content)))))
-
-  (testing "removes backslash escapes from ASCII punctuation"
-    (are [in out] (= out (-> in text :content))
-         "\\!" "!"
-         "\\\"" "\""
-         "\\#" "#"
-         "\\$" "$"
-         "\\%" "%"
-         "\\&" "&"
-         "\\'" "'"
-         "\\(" "("
-         "\\)" ")"
-         "\\*" "*"
-         "\\+" "+"
-         "\\," ","
-         "\\-" "-"
-         "\\." "."
-         "\\/" "/"
-         "\\:" ":"
-         "\\;" ";"
-         "\\<" "<"
-         "\\=" "="
-         "\\>" ">"
-         "\\?" "?"
-         "\\@" "@"
-         "\\[" "["
-         "\\\\" "\\"
-         "\\]" "]"
-         "\\^" "^"
-         "\\_" "_"
-         "\\`" "`"
-         "\\{" "{"
-         "\\|" "|"
-         "\\}" "}"
-         "\\~" "~")))
 
 (deftest reference-link-test
   (defn context [label]
