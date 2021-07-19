@@ -50,8 +50,7 @@
   (let [content ((some-fn :text :label) input)]
     (->> tokens
          (map #(token/translate % (- (string/index-of match content))))
-         (inflate content)
-         :children
+         (unroll content)
          (node (select-keys input [:tag :destination :title])))))
 
 (defmethod inflate :break
@@ -64,9 +63,11 @@
         (unroll input tokens)))
 
 (defmethod inflate :default
-  [{:keys [tag content]} tokens]
-  (node {:tag tag}
-        (unroll content tokens)))
+  [{:keys [tag content] :re/keys [match]} tokens]
+  (->> tokens
+       (map #(token/translate % (- (string/index-of match content))))
+       (unroll content)
+       (node {:tag tag})))
 
 (defn from-string
   "Parses string into an AST. Assumes string contains inline Markdown entities.
