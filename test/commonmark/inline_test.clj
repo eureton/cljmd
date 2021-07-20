@@ -1,41 +1,44 @@
 (ns commonmark.inline-test
   (:require [clojure.test :refer :all]
             [clojure.string :as string]
-            [commonmark.inline :refer :all]))
+            [commonmark.inline :refer :all]
+            [commonmark.re.link :as re.link]))
 
 (deftest code-span-test
   (testing "minimal"
-    (is (= (->> "`foo`" (code-span) :content)
+    (is (= (->> "`foo`" (re-find code-span-re) code-span :content)
            "foo")))
 
   (testing "multiple"
-    (is (= (->> "`foo` bar `baz`" code-span :content)
+    (is (= (->> "`foo` bar `baz`" (re-find code-span-re) code-span :content)
            "foo")))
 
   (testing "backtick in contents"
-    (is (= (->> "``foo`bar``" code-span :content)
+    (is (= (->> "``foo`bar``" (re-find code-span-re) code-span :content)
            "foo`bar")))
 
   (testing "wrap backtick pairs"
-    (is (= (->> "`` `ls -l` ``" code-span :content)
+    (is (= (->> "`` `ls -l` ``" (re-find code-span-re) code-span :content)
            "`ls -l`")))
 
   (testing "strip"
     (testing "single space"
-      (are [s c] (= (->> s code-span :content)
+      (are [s c] (= (->> s (re-find code-span-re) code-span :content)
                     c)
            "` foo `"   "foo"
            "`  foo  `" " foo "
            "` `` `"    "``"))
 
-    (testing "space not on both ends => don't"
-      (is (= (->> "` foo`" code-span :content)
+    (testing "space not on both ends"
+      (is (= (->> "` foo`" (re-find code-span-re) code-span :content)
              " foo")))
 
-    (testing "not unicode whitespace => don't"
-      (are [c] (let [s (str c "foo" c)]
-                 (= (->> (str "`" s "`") code-span :content count)
-                    5))
+    (testing "not unicode whitespace"
+      (are [c] (= (->> (str "`" c "foo" c "`")
+                       (re-find code-span-re)
+                       code-span
+                       :content count)
+                  5)
            \u0009
 ;          \u000A
            \u000C
@@ -57,35 +60,37 @@
            \u205F
            \u3000))
 
-    (testing "contains only spaces => don't"
-      (are [s c] (= (->> s code-span :content)
+    (testing "contains only spaces"
+      (are [s c] (= (->> s (re-find code-span-re) code-span :content)
                     c)
            "` `"  " "
            "`  `" "  ")))
 
-  (testing "line endings => treat like spaces"
-    (are [s c] (= (->> s code-span :content)
+  (testing "line endings"
+    (are [s c] (= (->> s (re-find code-span-re) code-span :content)
                   c)
          "``\nfoo\nbar  \nbaz\n``" "foo bar   baz"
          "``\nfoo \n``" "foo "))
 
-  (testing "interior spaces => don't collapse"
-    (is (= (->> "`foo   bar \nbaz`" code-span :content)
+  (testing "interior spaces"
+    (is (= (->> "`foo   bar \nbaz`" (re-find code-span-re) code-span :content)
            "foo   bar  baz")))
 
   (testing "backtick strings unequal length"
     (testing "no match"
-      (are [s] (nil? (code-span s))
+      (are [s] (nil? (re-find code-span-re s))
            "```foo``"
            "`foo"
            "`foo``"))
 
     (testing "match"
-      (are [s c] (= c (->> s code-span :content))
+      (are [s c] (= (->> s (re-find code-span-re) code-span :content)
+                    c)
            "`foo``bar``" "bar")))
 
   (testing "line endings"
-    (are [s c] (= c (->> s code-span :content))
+    (are [s c] (= (->> s (re-find code-span-re) code-span :content)
+                  c)
          "`abc\r\nxyz`"     "abc xyz"
          "`abc\nxyz`"       "abc xyz"
          "`abc\rxyz`"       "abc xyz"
@@ -142,7 +147,7 @@
       (is (= (->> "*foo bar*" (re-find (emphasis-re 1)) emphasis :content)
              "foo bar")))
 
-    (testing "multiple => match first"
+    (testing "multiple"
       (is (= (->> "*abc* xyz *def*" (re-find (emphasis-re 1)) emphasis :content)
              "abc")))
 
@@ -194,7 +199,7 @@
       (is (= (->> "_foo bar_" (re-find (emphasis-re 1)) emphasis :content)
              "foo bar")))
 
-    (testing "multiple => match first"
+    (testing "multiple"
       (is (= (->> "_abc_ xyz _def_" (re-find (emphasis-re 1)) emphasis :content)
              "abc")))
 
@@ -202,7 +207,7 @@
       (is (= (->> "._.xyz_" (re-find (emphasis-re 1)) emphasis :content)
              ".xyz")))
 
-    (testing "opening _ followed by whitespace => not emphasis"
+    (testing "opening _ followed by whitespace"
       (is (nil? (->> "_ foo bar_" (re-find (emphasis-re 1)) emphasis))))
 
     (testing "opening _ preceded by alphanumeric and followed by punctuation"
@@ -216,7 +221,7 @@
     (testing "left-flank, right-flank"
       (is (nil? (->> "aa_\"bb\"_cc" (re-find (emphasis-re 1)) emphasis))))
 
-    (testing "left-flank, right-flank, preceded by punctuation => emphasis"
+    (testing "left-flank, right-flank, preceded by punctuation"
       (is (= (->> "foo-_(bar)_" (re-find (emphasis-re 1)) emphasis :content)
              "(bar)"))))
 
@@ -311,12 +316,12 @@
            "foo__bar__"
            "5__6__78"))
 
-    (testing "left-flank, right-flank, preceded by punctuation => strong emphasis"
+    (testing "left-flank, right-flank, preceded by punctuation"
       (is (= (->> "foo-__(bar)__" (re-find (emphasis-re 2)) strong-emphasis :content)
              "(bar)"))))
 
   (testing "closing with **"
-    (testing "closing and opening delimiter don't match => not emphasis"
+    (testing "closing and opening delimiter don't match"
       (is (nil? (->> "__foo**" (re-find (emphasis-re 2)) strong-emphasis))))
 
     (testing "preceded by whitespace"
@@ -364,29 +369,36 @@
              "(bar)")))))
 
 (deftest inline-link-test
-  (testing "pun nil"
-    (is (nil? (inline-link nil))))
+  (testing "invalid input"
+    (is (nil? (re-find re.link/inline-re "not-a-valid-inline-link"))))
 
-  (testing "invalid input => nil"
-    (is (nil? (inline-link "not-a-valid-inline-link"))))
+  (testing "omit destination"
+    (is (some? (->> "[abc]()" (re-find re.link/inline-re)))))
 
-  (testing "destination is optional"
-    (is (some? (inline-link "[abc]()"))))
-
-  (testing "title is optional"
-    (is (let [{:keys [text destination title]} (inline-link "[abc](xyz)")]
+  (testing "omit title"
+    (is (let [{:keys [text destination title]} (->> "[abc](xyz)"
+                                                    (re-find re.link/inline-re)
+                                                    inline-link)]
           (and (some? text)
                (some? destination)
                (nil? title)))))
 
   (testing "text"
     (testing "backslash-escaped brackets"
-      (are [s] (= s (-> (str "[" s "](xyz)") inline-link :text))
+      (are [s] (= (->> (str "[" s "](xyz)")
+                       (re-find re.link/inline-re)
+                       inline-link
+                       :text)
+                  s)
            "abc\\]123"
            "abc\\[123"))
 
     (testing "balanced brackets"
-      (are [s] (= s (-> (str "[" s "](xyz)") inline-link :text))
+      (are [s] (= (->> (str "[" s "](xyz)")
+                       (re-find re.link/inline-re)
+                       inline-link
+                       :text)
+                  s)
            ""
            "[]"
            "[][]"
@@ -401,116 +413,160 @@
            "[abc [123] pqr]"))
 
     (testing "unbalanced brackets"
-      (are [s] (nil? (inline-link s))
+      (are [s] (nil? (re-find re.link/inline-re s))
            "[]]()"
            "[[]]]()"
            "[[[]]]]()"))
 
     (testing "contains line breaks"
       (testing "single"
-        (is (= "ab\ncd" (->> "[ab\ncd](xyz)" inline-link :text))))
+        (is (= (->> "[ab\ncd](xyz)"
+                    (re-find re.link/inline-re)
+                    inline-link
+                    :text)
+               "ab\ncd")))
 
       (testing "multiple"
-        (is (= "ab\ncd\nef" (->> "[ab\ncd\nef](xyz)" inline-link :text)))))
+        (is (= (->> "[ab\ncd\nef](xyz)"
+                    (re-find re.link/inline-re)
+                    inline-link
+                    :text)
+               "ab\ncd\nef"))))
 
     (testing "contains blank line"
-      (is (nil? (inline-link "[ab\n\ncd](xyz)"))))
+      (is (nil? (re-find re.link/inline-re "[ab\n\ncd](xyz)"))))
 
     (testing "nested links"
-      (is (let [res (inline-link "[[inner](inner.com)](outer.com)")
-                {:keys [text destination title]} res]
-            (and (= text "inner")
-                 (= destination "inner.com"))))))
+      (is (let [{:keys [text destination]} (->> "[[in](in.com)](out.com)"
+                                                (re-find re.link/inline-re)
+                                                inline-link)]
+            (and (= text "[in](in.com)")
+                 (= destination "out.com"))))))
 
   (testing "destination"
     (testing "wrapped in <>"
       (testing "minimal"
-        (is (= (-> "[abc](<xyz>)" inline-link :destination)
+        (is (= (->> "[abc](<xyz>)"
+                    (re-find re.link/inline-re)
+                    inline-link
+                    :destination)
                "xyz")))
 
-      (testing "contains spaces"
-        (is (= (-> "[abc](<xyz 123 qpr>)" inline-link :destination)
+      (testing "spaces"
+        (is (= (->> "[abc](<xyz 123 qpr>)"
+                    (re-find re.link/inline-re)
+                    inline-link
+                    :destination)
              "xyz 123 qpr")))
 
-      (testing "contains line breaks"
-        (is (nil? (inline-link "[abc](<123\nxyz>)"))))
+      (testing "line breaks"
+        (is (nil? (re-find re.link/inline-re "[abc](<123\nxyz>)"))))
 
-      (testing "contains parentheses"
-        (are [s d] (= d (-> s inline-link :destination))
+      (testing "parentheses"
+        (are [s d] (= d (->> s
+                             (re-find re.link/inline-re)
+                             inline-link
+                             :destination))
              "[abc](<123)xyz>)" "123)xyz"
              "[abc](<123(xyz>)" "123(xyz"))
 
       (testing "with title"
-        (are [t] (= (-> (str "[abc](<xyz> " t ")") inline-link :destination)
+        (are [t] (= (->> (str "[abc](<xyz> " t ")")
+                         (re-find re.link/inline-re)
+                         inline-link
+                         :destination)
                     "xyz")
              "'123'"
              "\"123\""))
 
-      (testing "contains escaped delimeters"
-        (are [s] (= s (-> (str "[abc](<" s ">)") inline-link :destination))
+      (testing "escaped delimeters"
+        (are [s] (= s (->> (str "[abc](<" s ">)")
+                           (re-find re.link/inline-re)
+                           inline-link
+                           :destination))
              "123\\<xyz"
              "123\\>xyz"
              "123\\<qpr\\>xyz"))
 
-      (testing "contains unescaped delimeters"
-        (are [s] (nil? (-> (str "[abc](<" s ">)") inline-link))
+      (testing "unescaped delimeters"
+        (are [s] (nil? (->> (str "[abc](<" s ">)")
+                            (re-find re.link/inline-re)))
              "123<xyz"
              "123>xyz"
              "123<qpr>xyz"))
 
       (testing "improperly matched opening delimiters"
-        (are [s] (nil? (inline-link s))
+        (are [s] (nil? (re-find re.link/inline-re s))
              "[a] (<b)c"
              "[a] (<b)c>"
              "[a] (<b>c)")))
 
     (testing "not wrapped in <>"
       (testing "minimal"
-        (is (= (-> "[abc](xyz)" inline-link :destination)
+        (is (= (->> "[abc](xyz)"
+                    (re-find re.link/inline-re)
+                    inline-link
+                    :destination)
                "xyz")))
 
       (testing "begins with <"
-        (is (nil? (-> "[abc](<xyz)" inline-link :destination))))
+        (is (nil? (re-find re.link/inline-re "[abc](<xyz)"))))
 
       (testing "contains <"
-        (is (= (-> "[abc](x<yz)" inline-link :destination)
+        (is (= (->> "[abc](x<yz)"
+                    (re-find re.link/inline-re)
+                    inline-link
+                    :destination)
                "x<yz")))
 
-      (testing "contains spaces"
-        (is (nil? (-> "[abc](xyz 123)" inline-link :destination))))
+      (testing "spaces"
+        (is (nil? (re-find re.link/inline-re "[abc](xyz 123)"))))
 
       (testing "with title"
-        (are [t] (= (-> (str "[abc](xyz " t ")") inline-link :destination)
+        (are [t] (= (->> (str "[abc](xyz " t ")")
+                         (re-find re.link/inline-re)
+                         inline-link
+                         :destination)
                     "xyz")
              "'123'"
              "\"123\""))
 
-      (testing "contains control characters"
-        (are [s] (nil? (inline-link (str "[abc](" s ")")))
+      (testing "control characters"
+        (are [s] (nil? (re-find re.link/inline-re (str "[abc](" s ")")))
              "123\rxyz"
              "123\nxyz"))
 
       (testing "parentheses"
         (testing "unescaped, unbalanced"
-          (are [s] (nil? (inline-link (str "[abc](" s ")")))
+          (are [s] (nil? (re-find re.link/inline-re (str "[abc](" s ")")))
                "123(xyz"
                "123()xyz("
                "123((qpr))xyz("))
 
         (testing "unescaped, balanced"
-          (are [s] (= s (-> (str "[abc](" s ")") inline-link :destination))
+          (are [s] (= s (->> (str "[abc](" s ")")
+                             (re-find re.link/inline-re)
+                             inline-link
+                             :destination))
                "()"
                "123()xyz"
                "123(!(qpr)!)xyz"))
 
         (testing "escaped"
-          (are [s] (= s (-> (str "[abc](" s ")") inline-link :destination))
+          (are [s] (= s (->> (str "[abc](" s ")")
+                             (re-find re.link/inline-re)
+                             inline-link
+                             :destination))
                "123\\(xyz"
                "123\\)xyz"
                "123\\)q\\(pr\\)xyz"))))
 
-    (testing "contains fragments and queries"
-      (are [d] (= d (-> (str "[abc](" d ")") inline-link :destination))
+    (testing "fragments and queries"
+      (are [d] (= (->> (str "[abc](" d ")")
+                       (re-find re.link/inline-re)
+                       inline-link
+                       :destination)
+                  d)
            "#fragment"
            "http://example.com#fragment"
            "http://example.com?foo=3#frag")))
@@ -518,69 +574,101 @@
   (testing "title"
     (testing "'-delimited"
       (testing "minimal"
-        (is (= (-> "[abc](xyz '123')" inline-link :title)
+        (is (= (->> "[abc](xyz '123')"
+                    (re-find re.link/inline-re)
+                    inline-link
+                    :title)
                "123")))
 
-      (testing "contains double quotes"
-        (is (= (-> "[abc](xyz '12 \"34\" 56')" inline-link :title)
+      (testing "double quotes"
+        (is (= (->> "[abc](xyz '12 \"34\" 56')"
+                    (re-find re.link/inline-re)
+                    inline-link
+                    :title)
                "12 \"34\" 56")))
 
-      (testing "contains escaped delimeters"
-        (are [t] (= t (-> (str "[abc](xyz '" t "')") inline-link :title))
+      (testing "escaped delimeters"
+        (are [t] (= t (->> (str "[abc](xyz '" t "')")
+                           (re-find re.link/inline-re)
+                           inline-link
+                           :title))
              "1\\'23"
              "12\\'3"
              "1\\'2\\'3"))
 
-      (testing "contains unescaped delimeters"
-        (are [t] (nil? (-> (str "[abc](xyz '" t "')") inline-link))
+      (testing "unescaped delimeters"
+        (are [t] (nil? (re-find re.link/inline-re (str "[abc](xyz '" t "')")))
              "1'23"
              "12'3"
              "1'2'3"))
 
-      (testing "contains line breaks"
+      (testing "line breaks"
         (testing "single"
-          (is (= (-> "[abc](xyz '12\n34\n56')" inline-link :title)
+          (is (= (->> "[abc](xyz '12\n34\n56')"
+                      (re-find re.link/inline-re)
+                      inline-link
+                      :title)
                  "12\n34\n56")))
 
         (testing "multiple"
-          (is (nil? (inline-link "[abc](xyz '12\n\n34')"))))))
+          (is (nil? (re-find re.link/inline-re "[abc](xyz '12\n\n34')"))))))
 
     (testing "\"-delimited"
       (testing "minimal"
-        (is (= (-> "[abc](xyz \"123\")" inline-link :title)
+        (is (= (->> "[abc](xyz \"123\")"
+                    (re-find re.link/inline-re)
+                    inline-link
+                    :title)
                "123")))
 
-      (testing "contains single quotes"
-        (is (= (-> "[abc](xyz \"12 '34' 56\")" inline-link :title)
+      (testing "single quotes"
+        (is (= (->> "[abc](xyz \"12 '34' 56\")"
+                    (re-find re.link/inline-re)
+                    inline-link
+                    :title)
                "12 '34' 56")))
 
-      (testing "contains escaped delimeters"
-        (are [t] (= t (-> (str "[abc](xyz \"" t "\")") inline-link :title))
+      (testing "escaped delimeters"
+        (are [t] (= (->> (str "[abc](xyz \"" t "\")")
+                         (re-find re.link/inline-re)
+                         inline-link
+                         :title)
+                    t)
              "1\\\"23"
              "12\\\"3"
              "1\\\"2\\\"3"))
 
-      (testing "contains unescaped delimeters"
-        (are [t] (nil? (-> (str "[abc](xyz \"" t "\")") inline-link))
+      (testing "unescaped delimeters"
+        (are [t] (nil? (re-find re.link/inline-re (str "[abc](xyz \"" t "\")")))
              "1\"23"
              "12\"3"
              "1\"2\"3"))
 
-      (testing "contains line breaks"
+      (testing "line breaks"
         (testing "single"
-          (is (= (-> "[abc](xyz \"12\n34\n56\")" inline-link :title)
+          (is (= (->> "[abc](xyz \"12\n34\n56\")"
+                      (re-find re.link/inline-re)
+                      inline-link
+                      :title)
                  "12\n34\n56")))
 
         (testing "multiple"
-          (is (nil? (inline-link "[abc](xyz \"12\n\n34\")"))))))
+          (is (nil? (re-find re.link/inline-re "[abc](xyz \"12\n\n34\")"))))))
 
     (testing "()-delimited"
       (testing "minimal"
-        (is (= (-> (str "[abc](xyz (123))") inline-link :title)
+        (is (= (->> (str "[abc](xyz (123))")
+                    (re-find re.link/inline-re)
+                    inline-link
+                    :title)
                "123")))
 
-      (testing "contains escaped delimeters"
-        (are [t] (= t (-> (str "[abc](xyz (" t "))") inline-link :title))
+      (testing "escaped delimeters"
+        (are [t] (= (->> (str "[abc](xyz (" t "))")
+                         (re-find re.link/inline-re)
+                         inline-link
+                         :title)
+                    t)
              "1\\(23"
              "12\\(3"
              "1\\(2\\(3"
@@ -590,8 +678,8 @@
              "1\\(2\\)3"
              "1\\)2\\(3"))
 
-      (testing "contains unescaped delimeters"
-        (are [t] (nil? (-> (str "[abc](xyz (" t "))") inline-link))
+      (testing "unescaped delimeters"
+        (are [t] (nil? (re-find re.link/inline-re (str "[abc](xyz (" t "))")))
              "1(23"
              "12(3"
              "1(2(3"
@@ -601,24 +689,36 @@
              "1(2)3"
              "1)2(3"))
 
-      (testing "contains line breaks"
+      (testing "line breaks"
         (testing "single"
-          (is (= (-> "[abc](xyz (12\n34\n56))" inline-link :title)
+          (is (= (->> "[abc](xyz (12\n34\n56))"
+                      (re-find re.link/inline-re)
+                      inline-link
+                      :title)
                  "12\n34\n56")))
 
         (testing "multiple"
-          (is (nil? (inline-link "[abc](xyz (12\n\n34))")))))
+          (is (nil? (re-find re.link/inline-re "[abc](xyz (12\n\n34))")))))
 
-      (testing "contains backslash escapes"
-        (is (= (-> "[abc](xyz \"be there in 5\\\"\")" inline-link :title)
+      (testing "backslash escapes"
+        (is (= (->> "[abc](xyz \"be there in 5\\\"\")"
+                    (re-find re.link/inline-re)
+                    inline-link
+                    :title)
                "be there in 5\\\"")))
 
-      (testing "contains entity"
-        (is (= (-> "[abc](xyz \"be there in 5&quot;\")" inline-link :title)
+      (testing "entity"
+        (is (= (->> "[abc](xyz \"be there in 5&quot;\")"
+                    (re-find re.link/inline-re)
+                    inline-link
+                    :title)
                "be there in 5&quot;")))))
 
   (testing "separating destination from title with non-unicode whitespace"
-    (are [c] (= (-> (str "[abc](xyz" c "123)") inline-link :destination)
+    (are [c] (= (->> (str "[abc](xyz" c "123)")
+                     (re-find re.link/inline-re)
+                     inline-link
+                     :destination)
                 (str "xyz" c "123"))
          \u00A0
          \u1680
@@ -638,20 +738,21 @@
          \u3000))
 
   (testing "whitespace around destination and title"
-    (is (let [res (inline-link "[abc]( \t\nxyz \t\n'12 34' \t\n)")
-              {:keys [destination title]} res]
+    (is (let [{:keys [destination title]} (->> "[abc]( \t\nxyz \t\n'12 34' \t\n)"
+                                               (re-find re.link/inline-re)
+                                               inline-link)]
           (and (= destination "xyz")
                (= title "12 34")))))
 
   (testing "whitespace between text and destination"
-    (are [s] (nil? (inline-link (str "[abc]" s "(xyz)")))
+    (are [s] (nil? (re-find re.link/inline-re (str "[abc]" s "(xyz)")))
          \space
          \newline
          \tab
          " \n\t"))
 
   (testing "opening bracket is escaped"
-    (is (nil? (inline-link (str "\\[abc](xyz)")))))
+    (is (nil? (re-find re.link/inline-re (str "\\[abc](xyz)")))))
 
   (testing "all in one"
     (is (let [res (inline-link "[p `code` *em*](http://example.com 'The title')")
