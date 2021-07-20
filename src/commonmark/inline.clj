@@ -135,13 +135,9 @@
       destination (assoc :destination destination)
       title (assoc :title title))))
 
-(defn full-reference-link-re
+(defn full-reference-link
   [definitions]
-  (re.link/full-reference-re (keys definitions)))
-
-(defn full-reference-link-matcher
-  [definitions]
-  (fn [[_ img? text & labels]]
+  (fn [[img? text & labels]]
     (when-some [info (some->> labels
                               (some identity)
                               util/normalize-link-label
@@ -151,27 +147,25 @@
           (assoc :text text
                  :tag (if img? :img :a))))))
 
-(defn textless-reference-link-re
+(defn textless-reference-link
   [definitions]
-  (re.link/textless-reference-re (keys definitions)))
-
-(defn textless-reference-link-matcher
-  [definitions]
-  (fn [[_ & labels]]
-    (when-some [info (some->> labels
-                              butlast
-                              (some identity)
-                              util/normalize-link-label
-                              definitions)]
-      {:tag :a
-       :title (:title info)
-       :destination (:destination info)
-       :text (:label info)})))
+  (fn [[& labels]]
+    (let [label (->> labels butlast (some identity))]
+      (when-some [info (definitions (util/normalize-link-label label))]
+        {:tag :a
+         :title (:title info)
+         :destination (:destination info)
+         :text label}))))
 
 (defn reference-link
   [definitions]
-  (some-fn (full-reference-link-matcher definitions)
-           (textless-reference-link-matcher definitions)))
+  (let [full-count (-> definitions keys count (+ 3))
+        full-items #(subvec % 1 full-count)
+        full? (comp #(some some? %) full-items)]
+    (fn [match]
+      (if (full? match)
+        ((full-reference-link definitions) (full-items match))
+        ((textless-reference-link definitions) (subvec match full-count))))))
 
 (def autolink-re
   (re-pattern (str (util/non-backslash-re \<) "("
@@ -255,30 +249,40 @@
   (-> (f (:re/match info))
       (merge (update info :re/match (ufn/to-fix vector? first)))))
 
-(defn tokenizers
-  "Returns a sequence of functions, each of which:
-     * corresponds to a markdown inline entity
-     * when called on a string, returns a sequence of the tokens parsed in it"
+(defn sweeper
+  "A function which, when called on a string, returns a sequence of tokens.
+   Each token represents an inline markdown entity identified by the
+   parser in the string.
+   Expects the context of the blockphase parser as parameter."
   [{:keys [definitions] :or {definitions {}}}]
-  (->> [[code-span-re                             code-span]
-        [re.html/tag-re                           html]
-        [autolink-re                              autolink]
-        [re.link/inline-re                        inline-link]
-     ;  [(full-reference-link-re definitions)     (full-reference-link-matcher definitions)]
-     ;  [(textless-reference-link-re definitions) (textless-reference-link-matcher definitions)]
-        [(emphasis-re 1)                          emphasis]
-        [(emphasis-re 2)                          strong-emphasis]
-        [hard-line-break-re                       hard-line-break]
-        [soft-line-break-re                       soft-line-break]]
+  (->> [[code-span-re                              code-span]
+        [re.html/tag-re                            html]
+        [autolink-re                               autolink]
+        [re.link/inline-re                         inline-link]
+        [(re.link/reference-re (keys definitions)) (reference-link definitions)]
+        [(emphasis-re 1)                           emphasis]
+        [(emphasis-re 2)                           strong-emphasis]
+        [hard-line-break-re                        hard-line-break]
+        [soft-line-break-re                        soft-line-break]]
+       (remove #(some nil? %))
        (map (fn [[re f]]
               (fn [string]
                 (some->> string
                          (matches re)
-                         (map #(annotate f %))))))))
+                         (map #(annotate f %))))))
+       (apply juxt)
+       (comp flatten)
+       ))
 
-(defn tokenizer
+(defn reconcile
+  "Curates the list of tokens to not contain mutually exclusive items."
+  [tokens]
+  (->> tokens
+       distinct))
+
+(defn tokenize
   ([string context]
-   (let [tokenizer (comp flatten (apply juxt (tokenizers context)))]
+   (let [tokenizer (sweeper context)]
      (->> (tokenizer string)
           (mapcat (fn [{:as token :re/keys [match start]}]
                     (let [content (inner token)]
@@ -286,8 +290,8 @@
                            (map #(token/translate %
                                                   (+ start (string/index-of match content))))
                            (concat [token])))))
-          distinct
+          reconcile
           (sort (comp - (comparator token/within?))))))
   ([string]
-   (tokenizer string {})))
+   (tokenize string {})))
 

@@ -21,7 +21,7 @@
       (map? input) (:tag input)))
   :hierarchy ontology)
 
-(defn unroll
+(defn unpack
   "Transforms string into a vector of ASTs, each of which corresponds to an
    inline markdown entity."
   [string tokens]
@@ -46,12 +46,11 @@
               :content (string/replace string #"\\(?=\p{Punct})" "")})])))
 
 (defmethod inflate :link
-  [{:as input :re/keys [match]} tokens]
-  (let [content ((some-fn :text :label) input)]
-    (->> tokens
-         (map #(token/translate % (- (string/index-of match content))))
-         (unroll content)
-         (node (select-keys input [:tag :destination :title])))))
+  [{:as input :keys [text] :re/keys [match]} tokens]
+  (->> tokens
+       (map #(token/translate % (- (string/index-of match text))))
+       (unpack text)
+       (node (select-keys input [:tag :destination :title]))))
 
 (defmethod inflate :break
   [input _]
@@ -60,21 +59,22 @@
 (defmethod inflate :string
   [input tokens]
   (node {:tag :txt}
-        (unroll input tokens)))
+        (unpack input tokens)))
 
 (defmethod inflate :default
   [{:keys [tag content] :re/keys [match]} tokens]
   (->> tokens
+       ; TODO refactor this with translation in the :link case above
        (map #(token/translate % (- (string/index-of match content))))
-       (unroll content)
+       (unpack content)
        (node {:tag tag})))
 
 (defn from-string
   "Parses string into an AST. Assumes string contains inline Markdown entities.
    Returns an AST whose root node is tagged :doc."
   ([string context]
-   (some->> (inline/tokenizer string context)
-            (unroll string)
+   (some->> (inline/tokenize string context)
+            (unpack string)
             (node {:tag :doc})))
   ([string]
    (from-string string {})))

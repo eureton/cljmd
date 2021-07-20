@@ -1,5 +1,6 @@
 (ns commonmark.re.link
   (:require [clojure.string :as string]
+            [flatland.useful.fn :as ufn]
             [commonmark.re.common :refer :all]
             [commonmark.util :as util]))
 
@@ -60,15 +61,15 @@
   [label]
   (as-> label v
         (string/replace v #"([-\[\]{}()*+?.\\^$|#])" "\\\\$1")
-        (string/replace v #"(?<!\\)(\p{Punct})" "\\\\\\\\?$1")
         (string/replace v #"\s+" "\\\\s+")
         (str #"\[" "(" v ")" #"\]")
         (re-pattern v)))
 
 (defn full-reference-re
   [labels]
-  (re-pattern (str #"(?u)(?i)(!)?" text-re
-                   (apply util/or-re (map label-matcher labels)))))
+  (when (not-empty labels)
+    (re-pattern (str #"(?u)(?i)(!)?" text-re
+                     (apply util/or-re (map label-matcher labels))))))
 
 (defn collapsed-reference-re
   [labels]
@@ -82,11 +83,12 @@
                      #"(?!\[\])"
                      "(?!" label-re ")"))))
 
-(defn textless-reference-re
-  [labels]
-  (re-pattern (str "(?:" (collapsed-reference-re labels) "|"
-                         (shortcut-reference-re labels)
-                   ")")))
+(def reference-re
+  (ufn/to-fix not-empty (comp (ufn/ap util/or-re)
+                              (juxt full-reference-re
+                                    collapsed-reference-re
+                                    shortcut-reference-re))
+              nil))
 
 (def reference-definition-re
   (re-pattern (str #"(?m)^ {0,3}" label-re ":"
