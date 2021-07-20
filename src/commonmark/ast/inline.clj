@@ -52,7 +52,7 @@
        (unpack text)
        (node (select-keys input [:tag :destination :title]))))
 
-(defmethod inflate :html-inline
+(defmethod inflate :verbatim
   [input _]
   (node (select-keys input [:tag :content])))
 

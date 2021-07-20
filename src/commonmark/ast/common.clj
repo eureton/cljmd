@@ -62,6 +62,9 @@
                   (derive :ofcblk :block)
                   (derive :doc    :block)
 
+                  (derive :html-inline :verbatim)
+                  (derive :cs          :verbatim)
+
                   (derive :bq :container)
                   (derive :li :container)
                   atom))

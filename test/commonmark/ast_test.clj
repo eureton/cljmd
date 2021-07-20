@@ -314,8 +314,7 @@
 
     (testing "inside raw HTML"
       (are [s] (= (-> s from-string (get-in [:children 0 :children]))
-                    [(node {:tag :html-inline}
-                           [(node {:tag :txt :content s})])])
+                    [(node {:tag :html-inline :content s})])
            "<a href=\"x  \r\nyz\">"
            "<a href=\"x\\\r\nyz\">"))
 
@@ -357,8 +356,7 @@
       (are [e] (= (-> (str "<a href=\"xyz" e "abc\">")
                       from-string
                       (get-in [:children 0 :children 0]))
-                  (node {:tag :html-inline}
-                        [(node {:tag :txt :content "<a href=\"xyz\r\nabc\">"})]))
+                  (node {:tag :html-inline :content "<a href=\"xyz\r\nabc\">"}))
            "\n"
 ;          "\r"
            "\r\n"))
@@ -397,12 +395,10 @@
     (testing "on the same line"
       (is (= (-> "<del>*abc*</del>" from-string :children)
              [(node {:tag :p}
-                    [(node {:tag :html-inline}
-                           [(node {:tag :txt :content "<del>"})])
+                    [(node {:tag :html-inline :content "<del>"})
                      (node {:tag :em}
                            [(node {:tag :txt :content "abc"})])
-                     (node {:tag :html-inline}
-                           [(node {:tag :txt :content "</del>"})])])]))))
+                     (node {:tag :html-inline :content "</del>"})])]))))
 
   (testing "post-processing"
     (testing "hard line break at end of block"
