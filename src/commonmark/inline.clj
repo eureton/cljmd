@@ -104,7 +104,7 @@
 
 (defn emphasis-re
   [length]
-  (re-pattern (str "(?:"
+  (re-pattern (str "(?s)(?:"
                      (star-emphasis-re (emphasis-delimeter-re \* length)) "|"
                      (lobar-emphasis-re (emphasis-delimeter-re \_ length))
                    ")")))

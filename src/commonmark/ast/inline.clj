@@ -52,6 +52,14 @@
        (unpack text)
        (node (select-keys input [:tag :destination :title]))))
 
+(defmethod inflate :html-inline
+  [input _]
+  (node (select-keys input [:tag :content])))
+
+(defmethod inflate :auto
+  [input _]
+  (node (select-keys input [:tag :uri :label])))
+
 (defmethod inflate :break
   [input _]
   (node (select-keys input [:tag :content])))
