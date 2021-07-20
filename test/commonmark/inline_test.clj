@@ -5,7 +5,7 @@
 
 (deftest code-span-test
   (testing "minimal"
-    (is (= (->> "`foo`" code-span :content)
+    (is (= (->> "`foo`" (code-span) :content)
            "foo")))
 
   (testing "multiple"
@@ -139,21 +139,21 @@
 (deftest emphasis-test
   (testing "opening with *"
     (testing "minimal"
-      (is (= (-> "*foo bar*" emphasis :content)
+      (is (= (->> "*foo bar*" (re-find (emphasis-re 1)) emphasis :content)
              "foo bar")))
 
     (testing "multiple => match first"
-      (is (= (-> "*abc* xyz *def*" emphasis :content)
+      (is (= (->> "*abc* xyz *def*" (re-find (emphasis-re 1)) emphasis :content)
              "abc")))
 
-    (testing "opening * followed by whitespace => not emphasis"
-      (is (nil? (emphasis "a * foo bar*"))))
+    (testing "opening * followed by whitespace"
+      (is (nil? (->> "a * foo bar*" (re-find (emphasis-re 1))))))
 
-    (testing "opening * preceded by alphanumeric and followed by punctuation => not emphasis"
-      (is (nil? (emphasis "a*\"foo\"*"))))
+    (testing "opening * preceded by alphanumeric and followed by punctuation"
+      (is (nil? (->> "a*\"foo\"*" (re-find (emphasis-re 1))))))
 
-    (testing "unicode nonbreaking spaces => not emphasis"
-      (are [c] (nil? (emphasis (str "*" c "a *")))
+    (testing "unicode nonbreaking spaces"
+      (are [c] (nil? (->> (str "*" c "a *") (re-find (emphasis-re 1))))
            \u0009
            \u000A
            \u000C
@@ -176,13 +176,13 @@
            \u3000))
 
     (testing "intraword"
-      (are [s c] (= (-> s emphasis :content)
+      (are [s c] (= (->> s (re-find (emphasis-re 1)) emphasis :content)
                     c)
            "foo*bar*" "bar"
            "5*6*78"   "6"))
 
     (testing "multiple"
-      (are [s] (= (-> s emphasis :content)
+      (are [s] (= (->> s (re-find (emphasis-re 1)) emphasis :content)
                   "xyz")
                "*xyz* *abc*"
                "*xyz* qpr *abc*"
@@ -191,176 +191,176 @@
 
   (testing "opening with _"
     (testing "minimal"
-      (is (= (-> "_foo bar_" emphasis :content)
+      (is (= (->> "_foo bar_" (re-find (emphasis-re 1)) emphasis :content)
              "foo bar")))
 
     (testing "multiple => match first"
-      (is (= (-> "_abc_ xyz _def_" emphasis :content)
+      (is (= (->> "_abc_ xyz _def_" (re-find (emphasis-re 1)) emphasis :content)
              "abc")))
 
     (testing "part of rfdr preceded by punctuation and followed by punctuation"
-      (is (= (-> "._.xyz_" emphasis :content)
+      (is (= (->> "._.xyz_" (re-find (emphasis-re 1)) emphasis :content)
              ".xyz")))
 
     (testing "opening _ followed by whitespace => not emphasis"
-      (is (nil? (emphasis "_ foo bar_"))))
+      (is (nil? (->> "_ foo bar_" (re-find (emphasis-re 1)) emphasis))))
 
-    (testing "opening _ preceded by alphanumeric and followed by punctuation => not emphasis"
-      (is (nil? (emphasis "a_\"foo \"_"))))
+    (testing "opening _ preceded by alphanumeric and followed by punctuation"
+      (is (nil? (->> "a_\"foo \"_" (re-find (emphasis-re 1)) emphasis))))
 
     (testing "intraword"
-      (are [s] (nil? (emphasis s))
+      (are [s] (nil? (->> s (re-find (emphasis-re 1)) emphasis))
            "foo_bar_"
            "5_6_78"))
 
-    (testing "left-flank, right-flank => not emphasis"
-      (is (nil? (emphasis "aa_\"bb\"_cc"))))
+    (testing "left-flank, right-flank"
+      (is (nil? (->> "aa_\"bb\"_cc" (re-find (emphasis-re 1)) emphasis))))
 
     (testing "left-flank, right-flank, preceded by punctuation => emphasis"
-      (is (= (-> "foo-_(bar)_" emphasis :content)
+      (is (= (->> "foo-_(bar)_" (re-find (emphasis-re 1)) emphasis :content)
              "(bar)"))))
 
   (testing "closing with *"
-    (testing "closing and opening delimiter don't match => not emphasis"
-      (is (nil? (emphasis "_foo*"))))
+    (testing "closing and opening delimiter don't match"
+      (is (nil? (->> "_foo*" (re-find (emphasis-re 1)) emphasis))))
 
-    (testing "preceded by whitespace => not emphasis"
-      (are [s] (nil? (emphasis s))
+    (testing "preceded by whitespace"
+      (are [s] (nil? (->> s (re-find (emphasis-re 1)) emphasis))
            "*foo bar *"
            "*foo bar\n*"))
 
-    (testing "preceded by punctuation, followed by alphanumeric => not emphasis"
-      (is (nil? (emphasis "*(*foo)"))))
+    (testing "preceded by punctuation, followed by alphanumeric"
+      (is (nil? (->> "*(*foo)" (re-find (emphasis-re 1)) emphasis))))
 
     (testing "preceded by punctuation, followed by whitespace"
-      (is (= (-> "*(xyz)*" emphasis :content)
+      (is (= (->> "*(xyz)*" (re-find (emphasis-re 1)) emphasis :content)
              "(xyz)")))
 
     (testing "nested"
-      (is (= (-> "*(*xyz*)*" emphasis :content)
+      (is (= (->> "*(*xyz*)*" (re-find (emphasis-re 1)) emphasis :content)
              "(*xyz*)")))
 
     (testing "intraword"
-      (is (= (-> "*foo*bar" emphasis :content)
+      (is (= (->> "*foo*bar" (re-find (emphasis-re 1)) emphasis :content)
              "foo"))))
 
   (testing "closing with _"
-    (testing "preceded by whitespace => not emphasis"
-      (is (nil? (emphasis "_foo bar _"))))
+    (testing "preceded by whitespace"
+      (is (nil? (->> "_foo bar _" (re-find (emphasis-re 1)) emphasis))))
 
     (testing "nested"
-      (is (= (-> "_(_xyz_)_" emphasis :content)
+      (is (= (->> "_(_xyz_)_" (re-find (emphasis-re 1)) emphasis :content)
              "(_xyz_)")))
 
     (testing "preceded by punctuation, followed by whitespace"
-      (is (= (-> "_(xyz)_" emphasis :content)
+      (is (= (->> "_(xyz)_" (re-find (emphasis-re 1)) emphasis :content)
              "(xyz)")))
 
-    (testing "preceded by punctuation, followed by alphanumeric => not emphasis"
-      (is (nil? (emphasis "_(_foo)"))))
+    (testing "preceded by punctuation, followed by alphanumeric"
+      (is (nil? (->> "_(_foo)" (re-find (emphasis-re 1)) emphasis))))
 
     (testing "lfdr followed by punctuation"
-      (are [s c] (= c (-> s emphasis :content))
+      (are [s c] (= c (->> s (re-find (emphasis-re 1)) emphasis :content))
            "_xyz)_(" "xyz)"
            "_(xyz)_." "(xyz)"))
 
-    (testing "intraword => not emphasis"
-      (are [s] (nil? (emphasis s))
+    (testing "intraword"
+      (are [s] (nil? (->> s (re-find (emphasis-re 1)) emphasis))
            "_foo_bar"
            "foo_bar_baz"))))
 
 (deftest strong-emphasis-test
   (testing "opening with **"
     (testing "minimal"
-      (is (= (-> "**foo bar**" strong-emphasis :content)
+      (is (= (->> "**foo bar**" (re-find (emphasis-re 2)) strong-emphasis :content)
              "foo bar")))
 
-    (testing "followed by whitespace => not strong emphasis"
-      (is (nil? (strong-emphasis "** foo bar**"))))
+    (testing "followed by whitespace"
+      (is (nil? (->> "** foo bar**" (re-find (emphasis-re 2)) strong-emphasis))))
 
-    (testing "preceded by alphanumeric, followed by punctuation => not strong emphasis"
-      (is (nil? (strong-emphasis "a**\"foo\"**"))))
+    (testing "preceded by alphanumeric, followed by punctuation"
+      (is (nil? (->> "a**\"foo\"**" (re-find (emphasis-re 2)) strong-emphasis))))
 
     (testing "intraword"
-      (is (= (-> "foo**bar**" strong-emphasis :content)
+      (is (= (->> "foo**bar**" (re-find (emphasis-re 2)) strong-emphasis :content)
              "bar")))
 
     (testing "nested"
-      (is (= (-> "**(**xyz**)**" strong-emphasis :content)
+      (is (= (->> "**(**xyz**)**" (re-find (emphasis-re 2)) strong-emphasis :content)
              "(**xyz**)"))))
 
   (testing "opening with __"
     (testing "minimal"
-      (is (= (-> "__foo bar__" strong-emphasis :content)
+      (is (= (->> "__foo bar__" (re-find (emphasis-re 2)) strong-emphasis :content)
              "foo bar")))
 
-    (testing "nested => matches innermost"
-      (is (= (-> "__(__xyz__)__" strong-emphasis :content)
+    (testing "nested"
+      (is (= (->> "__(__xyz__)__" (re-find (emphasis-re 2)) strong-emphasis :content)
              "(__xyz__)")))
 
-    (testing "followed by whitespace => not strong emphasis"
-      (are [s] (nil? (strong-emphasis s))
+    (testing "followed by whitespace"
+      (are [s] (nil? (->> s (re-find (emphasis-re 2)) strong-emphasis))
            "__ foo bar__"
            "__\nfoo bar__"))
 
-    (testing "preceded by alphanumeric, followed by punctuation => not strong emphasis"
-      (is (nil? (strong-emphasis "a__\"foo\"__"))))
+    (testing "preceded by alphanumeric, followed by punctuation"
+      (is (nil? (->> "a__\"foo\"__" (re-find (emphasis-re 2)) strong-emphasis))))
 
     (testing "intraword"
-      (are [s] (nil? (strong-emphasis s))
+      (are [s] (nil? (->> s (re-find (emphasis-re 2)) strong-emphasis))
            "foo__bar__"
            "5__6__78"))
 
     (testing "left-flank, right-flank, preceded by punctuation => strong emphasis"
-      (is (= (-> "foo-__(bar)__" strong-emphasis :content)
+      (is (= (->> "foo-__(bar)__" (re-find (emphasis-re 2)) strong-emphasis :content)
              "(bar)"))))
 
   (testing "closing with **"
     (testing "closing and opening delimiter don't match => not emphasis"
-      (is (nil? (strong-emphasis "__foo**"))))
+      (is (nil? (->> "__foo**" (re-find (emphasis-re 2)) strong-emphasis))))
 
-    (testing "preceded by whitespace => not emphasis"
-      (are [s] (nil? (strong-emphasis s))
+    (testing "preceded by whitespace"
+      (are [s] (nil? (->> s (re-find (emphasis-re 2)) strong-emphasis))
            "**foo bar **"
            "**foo bar\n**"))
 
-    (testing "preceded by punctuation, followed by alphanumeric => not emphasis"
-      (is (nil? (strong-emphasis "**(**foo)"))))
+    (testing "preceded by punctuation, followed by alphanumeric"
+      (is (nil? (->> "**(**foo)" (re-find (emphasis-re 2)) strong-emphasis))))
 
     (testing "preceded by punctuation, followed by whitespace"
-      (are [s c] (= (-> s strong-emphasis :content))
+      (are [s c] (= (->> s (re-find (emphasis-re 2)) strong-emphasis :content))
            "*(**foo**)*" "foo"
            "**Gomphocarpus (*Gomphocarpus physocarpus*, syn.\n*Asclepias physocarpa*)**"
            "Gomphocarpus (*Gomphocarpus physocarpus*, syn.\n*Asclepias physocarpa*)"
            "**foo \"*bar*\" foo**" "foo \"*bar*\" foo"))
 
     (testing "intraword"
-      (is (= (-> "**foo**bar" strong-emphasis :content)
+      (is (= (->> "**foo**bar" (re-find (emphasis-re 2)) strong-emphasis :content)
              "foo"))))
 
   (testing "closing with __"
-    (testing "preceded by whitespace => not emphasis"
-      (are [s] (nil? (strong-emphasis s))
+    (testing "preceded by whitespace"
+      (are [s] (nil? (->> s (re-find (emphasis-re 2)) strong-emphasis))
            "__foo bar __"
            "__foo bar\n__"))
 
-    (testing "preceded by punctuation, followed by alphanumeric => not emphasis"
-      (is (nil? (strong-emphasis "__(__foo)"))))
+    (testing "preceded by punctuation, followed by alphanumeric"
+      (is (nil? (->> "__(__foo)" (re-find (emphasis-re 2)) strong-emphasis))))
 
     (testing "preceded by punctuation, followed by whitespace"
-      (are [s c] (= (-> s strong-emphasis :content))
+      (are [s c] (= (->> s (re-find (emphasis-re 2)) strong-emphasis :content))
            "_(__foo__)_" "foo"
            "__foo \"_bar_\" foo__" "foo \"_bar_\" foo"))
 
-    (testing "intraword => not strong emphasis"
-      (is (nil? (-> "__foo__bar" strong-emphasis :content))))
+    (testing "intraword"
+      (is (nil? (->> "__foo__bar" (re-find (emphasis-re 2)) strong-emphasis :content))))
 
     (testing "intraword"
-      (is (= (-> "__foo__bar__baz__" strong-emphasis :content)
+      (is (= (->> "__foo__bar__baz__" (re-find (emphasis-re 2)) strong-emphasis :content)
              "foo__bar__baz")))
 
-    (testing "left-flank, right-flank, followed by punctuation => strong emphasis"
-      (is (= (-> "__(bar)__." strong-emphasis :content)
+    (testing "left-flank, right-flank, followed by punctuation"
+      (is (= (->> "__(bar)__." (re-find (emphasis-re 2)) strong-emphasis :content)
              "(bar)")))))
 
 (deftest inline-link-test
@@ -380,16 +380,6 @@
                (nil? title)))))
 
   (testing "text"
-    (testing "bracket binding"
-      (testing "less tightly than backticks"
-        (is (= (-> "`[abc`](xyz)" tagger :tag)
-               :cs)))
-
-      (testing "more tightly than emphasis markers"
-        (are [s] (= :a (-> s tagger :tag))
-             "*[abc*](xyz)"
-             "[abc *xyz](123*)")))
-
     (testing "backslash-escaped brackets"
       (are [s] (= s (-> (str "[" s "](xyz)") inline-link :text))
            "abc\\]123"
@@ -1009,9 +999,6 @@
   (defn full-reference-link-for [label]
     (full-reference-link-matcher (:definitions (context label))))
 
-  (defn tagger-for [label]
-    #(tagger % (context label)))
-
   (testing "pun nil"
     (is (nil? ((reference-link-for "") nil))))
 
@@ -1047,28 +1034,7 @@
           (is (= (-> "[1[2[3]4]5][xyz]"
                      ((reference-link-for "xyz"))
                      :text)
-                 "1[2[3]4]5"))))
-
-      (testing "bracket binding"
-        (testing "less tightly than backticks"
-          (is (= (-> "[ab`c][xyz]`" ((tagger-for "xyz")) :tag)
-                 :cs)))
-
-        (testing "less tightly than HTML tags"
-          (is (= (-> "[<abc attr=\"][xyz]\">" ((tagger-for "xyz")) :tag)
-                 :html-inline)))
-
-        (testing "less tightly than autolinks"
-          (is (= (-> "[abc<http://example.com?q=\"][xyz]\">"
-                     ((tagger-for "xyz"))
-                     :tag)
-                 :auto)))
-
-        (testing "more tightly than emphasis markers"
-          (are [s l] (= (-> s ((tagger-for l)) :tag)
-                        :a)
-               "*[abc*][xyz]"     "xyz"
-               "[abc *xyz][123*]" "123*"))))
+                 "1[2[3]4]5")))))
 
     (testing "label"
       (testing "brackets"
