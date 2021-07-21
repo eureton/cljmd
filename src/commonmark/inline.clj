@@ -152,10 +152,10 @@
   (fn [[& labels]]
     (let [label (->> labels butlast (some identity))]
       (when-some [info (definitions (util/normalize-link-label label))]
-        {:tag :a
-         :title (:title info)
-         :destination (:destination info)
-         :text label}))))
+        (-> info
+          (select-keys [:title :destination])
+          (assoc :text label
+                 :tag :a))))))
 
 (defn reference-link
   [definitions]
@@ -174,6 +174,7 @@
 
 (defn autolink
   [[_ uri]]
+  ; TODO make this :a
   {:tag :auto
    :uri uri
    :label (java.net.URLDecoder/decode uri)})
@@ -203,30 +204,6 @@
   [html]
   {:tag :html-inline
    :content html})
-
-(defmulti inner
-  "Nested inline content if the represented entity supports it, nil otherwise."
-  :tag)
-
-(defmethod inner :em
-  [{:keys [content]}]
-  content)
-
-(defmethod inner :strong
-  [{:keys [content]}]
-  content)
-
-(defmethod inner :a
-  [{:keys [text]}]
-  text)
-
-(defmethod inner :img
-  [{:keys [text]}]
-  text)
-
-(defmethod inner :default
-  [_]
-  nil)
 
 (defn matches
   "Returns a vector of hashes, each of which contains:
@@ -271,21 +248,37 @@
                          (matches re)
                          (map #(annotate f %))))))
        (apply juxt)
-       (comp flatten)
-       ))
+       (comp #(remove nil? %) flatten)))
+
+; TODO superceded tokens: decouple discovery from removal 
+; TODO should assume nothing about sweeper internals ->
+;      sort by precedence before setting to work
+(defn enforce-precedence
+  "Removes tokens which cross tokens of higher precedence. Assumes tokens are
+   sorted by precedence."
+  [tokens]
+  (loop [tokens tokens
+         result []]
+    (let [head (first tokens)
+          tail (rest tokens)]
+      (if (empty? tokens)
+        result
+        (recur (remove #(token/cross? % head) tail)
+               (conj result head))))))
 
 (defn reconcile
   "Curates the list of tokens to not contain mutually exclusive items."
   [tokens]
   (->> tokens
-       distinct))
+       distinct
+       enforce-precedence))
 
 (defn tokenize
   ([string context]
    (let [tokenizer (sweeper context)]
      (->> (tokenizer string)
           (mapcat (fn [{:as token :re/keys [match start]}]
-                    (let [content (inner token)]
+                    (let [content (token/inner token)]
                       (->> (when content (tokenizer content))
                            (map #(token/translate %
                                                   (+ start (string/index-of match content))))
