@@ -152,7 +152,10 @@
                "[ab`c][x`yz]" [(node {:tag :txt :content "[ab"})
                                (node {:tag :cs}
                                      [(node {:tag :txt :content "c][x"})])
-                               (node {:tag :txt :content "yz]"})]))
+                               (node {:tag :txt :content "yz]"})]
+               "[ab`c][]`"    [(node {:tag :txt :content "[ab"})
+                               (node {:tag :cs}
+                                     [(node {:tag :txt :content "c][]"})])]))
 
         (testing "vs HTML"
           (are [s t] (= (-> s from-string :children)
@@ -162,7 +165,10 @@
                                                  :content "<abc attr=\"][xyz]\">"})]
                "<a attr=\"[abc][\">xyz]" [(node {:tag :html-inline
                                                  :content "<a attr=\"[abc][\">"})
-                                          (node {:tag :txt :content "xyz]"})]))
+                                          (node {:tag :txt :content "xyz]"})]
+               "[<abc attr=\"][]\">"     [(node {:tag :txt :content "["})
+                                          (node {:tag :html-inline
+                                                 :content "<abc attr=\"][]\">"})]))
 
         (testing "vs autolinks"
           (are [s t] (= (-> s from-string :children)
@@ -174,17 +180,25 @@
                "<http://123.com?q=\"[abc\">][xyz]" [(node {:tag :auto
                                                            :uri "http://123.com?q=\"[abc\""
                                                            :label "http://123.com?q=\"[abc\""})
-                                                    (node {:tag :txt :content "][xyz]"})]))
+                                                    (node {:tag :txt :content "][xyz]"})]
+               "[abc<http://123.com?q=\"][]\">"    [(node {:tag :txt :content "[abc"})
+                                                    (node {:tag :auto
+                                                           :uri "http://123.com?q=\"][]\""
+                                                           :label "http://123.com?q=\"][]\""})]))
 
         (testing "vs emphasis markers"
           (are [s t] (= (-> (str s "\n\n[xyz]: 123") from-string :children)
                         t)
                "*[abc*][xyz]" [(node {:tag :txt :content "*"})
-                               (node {:tag :a
-                                      :destination "123"}
+                               (node {:tag :a :destination "123"}
                                      [(node {:tag :txt :content "abc*"})])]
-               "[a*bc][xyz]*" [(node {:tag :a
-                                      :destination "123"}
+               "[a*bc][xyz]*" [(node {:tag :a :destination "123"}
                                      [(node {:tag :txt :content "a*bc"})])
+                               (node {:tag :txt :content "*"})]
+               "*[xyz*][]"    [(node {:tag :txt :content "*"})
+                               (node {:tag :a :destination "123"}
+                                     [(node {:tag :txt :content "xyz*"})])]
+               "[*xyz][]*"    [(node {:tag :a :destination "123"}
+                                     [(node {:tag :txt :content "*xyz"})])
                                (node {:tag :txt :content "*"})]))))))
 
