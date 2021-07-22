@@ -45,9 +45,6 @@
                   (derive :hbr    :inline)
                   (derive :sbr    :inline)
 
-                  (derive :hbr    :break)
-                  (derive :sbr    :break)
-
                   (derive :a      :link)
                   (derive :img    :link)
 
@@ -64,6 +61,8 @@
 
                   (derive :html-inline :verbatim)
                   (derive :cs          :verbatim)
+                  (derive :hbr         :verbatim)
+                  (derive :sbr         :verbatim)
 
                   (derive :bq :container)
                   (derive :li :container)
