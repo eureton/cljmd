@@ -34,7 +34,7 @@
      (+ outer-start (count content))]))
 
 (defn within?
-  "Logical true if x lies within y, logical false otherwise."
+  "True if x lies within y, false otherwise."
   [x y]
   (let [{:re/keys [match start]} y
         {inner-start :re/start inner-end :re/end} x
@@ -44,12 +44,12 @@
          (<= inner-end outer-end))))
 
 (defn before?
-  "Returns true if token x ends before token y, false otherwise."
+  "True if token x ends before token y, false otherwise."
   [x y]
   (<= (:re/end x) (:re/start y)))
 
 (defn after?
-  "Returns true if token x begins after token y, false otherwise."
+  "True if token x begins after token y, false otherwise."
   [x y]
   (>= (:re/start x) (:re/end y)))
 
@@ -65,10 +65,10 @@
     * x begins inside y
     * x ends outside y"
   [x y]
-  (let [[x-start x-end] (inner-bounds x)
-        [y-start y-end] (inner-bounds y)]
-    (and (> x-start y-start)
-         (<= x-start y-end)
+  (let [{x-start :re/start x-end :re/end} x
+        {y-start :re/start y-end :re/end} y]
+    (and (>= x-start y-start)
+         (< x-start y-end)
          (> x-end y-end))))
 
 (defn cross?

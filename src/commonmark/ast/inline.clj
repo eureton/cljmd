@@ -82,6 +82,7 @@
    Returns an AST whose root node is tagged :doc."
   ([string context]
    (some->> (inline/tokenize string context)
+            (sort (comp - (comparator token/within?)))
             (unpack string)
             (node {:tag :doc})))
   ([string]

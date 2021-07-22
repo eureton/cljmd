@@ -229,8 +229,8 @@
 (defn sweeper
   "A function which, when called on a string, returns a sequence of tokens.
    Each token represents an inline markdown entity identified by the
-   parser in the string.
-   Expects the context of the blockphase parser as parameter."
+   parser in the string. Does not descend into the inner content of the tokens
+   it finds. Expects the context of the blockphase parser as parameter."
   [{:keys [definitions] :or {definitions {}}}]
   (->> [[code-span-re                              code-span]
         [re.html/tag-re                            html]
@@ -250,21 +250,25 @@
        (apply juxt)
        (comp #(remove nil? %) flatten)))
 
-; TODO superceded tokens: decouple discovery from removal 
-; TODO should assume nothing about sweeper internals ->
-;      sort by precedence before setting to work
+(defn priority
+  "Integer representing the priorty of the tag. Greater is higher."
+  [tag]
+  (let [tags [:sbr :hbr :strong :em :img :a :auto :html-inline :cs]]
+    (.indexOf tags tag)))
+
+(defn superceded?
+  "True if x is lower priority than y, false otherwise."
+  [x y]
+  (and (not= x y)
+       (token/cross? x y)
+       (< (priority (:tag x)) (priority (:tag y)))))
+
 (defn enforce-precedence
-  "Removes tokens which cross tokens of higher precedence. Assumes tokens are
-   sorted by precedence."
+  "Removes tokens which conflict with tokens of higher priority."
   [tokens]
-  (loop [tokens tokens
-         result []]
-    (let [head (first tokens)
-          tail (rest tokens)]
-      (if (empty? tokens)
-        result
-        (recur (remove #(token/cross? % head) tail)
-               (conj result head))))))
+  (reduce (fn [acc x] (remove #(superceded? % x) acc))
+          tokens
+          tokens))
 
 (defn reconcile
   "Curates the list of tokens to not contain mutually exclusive items."
@@ -273,18 +277,25 @@
        distinct
        enforce-precedence))
 
+(defn expander
+  "Returns a function which, when given a token, returns a vector consisting of
+   that token followed by tokens of its inner content."
+  [tokenizer]
+  (fn [{:as token :re/keys [match start]}]
+    (let [content (token/inner token)]
+      (->> (when content (tokenizer content))
+           (map #(token/translate % (+ start (string/index-of match content))))
+           (concat [token])))))
+
 (defn tokenize
+  "Returns inline entities in string as a sequence. Descends recursively into
+   the inner content of entities. Expects the context of the blockphase parser
+   as an optional parameter."
   ([string context]
    (let [tokenizer (sweeper context)]
      (->> (tokenizer string)
-          (mapcat (fn [{:as token :re/keys [match start]}]
-                    (let [content (token/inner token)]
-                      (->> (when content (tokenizer content))
-                           (map #(token/translate %
-                                                  (+ start (string/index-of match content))))
-                           (concat [token])))))
-          reconcile
-          (sort (comp - (comparator token/within?))))))
+          (mapcat (expander tokenizer))
+          reconcile)))
   ([string]
    (tokenize string {})))
 
