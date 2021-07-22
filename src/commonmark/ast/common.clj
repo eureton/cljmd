@@ -28,6 +28,14 @@
   ([x y1 y2 y3 & ys]
    (update x :children (comp vec concat) (conj ys y3 y2 y1))))
 
+(defn update-children
+  "If (apply f children args) evaluates to nil, :children is removed entirely.
+   Otherwise, the result is associated with :children."
+  [node f & args]
+  (let [result (apply update node :children f args)]
+    (cond-> result
+      (empty? (:children result)) (dissoc :children))))
+
 (def ontology (-> (make-hierarchy)
                   (derive :a      :inline)
                   (derive :img    :inline)
@@ -36,9 +44,6 @@
                   (derive :cs     :inline)
                   (derive :hbr    :inline)
                   (derive :sbr    :inline)
-
-                  (derive :hbr    :break)
-                  (derive :sbr    :break)
 
                   (derive :a      :link)
                   (derive :img    :link)
@@ -53,6 +58,11 @@
                   (derive :icblk  :block)
                   (derive :ofcblk :block)
                   (derive :doc    :block)
+
+                  (derive :html-inline :verbatim)
+                  (derive :cs          :verbatim)
+                  (derive :hbr         :verbatim)
+                  (derive :sbr         :verbatim)
 
                   (derive :bq :container)
                   (derive :li :container)

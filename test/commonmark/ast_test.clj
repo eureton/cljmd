@@ -5,101 +5,269 @@
 
 (deftest from-string-test
   (testing "minimal"
-    (is (= (from-string "abc")
-           (node {:tag :doc}
-                 [(node {:tag :p}
-                        [(node {:tag :txt
-                                :content "abc"})])]))))
+    (is (= (-> "abc" from-string :children)
+           [(node {:tag :p}
+                  [(node {:tag :txt :content "abc"})])])))
 
   (testing "link"
     (testing "inline"
       (testing "minimal"
-        (is (= (from-string "[abc](xyz '123')")
-               (node {:tag :doc}
-                     [(node {:tag :p}
-                            [(node {:tag :a
-                                    :destination "xyz"
-                                    :title "123"}
-                                  [(node {:tag :txt
-                                          :content "abc"})])])]))))
+        (is (= (-> "[abc](xyz '123')"
+                   from-string
+                   (get-in [:children 0 :children 0]))
+               (node {:tag :a :destination "xyz" :title "123"}
+                     [(node {:tag :txt :content "abc"})]))))
 
       (testing "preceded by literal '!'"
-        (is (= (from-string "\\![abc](xyz)")
-               (node {:tag :doc}
-                     [(node {:tag :p}
-                            [(node {:tag :txt
-                                         :content "!"})
-                             (node {:tag :a
-                                    :destination "xyz"}
-                                   [(node {:tag :txt
-                                           :content "abc"})])])]))))))
+        (is (= (-> "\\![abc](xyz)"
+                   from-string
+                   (get-in [:children 0]))
+               (node {:tag :p}
+                     [(node {:tag :txt :content "!"})
+                      (node {:tag :a :destination "xyz"}
+                            [(node {:tag :txt :content "abc"})])])))))
+
+    (testing "reference"
+      (testing "full"
+        (testing "standard"
+          (is (= (-> "[abc][qpr]\n\n[qpr]: xyz '123'"
+                       from-string
+                       (get-in [:children 0 :children 0]))
+                   (node {:tag :a :destination "xyz" :title "123"}
+                         [(node {:tag :txt :content "abc"})]))))
+
+        (testing "inline content"
+          (are [s t] (= (-> (str "[" s "][qpr]\n\n[qpr]: xyz '123'")
+                            from-string
+                            (get-in [:children 0 :children]))
+                        [(node {:tag :a :destination "xyz" :title "123"}
+                               [(node {:tag t}
+                                      [(node {:tag :txt :content "abc"})])])])
+               "*abc*"   :em
+               "`abc`"   :cs
+               "**abc**" :strong))
+
+        (testing "inline image"
+          (is (= (-> "[![abc](abc.png)][qpr]\n\n[qpr]: xyz '123'"
+                     from-string
+                     (get-in [:children 0 :children]))
+                 [(node {:tag :a :destination "xyz" :title "123"}
+                        [(node {:tag :img :destination "abc.png"}
+                               [(node {:tag :txt :content "abc"})])])])))
+
+        (testing "match"
+          (testing "case-insensitive"
+            (is (= (-> "[abc][QpR]\n\n[qpr]: xyz '123'"
+                       from-string
+                       (get-in [:children 0 :children 0 :data]))
+                   {:tag :a :destination "xyz" :title "123"})))
+
+          (testing "Unicode"
+            (is (= (-> "[abc][ÄÖÕ]\n\n[äöõ]: xyz '123'"
+                       from-string
+                       (get-in [:children 0 :children 0 :data]))
+                   {:tag :a :destination "xyz" :title "123"})))
+
+          (testing "whitespace"
+            (is (= (-> "[abc][q \t\r\n p \t\r\n r]\n\n[q p r]: xyz '123'"
+                       from-string
+                       (get-in [:children 0 :children 0 :data]))
+                   {:tag :a :destination "xyz" :title "123"})))
+
+          (testing "multiple"
+            (is (= (-> "[abc][qpr]\n\n[qpr]: xyz '123'\n[qpr]: zyx '321'"
+                       from-string
+                       (get-in [:children 0 :children 0 :data]))
+                   {:tag :a :destination "xyz" :title "123"})))
+
+          (testing "backslash escapes"
+            (is (= (-> "[abc][qpr\\!]\n\n[qpr!]: xyz '123'"
+                       from-string
+                       (get-in [:children 0 :children 0 :data]))
+                   {:tag :txt :content "[abc][qpr!]"})))))
+
+      (testing "collapsed"
+        (testing "standard"
+          (is (= (-> "[abc][]\n\n[abc]: xyz '123'"
+                     from-string
+                     (get-in [:children 0 :children 0]))
+                 (node {:tag :a :destination "xyz" :title "123"}
+                       [(node {:tag :txt :content "abc"})]))))
+
+        (testing "inline content"
+          (are [s t] (= (-> (str "[" s "][]\n\n[" s "]: xyz '123'")
+                            from-string
+                            (get-in [:children 0 :children]))
+                        [(node {:tag :a :destination "xyz" :title "123"}
+                               [(node {:tag t}
+                                      [(node {:tag :txt :content "abc"})])])])
+               "*abc*"   :em
+               "`abc`"   :cs
+               "**abc**" :strong))
+
+        (testing "match"
+          (testing "case-insensitive"
+            (is (= (-> "[QpR][]\n\n[qpr]: xyz '123'"
+                       from-string
+                       (get-in [:children 0 :children 0 :data]))
+                   {:tag :a :destination "xyz" :title "123"})))
+
+          (testing "Unicode"
+            (is (= (-> "[ÄÖÕ][]\n\n[äöõ]: xyz '123'"
+                       from-string
+                       (get-in [:children 0 :children 0 :data]))
+                   {:tag :a :destination "xyz" :title "123"})))
+
+          (testing "whitespace"
+            (is (= (-> "[q \t\r\n p \t\r\n r][]\n\n[q p r]: xyz '123'"
+                       from-string
+                       (get-in [:children 0 :children 0 :data]))
+                   {:tag :a :destination "xyz" :title "123"})))
+
+          (testing "multiple"
+            (is (= (-> "[qpr][]\n\n[qpr]: xyz '123'\n[qpr]: zyx '321'"
+                       from-string
+                       (get-in [:children 0 :children 0 :data]))
+                   {:tag :a :destination "xyz" :title "123"})))
+
+          (testing "backslash escapes"
+            (is (= (-> "[qpr\\!][]\n\n[qpr!]: xyz '123'"
+                       from-string
+                       (get-in [:children 0 :children 0 :data]))
+                   {:tag :txt :content "[qpr!][]"})))))
+
+      (testing "shortcut"
+        (testing "standard"
+          (is (= (-> "[abc]\n\n[abc]: xyz '123'"
+                     from-string
+                     (get-in [:children 0 :children 0]))
+                 (node {:tag :a :destination "xyz" :title "123"}
+                       [(node {:tag :txt :content "abc"})]))))
+
+        (testing "inline content"
+          (are [s t] (= (-> (str "[" s "]\n\n[" s "]: xyz '123'")
+                            from-string
+                            (get-in [:children 0 :children]))
+                        [(node {:tag :a :destination "xyz" :title "123"}
+                               [(node {:tag t}
+                                      [(node {:tag :txt :content "abc"})])])])
+               "*abc*"   :em
+               "`abc`"   :cs
+               "**abc**" :strong))
+
+        (testing "match"
+          (testing "case-insensitive"
+            (is (= (-> "[QpR][]\n\n[qpr]: xyz '123'"
+                       from-string
+                       (get-in [:children 0 :children 0 :data]))
+                   {:tag :a :destination "xyz" :title "123"})))
+
+          (testing "Unicode"
+            (is (= (-> "[ÄÖÕ][]\n\n[äöõ]: xyz '123'"
+                       from-string
+                       (get-in [:children 0 :children 0 :data]))
+                   {:tag :a :destination "xyz" :title "123"})))
+
+          (testing "whitespace"
+            (is (= (-> "[q \t\r\n p \t\r\n r]\n\n[q p r]: xyz '123'"
+                       from-string
+                       (get-in [:children 0 :children 0 :data]))
+                   {:tag :a :destination "xyz" :title "123"})))
+
+          (testing "multiple"
+            (is (= (-> "[qpr]\n\n[qpr]: xyz '123'\n[qpr]: zyx '321'"
+                       from-string
+                       (get-in [:children 0 :children 0 :data]))
+                   {:tag :a :destination "xyz" :title "123"})))
+
+          (testing "backslash escapes"
+            (is (= (-> "[qpr\\!]\n\n[qpr!]: xyz '123'"
+                       from-string
+                       (get-in [:children 0 :children 0 :data]))
+                   {:tag :txt :content "[qpr!]"}))))
+
+        (testing "followed by label"
+          (is (= (-> "[abc][xyz][123]\n\n[123]: dest-123 'title-123'\n[abc]: dest-abc 'title-abc'"
+                     from-string
+                     (get-in [:children 0 :children]))
+                 [(node {:tag :txt :content "[abc]"})
+                  (node {:tag :a :destination "dest-123" :title "title-123"}
+                        [(node {:tag :txt :content "xyz"})])]))))
+
+      (testing "no match"
+        (are [s] (= (-> s from-string (get-in [:children 0 :children]))
+                    [(node {:tag :txt :content s})])
+             "[abc][xyz]"
+             "[abc][]"
+             "[abc]"))
+
+      (testing "surrounding inline content"
+        (are [r l] (= (-> (str "before " r " after\n\n[" l "]: xyz '123'")
+                          from-string
+                          (get-in [:children 0 :children]))
+                    [(node {:tag :txt :content "before "})
+                     (node {:tag :a :destination "xyz" :title "123"}
+                           [(node {:tag :txt :content "abc"})])
+                     (node {:tag :txt :content " after"})])
+             "[abc][lbl]" "lbl"
+             "[abc][]"    "abc"
+             "[abc]"      "abc"))))
 
   (testing "image"
     (testing "inline"
       (testing "description, destination and title"
-        (is (= (from-string "![abc](/xyz \"123\")")
-               (node {:tag :doc}
-                     [(node {:tag :p}
-                            [(node {:tag :img
-                                    :destination "/xyz"
-                                    :title "123"}
-                                  [(node {:tag :txt
-                                          :content "abc"})])])]))))
+        (is (= (-> "![abc](/xyz \"123\")"
+                   from-string
+                   (get-in [:children 0 :children]))
+               [(node {:tag :img :destination "/xyz" :title "123"}
+                      [(node {:tag :txt :content "abc"})])])))
 
       (testing "image within image"
-        (is (= (from-string "![txt ![abc](/xyz)](/123)")
-               (node {:tag :doc}
-                     [(node {:tag :p}
-                            [(node {:tag :img
-                                    :destination "/123"}
-                                  [(node {:tag :txt
-                                          :content "txt "})
-                                   (node {:tag :img
-                                          :destination "/xyz"}
-                                         [(node {:tag :txt :content "abc"})])])])]))))
+        (is (= (-> "![txt ![abc](/xyz)](/123)"
+                   from-string
+                   (get-in [:children 0 :children]))
+               [(node {:tag :img :destination "/123"}
+                      [(node {:tag :txt :content "txt "})
+                       (node {:tag :img :destination "/xyz"}
+                             [(node {:tag :txt :content "abc"})])])])))
 
       (testing "link within image"
-        (is (= (from-string "![txt [abc](/xyz)](/123)")
-               (node {:tag :doc}
-                     [(node {:tag :p}
-                            [(node {:tag :img
-                                    :destination "/123"}
-                                  [(node {:tag :txt
-                                          :content "txt "})
-                                   (node {:tag :a
-                                          :destination "/xyz"}
-                                         [(node {:tag :txt :content "abc"})])])])]))))))
+        (is (= (-> "![txt [abc](/xyz)](/123)"
+                   from-string
+                   (get-in [:children 0 :children]))
+               [(node {:tag :img :destination "/123"}
+                      [(node {:tag :txt :content "txt "})
+                       (node {:tag :a :destination "/xyz"}
+                             [(node {:tag :txt :content "abc"})])])])))))
 
   (testing "nested inline"
     (testing "text within emphasis"
-      (is (= (from-string "*abc*")
-             (node {:tag :doc}
-                   [(node {:tag :p}
-                          [(node {:tag :em}
-                                 [(node {:tag :txt :content "abc"})])])]))))
+      (is (= (-> "*abc*" from-string (get-in [:children 0 :children]))
+             [(node {:tag :em}
+                    [(node {:tag :txt :content "abc"})])])))
 
     (testing "nested __-strong emphasis"
-      (is (= (from-string "__abc, __xyz__, pqr__")
-             (node {:tag :doc}
-                   [(node {:tag :p}
-                          [(node {:tag :strong}
-                                 [(node {:tag :txt :content "abc, "})
-                                  (node {:tag :strong}
-                                        [(node {:tag :txt :content "xyz"})])
-                                  (node {:tag :txt :content ", pqr"})])])]))))
+      (is (= (-> "__abc, __xyz__, pqr__"
+                 from-string
+                 (get-in [:children 0 :children]))
+             [(node {:tag :strong}
+                    [(node {:tag :txt :content "abc, "})
+                     (node {:tag :strong}
+                           [(node {:tag :txt :content "xyz"})])
+                     (node {:tag :txt :content ", pqr"})])])))
 
     (testing "nested *-emphasis"
-      (is (= (from-string "*(*abc*)* xyz *pqr*")
-             (node {:tag :doc}
-                   [(node {:tag :p}
-                          [(node {:tag :em}
-                                 [(node {:tag :txt :content "("})
-                                  (node {:tag :em}
-                                        [(node {:tag :txt :content "abc"})])
-                                  (node {:tag :txt :content ")"})])
-                           (node {:tag :txt :content " xyz "})
-                           (node {:tag :em}
-                                 [(node {:tag :txt :content "pqr"})])])])))))
+      (is (= (-> "*(*abc*)* xyz *pqr*"
+                 from-string
+                 (get-in [:children 0 :children]))
+             [(node {:tag :em}
+                    [(node {:tag :txt :content "("})
+                     (node {:tag :em}
+                           [(node {:tag :txt :content "abc"})])
+                     (node {:tag :txt :content ")"})])
+              (node {:tag :txt :content " xyz "})
+              (node {:tag :em}
+                    [(node {:tag :txt :content "pqr"})])]))))
 
   (testing "hard line break"
     (testing "spaces at beginning of next line"
@@ -124,8 +292,7 @@
 
     (testing "inside raw HTML"
       (are [s] (= (-> s from-string (get-in [:children 0 :children]))
-                    [(node {:tag :html-inline}
-                           [(node {:tag :txt :content s})])])
+                    [(node {:tag :html-inline :content s})])
            "<a href=\"x  \r\nyz\">"
            "<a href=\"x\\\r\nyz\">"))
 
@@ -167,23 +334,19 @@
       (are [e] (= (-> (str "<a href=\"xyz" e "abc\">")
                       from-string
                       (get-in [:children 0 :children 0]))
-                  (node {:tag :html-inline}
-                        [(node {:tag :txt :content "<a href=\"xyz\r\nabc\">"})]))
+                  (node {:tag :html-inline :content "<a href=\"xyz\r\nabc\">"}))
            "\n"
 ;          "\r"
            "\r\n"))
 
     (testing "inside inline link"
-      (are [e] (let [res (from-string (str "[abc" e "xyz](123)"))]
-                 (and (= (get-in res [:children 0 :children 0 :data])
-                         {:tag :a :destination "123"})
-                      (= (map (comp :tag :data)
-                              (get-in res [:children 0 :children 0 :children]))
-                         [:txt :sbr :txt])
-                      (= (get-in res [:children 0 :children 0 :children 0 :data :content])
-                         "abc")
-                      (= (get-in res [:children 0 :children 0 :children 2 :data :content])
-                         "xyz")))
+      (are [e] (= (-> (str "[abc" e "xyz](123)")
+                      from-string
+                      (get-in [:children 0 :children 0]))
+                  (node {:tag :a :destination "123"}
+                        [(node {:tag :txt :content "abc"})
+                         (node {:tag :sbr :content "\r\n"})
+                         (node {:tag :txt :content "xyz"})]))
            "\n"
            "\r"
            "\r\n")))
@@ -193,11 +356,9 @@
       (is (= (-> "<del>\n\n*abc*\n\n</del>" from-string :children)
              [(node {:tag :html-block
                      :content "<del>"})
-              (node {:tag :blank})
               (node {:tag :p}
                     [(node {:tag :em}
                            [(node {:tag :txt :content "abc"})])])
-              (node {:tag :blank})
               (node {:tag :html-block
                      :content "</del>"})])))
 
@@ -209,12 +370,10 @@
     (testing "on the same line"
       (is (= (-> "<del>*abc*</del>" from-string :children)
              [(node {:tag :p}
-                    [(node {:tag :html-inline}
-                           [(node {:tag :txt :content "<del>"})])
+                    [(node {:tag :html-inline :content "<del>"})
                      (node {:tag :em}
                            [(node {:tag :txt :content "abc"})])
-                     (node {:tag :html-inline}
-                           [(node {:tag :txt :content "</del>"})])])]))))
+                     (node {:tag :html-inline :content "</del>"})])]))))
 
   (testing "post-processing"
     (testing "hard line break at end of block"

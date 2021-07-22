@@ -2,36 +2,51 @@
   (:require [clojure.string :as string]
             [clojure.core.incubator :refer [dissoc-in]]
             [flatland.useful.fn :as ufn]
-            [treeduce.core :as treeduce]
+            [treeduce.core :as tree]
             [commonmark.blockrun :as blockrun]
-            [commonmark.ast.common :as common]
+            [commonmark.ast.node :as node]
             [commonmark.ast.block :as block]
-            [commonmark.ast.inline :as inline]
             [commonmark.ast.postprocessing :as postp]))
 
-(def has-inline?
-  "Returns true if the node has inline content which may be expanded into AST
-   form, false otherwise."
-  (every-pred common/leaf?
-              (comp not #{:txt :hbr :sbr :blank :html-block} :tag :data)))
+(defn remove-link-reference-definitions
+  "Removes nodes tagged with :adef."
+  [ast]
+  ; TODO use update-children here
+  (tree/map (fn [{:as node :keys [children]}]
+              (let [children (remove (comp #{:adef} :tag :data) children)]
+                (if (empty? children)
+                  (dissoc node :children)
+                  (assoc node :children (vec children)))))
+            ast))
+
+(defn blockphase-context
+  "Returns the context of the block phase of the parsing process."
+  [ast]
+  {:definitions (tree/reduce (fn [acc {:as x :keys [tag label]}]
+                               (cond-> acc
+                                 (= :adef tag) (update label #(or %1 %2) x)))
+                               {}
+                               ast
+                               :depth-first)})
 
 (defn expand-inline
-  "Assuming node contains inline Markdown content:
-     1. parses an AST from the inline content
-     2. appends the children of the AST to node
-     3. removes inline content from node."
-  [node]
-  (apply common/add (dissoc-in node [:data :content])
-                    (-> node :data :content inline/from-string :children)))
+  "Matches link references with link definitions and completes the former with
+   the information of the latter. Unmatched references are transformed into :txt
+   nodes with the source text as content."
+  [ast]
+  (let [contextful-expand #(node/expand-inline % (blockphase-context ast))]
+    (tree/map (ufn/to-fix node/has-inline? contextful-expand)
+              ast)))
 
 (defn from-string
   "Parses markdown AST from string."
   [string]
-  (reduce #(treeduce/map %2 %1)
+  (reduce #(tree/map %2 %1)
           (->> string
                blockrun/from-string
                blockrun/postprocess
                block/from-blockrun
-               (treeduce/map (ufn/to-fix has-inline? expand-inline)))
+               expand-inline
+               remove-link-reference-definitions)
           postp/queue))
 

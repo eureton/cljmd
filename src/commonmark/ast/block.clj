@@ -40,8 +40,7 @@
   (let [fetch (comp string/join
                     (juxt (comp :content block/paragraph-line)
                           (comp (ufn/to-fix some? #(string/replace % #"\\" ""))
-                                :content
-                                inline/hard-line-break)))]
+                                #(re-find inline/hard-line-break-re %))))]
     (->> lines
          (map fetch)
          (string/join "\r\n")
@@ -59,4 +58,11 @@
 (defmethod from-blockrun-entry :blank
   [[_ _]]
   (common/node {:tag :blank}))
+
+(defmethod from-blockrun-entry :adef
+  [[_ lines]]
+  (->> lines
+       (string/join " ")
+       block/link-reference-definition
+       common/node))
 

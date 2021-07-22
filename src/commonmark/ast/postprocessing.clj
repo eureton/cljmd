@@ -2,13 +2,13 @@
   (:require [clojure.string :as string]
             [flatland.useful.fn :as ufn]
             [treeduce.core :as treeduce]
-            [commonmark.ast.common :as common]))
+            [commonmark.ast.common :refer [block? node update-children]]))
 
 (defn block-with-hbr-end?
   "True if the node is a block and its last child is an :hbr whose content
    satisfies pred, false otherwise."
   [pred]
-  (every-pred common/block?
+  (every-pred block?
               (comp (every-pred (comp #{:hbr} :tag)
                                 (comp pred :content))
                     :data
@@ -29,8 +29,8 @@
   "Deals with :hbr entities from the end of blocks."
   [ast]
   (let [pop-hbr #(update % :children pop)
-        push-bslash #(update % :children conj (common/node {:tag :txt
-                                                            :content "\\"}))]
+        push-bslash #(update % :children conj (node {:tag :txt
+                                                     :content "\\"}))]
     (treeduce/map (ufn/to-fix block-with-space-hbr-end?
                               pop-hbr
                               block-with-backslash-hbr-end?
@@ -67,7 +67,7 @@
      * is a block
      * either has no children or all its children are empty text nodes
    Returns false otherwise."
-  (every-pred common/block? empty-children?))
+  (every-pred block? empty-children?))
 
 (defn empty-block-fix
   "Removes empty :p entities from the AST."
@@ -75,9 +75,19 @@
   (treeduce/map (ufn/to-fix empty-block? #(dissoc % :children))
                 ast))
 
+(defn blank-fix
+  "Removes :blank entities from the AST."
+  [ast]
+  (treeduce/map #(update-children % (comp vec
+                                          (partial remove (comp #{:blank}
+                                                                :tag
+                                                                :data))))
+                ast))
+
 (def queue
   "A collection of post-processing fixes to apply to the AST."
   [hbr-fix
    empty-p-fix
-   empty-block-fix])
+   empty-block-fix
+   blank-fix])
 

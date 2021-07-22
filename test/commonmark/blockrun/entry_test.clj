@@ -193,3 +193,48 @@
              ["> xyz" "    abc" "pqr"]           "xyz\r\n    abc\r\npqr"
              ["> xyz" "    abc" "    pqr" "123"] "xyz\r\n    abc\r\n    pqr\r\n123")))))
 
+(deftest link-reference-definition-batch-test
+  (testing "empty"
+    (testing "string"
+      (is (= (link-reference-definition-batch [:_ [""]])
+             [])))
+
+    (testing "collection"
+      (is (= (link-reference-definition-batch [:_ []])
+             []))))
+
+  (testing "one"
+    (is (= (link-reference-definition-batch [:_ ["[abc]: xyz '123'"]])
+           ["[abc]: xyz '123'"])))
+
+  (testing "multiple"
+    (is (= (link-reference-definition-batch [:_ ["[abc]: xyz '123'"
+                                                 "[cba]: zyx '321'"]])
+           ["[abc]: xyz '123'"
+            "[cba]: zyx '321'"])))
+
+  (testing "multiline"
+    (testing "label and destination"
+      (is (= (link-reference-definition-batch [:_ ["[abc]: xyz" "'123'"]])
+           ["[abc]: xyz" "'123'"])))
+
+    (testing "destination and title"
+      (is (= (link-reference-definition-batch [:_ ["[abc]:" "xyz '123'"]])
+           ["[abc]:" "xyz '123'"])))
+
+    (testing "three lines"
+      (is (= (link-reference-definition-batch [:_ ["[abc]:" "xyz" "'123'"]])
+             ["[abc]:" "xyz" "'123'"])))
+
+    (testing "multiline title"
+      (is (= (link-reference-definition-batch [:_ ["[abc]:" "xyz" "'12" "34" "56'"]])
+             ["[abc]:" "xyz" "'12" "34" "56'"]))))
+
+  (testing "preceded by non-definition"
+    (is (= (link-reference-definition-batch [:_ ["qpr" "[abc]: xyz '123'"]])
+           [])))
+
+  (testing "followed by non-definition"
+    (is (= (link-reference-definition-batch [:_ ["[abc]: xyz '123'" "qpr"]])
+           ["[abc]: xyz '123'"]))))
+

@@ -1,6 +1,7 @@
 (ns commonmark.blockrun.entry
   (:require [clojure.string :as string]
-            [commonmark.block :as block]))
+            [commonmark.block :as block]
+            [commonmark.re.link :as re.link]))
 
 (def origin
   "Returns the first line."
@@ -34,8 +35,20 @@
   [[_ lines]]
   (string/join "\r\n" lines))
 
+(defn link-reference-definition-batch
+  "Returns a sequence containing the lines which comprise adjacent link
+   reference definitions. If no definitions exist, an empty sequence is
+   returned."
+  [[_ lines]]
+  (->> lines
+       (string/join "\n")
+       (re-find re.link/reference-definition-batch-re)
+       first
+       string/split-lines
+       (remove empty?)))
+
 (defmulti promote
-  "Hook for performing transformations after the blockrun has been compiled."
+  "Hook for changing the tag of an entry after the blockrun has been compiled."
   first)
 
 (defmethod promote :html-block-unpaired

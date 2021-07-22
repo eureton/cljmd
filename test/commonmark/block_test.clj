@@ -1,7 +1,7 @@
 (ns commonmark.block-test
   (:require [clojure.test :refer :all]
             [commonmark.block :refer :all]
-            [commonmark.html :as html]))
+            [commonmark.re.html :as re.html]))
 
 (deftest atx-heading-test
   (testing "minimal, 1-6"
@@ -523,7 +523,7 @@
           (are [pre suf] (every? #(->> (str pre % suf)
                                        html-block-begin
                                        v6?)
-                                 html/block-variant-6-tags)
+                                 re.html/block-variant-6-tags)
                "<"  " xyz"
                "<"  ">"
                "<"  "/>"
@@ -913,4 +913,61 @@
            ""
            "   "
            "   \t\t\t   "))))
+
+(deftest link-reference-definition-test
+  (testing "complete"
+    (let [{:keys [label destination title]} (link-reference-definition "[abc]: xyz '123'")]
+      (is (and (= "abc" label)
+               (= "xyz" destination)
+               (= "123" title)))))
+
+  (testing "no title"
+    (let [{:keys [label destination title]} (link-reference-definition "[abc]: xyz")]
+      (is (and (= "abc" label)
+               (= "xyz" destination)
+               (nil? title)))))
+
+  (testing "no destination, no title"
+    (is (nil? (link-reference-definition "[abc]:"))))
+
+  (testing "whitespace"
+    (are [s] (some? (link-reference-definition s))
+         "[abc]:xyz"
+         "[abc]: xyz"
+         "[abc]: xyz "
+         "[abc]: xyz '123'"
+         "[abc]: xyz '123' "))
+
+  (testing "valid"
+    (are [s] (some? (link-reference-definition s))
+         "[abc\\\\]: xyz"))
+
+  (testing "invalid"
+    (are [s] (nil? (link-reference-definition s))
+         "\\[abc]: xyz"
+         "[abc] xyz"
+         "[abc] : xyz"
+         "[]: xyz"
+         "[ ]: xyz"
+         "[\t]: xyz"
+         "[\n]: xyz"
+         "xyz"
+         "<xyz>"
+         "\"123\""
+         "'123'"
+         "(123)"
+         "((123))"))
+
+  (testing "indentation"
+    (testing "valid"
+      (are [s] (some? (link-reference-definition s))
+           " [abc]: xyz"
+           "  [abc]: xyz"
+           "   [abc]: xyz"))
+
+    (testing "invalid"
+      (are [s] (nil? (link-reference-definition s))
+           "    [abc]: xyz"
+           "     [abc]: xyz"
+           "      [abc]: xyz"))))
 

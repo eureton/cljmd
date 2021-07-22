@@ -1,7 +1,9 @@
 (ns commonmark.blockrun
   (:require [clojure.string :as string]
+            [flatland.useful.fn :as ufn]
             [commonmark.block :as block]
-            [commonmark.blockrun.entry :as entry]))
+            [commonmark.blockrun.entry :as entry]
+            [commonmark.re.link :as re.link]))
 
 (def zero
   "Identity element of the add binary operation."
@@ -217,18 +219,41 @@
   "Merges adjacent entries of the same type."
   [blockrun]
   (reduce (fn [acc x]
-            (let [left (last acc)]
-              (if (= (first left) (first x))
+            (let [left (last acc)
+                  tag (first x)]
+              (if (and (= (first left) tag)
+                       (not= tag :adef))
                 (-> acc pop (conj (update left 1 (comp vec concat) (second x))))
                 (conj acc x))))
           []
           blockrun))
+
+(defn extract-link-reference-definitions
+  "Searches blockrun for link reference definitions and extracts them into
+   separate entries. Each definition is awarded its own entry. The new entries
+   are tagged :adef. The entries which the definitions came from are split and
+   each of the parts bears the tag of its originator."
+  [blockrun]
+  (let [split? #(= :p (first %))
+        split #(let [batch (entry/link-reference-definition-batch %)
+                     items (->> batch
+                                (string/join "\r\n")
+                                (re-seq re.link/reference-definition-re)
+                                (map (comp string/split-lines first)))
+                     remainder (vec (drop (count batch) (second %)))]
+                 (concat
+                   (map vector (repeat :adef) items)
+                   (if (not-empty remainder) [[:p remainder]] [])))]
+    (->> blockrun
+         (mapcat (ufn/to-fix split? split vector))
+         vec)))
 
 (defn postprocess
   "Hook for performing transformations after the blockrun has been compiled."
   [blockrun]
   (->> blockrun
        (map entry/promote)
+       extract-link-reference-definitions
        coalesce))
 
 (defn from-string

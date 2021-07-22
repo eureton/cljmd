@@ -1,4 +1,4 @@
-(ns commonmark.html
+(ns commonmark.re.html
   (:require [clojure.string :as string]
             [commonmark.util :as util]))
 
@@ -17,7 +17,7 @@
                                     double-quoted-value ")")
          attribute-value-spec (str #"\s*=\s*" attribute-value)
          attribute (str #"\s+" attribute-name "(?:" attribute-value-spec ")?")]
-     (re-pattern (str #"(?<!\\)<"
+     (re-pattern (str (util/non-backslash-re \<)
                       (reduce #(str "(?!" %2 "\\b)" %1) tag-name-re exclude-tags)
                       "(?:" attribute ")*"
                       #"\s*"
@@ -26,23 +26,31 @@
    (open-tag-re {})))
 
 (def closing-tag-re
-  (re-pattern (str #"(?<!\\)</" tag-name-re #"\s*" ">")))
+  (re-pattern (str (util/non-backslash-re "</") tag-name-re #"\s*" ">")))
 
-(def comment-begin-re #"(?<!\\)<!--")
+(def comment-begin-re
+  (util/non-backslash-re "<!--"))
 
-(def comment-end-re #"(?<!\\)-->")
+(def comment-end-re
+  (util/non-backslash-re "-->"))
 
-(def processing-instruction-begin-re #"(?<!\\)<\?")
+(def processing-instruction-begin-re
+  (util/non-backslash-re #"<\?"))
 
-(def processing-instruction-end-re #"(?<!\\)\?>")
+(def processing-instruction-end-re
+  (util/non-backslash-re #"\?>"))
 
-(def declaration-begin-re #"(?<!\\)<![A-Z]")
+(def declaration-begin-re
+  (util/non-backslash-re #"<![A-Z]"))
 
-(def declaration-end-re #"(?<!\\)>")
+(def declaration-end-re
+  (util/non-backslash-re \>))
 
-(def cdata-section-begin-re #"(?<!\\)<!\[CDATA\[")
+(def cdata-section-begin-re
+  (util/non-backslash-re #"<!\[CDATA\["))
 
-(def cdata-section-end-re #"(?<!\\)\]\]>")
+(def cdata-section-end-re
+  (util/non-backslash-re #"\]\]>"))
 
 (def tag-re
   (re-pattern (str "(?:(?s)" (open-tag-re) "|"
