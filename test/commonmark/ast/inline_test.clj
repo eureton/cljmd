@@ -120,6 +120,26 @@
                       (txt " ")
                       (em "abc")]))))
 
+  (testing "autolink"
+    (testing "URI"
+      (testing "standard"
+        (are [s] (= (-> (str "<" s ">") from-string :children)
+                    [(node {:tag :a :destination s}
+                           [(txt s)])])
+             "http://abc.com"
+             "http://abc.com?q=xyz"
+             "http://abc.com#123"
+             "ssh://abc.com"
+             "x+y://abc.com"))
+
+      (testing "percent coding"
+        (are [s d] (= (-> (str "<" s ">") from-string :children)
+                      [(node {:tag :a :destination d}
+                             [(txt s)])])
+             "http://a%3Cb%20c.com"      "http://a%3Cb%20c.com"
+             "http://abc.com?q=1%3C%202" "http://abc.com?q=1%3C%202"
+             "http://a[b]c.com"          "http://a%5Bb%5Dc.com"))))
+
   (testing "precedence"
     (testing "inline link"
       (testing "vs codespan"

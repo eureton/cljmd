@@ -681,58 +681,66 @@
   (defn match [s]
     (re-find autolink-re s))
 
-  (defn uri [s]
-    (some->> (match s) autolink :uri))
+  (defn destination [s]
+    (some->> (match s) autolink :destination))
+
+  (defn text [s]
+    (some->> (match s) autolink :text))
 
   (testing "URI"
-    (testing "valid URIs"
-      (are [s] (= s (uri (str "<" s ">")))
-           "http://abc.xyz.123"
-           "http://abc.xyz.123/test?q=hello&id=22&boolean"
-           "irc://abc.xyz:2233/123"
-           "MAILTO:ABC@XYZ.123"
-           "a+b+c:d"
-           "made-up-scheme://abc,xyz"
-           "http://../"
-           "localhost:5001/abc"))
+    (testing "destination"
+      (testing "valid URIs"
+        (are [s] (= s (destination (str "<" s ">")))
+             "http://abc.xyz.123"
+             "http://abc.xyz.123/test?q=hello&id=22&boolean"
+             "irc://abc.xyz:2233/123"
+             "MAILTO:ABC@XYZ.123"
+             "a+b+c:d"
+             "made-up-scheme://abc,xyz"
+             "http://../"
+             "localhost:5001/abc"))
 
-    (testing "invalid URIs"
-      (are [s] (nil? (match s))
-           "<>"
-           "< http://abc.xyz >"
-           "<m:abc>"
-           "<abc.xyz.123>"))
+      (testing "invalid URIs"
+        (are [s] (nil? (match s))
+             "<>"
+             "< http://abc.xyz >"
+             "<m:abc>"
+             "<abc.xyz.123>"))
 
-    (testing "not wrapped in <>"
-      (are [s] (nil? (match s))
-           "http://xyz.com"
-           "abc@qpr.xyz.com"))
+      (testing "not wrapped in <>"
+        (are [s] (nil? (match s))
+             "http://xyz.com"
+             "abc@qpr.xyz.com"))
 
-    (testing "contains space"
-      (is (nil? (match "<http://abc.xyz/qpr jkl>"))))
+      (testing "contains space"
+        (is (nil? (match "<http://abc.xyz/qpr jkl>"))))
 
-    (testing "backslash escape"
-      (is (let [s "http://example.com/\\[\\"]
-            (= s (uri (str "<" s ">"))))))
-
-    (testing "label"
-      (defn label [s]
-        (some->> (match s) autolink :label))
-
-      (testing "nothing to decode"
-        (is (let [res (autolink (match "<https://abc.xyz?q=1>"))]
-              (= (:label res)
-                 (:uri res)))))
+      (testing "backslash escape"
+        (is (let [s "http://example.com/\\[\\"]
+              (= s (destination (str "<" s ">"))))))
 
       (testing "percent decoding"
-        (is (= (label "<https://a%09b%0Dc%0A.%20x%5By%5Cz?q=%3C1%3E>")
-               "https://a\tb\rc\n. x[y\\z?q=<1>")))))
+        (is (= (destination "<https://a%09b%0Dc%0A.%20x%5By%5Cz?q=%3C1%3E>")
+               "https://a\tb\rc\n. x[y\\z?q=<1>"))))
+
+    (testing "text"
+      (are [u] (= u (text (str "<" u ">")))
+           "https://abc.xyz?q=1"
+           "https://a%09b%0Dc%0A.%20x%5By%5Cz?q=%3C1%3E")))
 
   (testing "email address"
-    (testing "valid addresses"
-      (are [s] (= s (uri (str "<" s ">")))
-           "abc@xyz.example.com"
-           "abc+special@Xyz.123-xyz0.com"))
+    (testing "destination"
+      (testing "valid addresses"
+        (are [s] (= (destination (str "<" s ">"))
+                    (str "mailto:" s))
+             "abc@xyz.example.com"
+             "abc+special@Xyz.123-xyz0.com")))
+
+    (testing "text"
+      (testing "valid addresses"
+        (are [s] (= s (text (str "<" s ">")))
+             "abc@xyz.example.com"
+             "abc+special@Xyz.123-xyz0.com")))
 
     (testing "backslash escape"
       (is (nil? (match "<foo\\+@bar.example.com>"))))))

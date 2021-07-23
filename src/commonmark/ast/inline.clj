@@ -56,10 +56,6 @@
   [input _]
   (node (select-keys input [:tag :content])))
 
-(defmethod inflate :auto
-  [input _]
-  (node (select-keys input [:tag :uri :label])))
-
 (defmethod inflate :string
   [input tokens]
   (node {:tag :txt}

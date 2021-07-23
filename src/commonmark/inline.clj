@@ -168,16 +168,17 @@
         ((textless-reference-link definitions) (subvec match full-count))))))
 
 (def autolink-re
-  (re-pattern (str (util/non-backslash-re \<) "("
-                     re.common/absolute-uri-re "|" re.common/email-address-re
-                   ")>")))
+  (re-pattern (str (util/non-backslash-re \<)
+                   (util/or-re (str "(" re.common/absolute-uri-re ")")
+                               (str "(" re.common/email-address-re ")"))
+                   ">")))
 
 (defn autolink
-  [[_ uri]]
-  ; TODO make this :a
-  {:tag :auto
-   :uri uri
-   :label (java.net.URLDecoder/decode uri)})
+  [[_ uri email]]
+  {:tag :a
+   :text (or uri email)
+   :destination (cond email (str "mailto:" email)
+                      uri (util/percent-encode-uri uri))})
 
 (def hard-line-break-re
   (let [end #"(?:\r\n|\n|\r(?!\n)|$)"]
@@ -253,7 +254,7 @@
 (defn priority
   "Integer representing the priorty of the tag. Greater is higher."
   [tag]
-  (let [tags [:sbr :hbr :strong :em :img :a :auto :html-inline :cs]]
+  (let [tags [:sbr :hbr :strong :em :img :a :html-inline :cs]]
     (.indexOf tags tag)))
 
 (defn superceded?
