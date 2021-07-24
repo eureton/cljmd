@@ -704,6 +704,10 @@
         (are [s] (nil? (match s))
              "<>"
              "< http://abc.xyz >"
+             "<http://ab\tc.xyz>"
+             "<http://ab\nc.xyz>"
+             "<http://ab\rc.xyz>"
+             "<http://ab\r\nc.xyz>"
              "<m:abc>"
              "<abc.xyz.123>"))
 
@@ -715,13 +719,27 @@
       (testing "contains space"
         (is (nil? (match "<http://abc.xyz/qpr jkl>"))))
 
-      (testing "backslash escape"
-        (is (let [s "http://example.com/\\[\\"]
-              (= s (destination (str "<" s ">"))))))
+      (testing "backslash"
+        (is (= (destination "<http://abc.com/\\xyz>")
+               "http://abc.com/%5Cxyz")))
 
-      (testing "percent decoding"
-        (is (= (destination "<https://a%09b%0Dc%0A.%20x%5By%5Cz?q=%3C1%3E>")
-               "https://a\tb\rc\n. x[y\\z?q=<1>"))))
+      (testing "percent encoding"
+        (are [c e] (= (destination (str "<http://abc.com/" c ">"))
+                      (str "http://abc.com/" e))
+             \" "%22"
+             \% "%25"
+             \[ "%5B"
+             \\ "%5C"
+             \] "%5D"
+             \` "%60"
+             \{ "%7B"
+             \| "%7C"
+             \} "%7D")))
+
+    (testing "text"
+      (testing "backslash escape"
+        (is (= (text "<http://abc.com/\\xyz>")
+               "http://abc.com/\\xyz"))))
 
     (testing "text"
       (are [u] (= u (text (str "<" u ">")))

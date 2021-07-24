@@ -112,37 +112,14 @@
       (string/replace #"\s+" " ")
       string/lower-case))
 
-(defn shard-count
-  "The number of parts character c splits string s into, including empty ones."
-  [s c]
-  (->> s (filter #{c}) count inc))
-
-(defn percent-encode
-  "java.net.URLEncoder wrapper which maps spaces to %20. Encodes in UTF-8."
-  [s]
-  (->> (string/split s #" " (shard-count s \space))
-       (map #(java.net.URLEncoder/encode % "UTF-8"))
-       (string/join "%20")))
-
 (defn percent-encode-uri
   "Percent-encodes the path and query string, if any, of uri."
   [uri]
-  (let [encode (comp percent-encode #(java.net.URLDecoder/decode % "UTF-8"))
-        splice #(->> (string/split %1 (re-pattern (str %2)) (shard-count %1 %2))
-                     (map encode)
-                     (string/join %2))
-        param-re #"([^&]*)"
-        query-re (re-pattern (str param-re "(?:&" param-re ")*"))
-        uri-re #"^(([^:/?#]+):)?(//([^/?#]*))?([^?#]*)(\?([^#]*))?(#(.*))?"
-        [_ _ scheme _ hostport path _ query _ fragment] (re-find uri-re uri)]
-;   (prn ">>>" [scheme hostport path query fragment] )
-    (string/join (cond-> [scheme "://" (splice hostport \:)]
-                   path (conj (splice path \/))
-                   query (conj "?" (->> query
-                                        (re-find query-re)
-                                        (drop 1)
-                                        (remove nil?)
-                                        (map #(splice % \=))
-                                        (string/join "&")))
-                   fragment (conj "#" (encode fragment))))))
+  (let [uri-re #"^(([^:/?#]+):)?(//([^/?#]*))?([^?#]*)(\?([^#]*))?(#(.*))?"
+        [_ _ scheme _ authority path _ query _ fragment] (re-find uri-re uri)]
+;   (prn "-->" (re-find uri-re uri))
+;   (prn ">>>" [scheme authority path query fragment] )
+    (.toString (try 
+                 (java.net.URI. scheme authority path query fragment)
+                 (catch java.net.URISyntaxException _ (java.net.URI. uri))))))
 
