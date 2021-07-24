@@ -727,24 +727,45 @@
         (are [c e] (= (destination (str "<http://abc.com/" c ">"))
                       (str "http://abc.com/" e))
              \" "%22"
-             \% "%25"
              \[ "%5B"
              \\ "%5C"
              \] "%5D"
              \` "%60"
              \{ "%7B"
              \| "%7C"
-             \} "%7D")))
+             \} "%7D"))
+
+      (testing "percent decoding"
+        (are [uri] (= (destination (str "<" uri ">"))
+                      uri)
+             "http://abc.com/%3C"
+             "http://abc.com/%3E"
+             "http://abc.com/%20")))
 
     (testing "text"
       (testing "backslash escape"
         (is (= (text "<http://abc.com/\\xyz>")
-               "http://abc.com/\\xyz"))))
+               "http://abc.com/\\xyz")))
 
-    (testing "text"
-      (are [u] (= u (text (str "<" u ">")))
-           "https://abc.xyz?q=1"
-           "https://a%09b%0Dc%0A.%20x%5By%5Cz?q=%3C1%3E")))
+      (testing "percent decoding"
+        (are [e] (let [uri (str "http://abc.com/" e)]
+                   (= (text (str "<" uri ">"))
+                      uri))
+             "%3C"
+             "%3E"
+             "%20"))
+
+      (testing "percent encoding"
+        (are [c] (= (text (str "<http://abc.com/" c ">"))
+                    (str "http://abc.com/" c))
+             \"
+             \[
+             \\
+             \]
+             \`
+             \{
+             \|
+             \}))))
 
   (testing "email address"
     (testing "destination"
