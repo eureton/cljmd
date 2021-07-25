@@ -118,8 +118,6 @@
   (let [decode #(java.net.URLDecoder/decode % "UTF-8")
         uri-re #"^(([^:/?#]+):)?(//([^/?#]*))?([^?#]*)(\?([^#]*))?(#(.*))?"
         [_ _ scheme _ authority path _ query _ fragment] (re-find uri-re uri)]
-;   (prn "-->" (re-find uri-re uri))
-;   (prn ">>>" [scheme authority path query fragment] )
     (.toString (try 
                  (java.net.URI. scheme
                                 (and authority (decode authority))

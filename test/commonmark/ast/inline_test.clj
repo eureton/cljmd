@@ -138,7 +138,7 @@
                              [(txt s)])])
              "http://a%3Cb%20c.com"      "http://a%3Cb%20c.com"
              "http://abc.com?q=1%3C%202" "http://abc.com?q=1%3C%202"
-             "http://a[b]c.com"          "http://a%5Bb%5Dc.com"))))
+             "http://a%5Bb%5Dc.com"      "http://a%5Bb%5Dc.com"))))
 
   (testing "precedence"
     (testing "inline link"

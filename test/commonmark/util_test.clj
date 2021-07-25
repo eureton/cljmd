@@ -45,12 +45,11 @@
 
   (testing "symbols"
     (are [in out] (= out (percent-encode-uri in))
-         "http://a[b]c.c[o]m"                        "http://a%5Bb%5Dc.c%5Bo%5Dm"
-         "http://abc.com:1[23]4"                     "http://abc.com:1%5B23%5D4"
          "http://abc.com:1234/x[y]z"                 "http://abc.com:1234/x%5By%5Dz"
-         "http://abc.com:1234/xyz?q=p[r]s"           "http://abc.com:1234/xyz?q=p%5Br%5Ds"
-         "http://abc.com:1234/xyz?q=p[r]s&w=t[u]v"   "http://abc.com:1234/xyz?q=p%5Br%5Ds&w=t%5Bu%5Dv"
-         "http://abc.com:1234/xyz?q=prs&w=tuv#1[2]3" "http://abc.com:1234/xyz?q=prs&w=tuv#1%5B2%5D3"))
+         "http://abc.com:1234/xyz?q=p[r]s"           "http://abc.com:1234/xyz?q=p[r]s"
+         "http://abc.com:1234/xyz?q=p{r}s"           "http://abc.com:1234/xyz?q=p%7Br%7Ds"
+         "http://abc.com:1234/xyz?q=p{r}s&w=t{u}v"   "http://abc.com:1234/xyz?q=p%7Br%7Ds&w=t%7Bu%7Dv"
+         "http://abc.com:1234/xyz?q=prs&w=tuv#1{2}3" "http://abc.com:1234/xyz?q=prs&w=tuv#1%7B2%7D3"))
 
   (testing "percent-encoded"
     (are [s s] (= s (percent-encode-uri s))
