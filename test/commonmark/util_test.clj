@@ -33,3 +33,30 @@
     (is (= (re-seq (but-unescaped-re \2 \5 {:allow #"\d\s" :exclude #"\t"}) "abc123 \txyz456")
            ["1" "3" " " "4" "6"]))))
 
+(deftest percent-encode-uri-test
+  (testing "standard"
+    (are [in out] (= out (percent-encode-uri in))
+         "http://abc.com"                          "http://abc.com"
+         "http://abc.com:1234"                     "http://abc.com:1234"
+         "http://abc.com:1234/xyz"                 "http://abc.com:1234/xyz"
+         "http://abc.com:1234/xyz?q=prs"           "http://abc.com:1234/xyz?q=prs"
+         "http://abc.com:1234/xyz?q=prs&w=tuv"     "http://abc.com:1234/xyz?q=prs&w=tuv"
+         "http://abc.com:1234/xyz?q=prs&w=tuv#123" "http://abc.com:1234/xyz?q=prs&w=tuv#123"))
+
+  (testing "symbols"
+    (are [in out] (= out (percent-encode-uri in))
+         "http://abc.com:1234/x[y]z"                 "http://abc.com:1234/x%5By%5Dz"
+         "http://abc.com:1234/xyz?q=p[r]s"           "http://abc.com:1234/xyz?q=p[r]s"
+         "http://abc.com:1234/xyz?q=p{r}s"           "http://abc.com:1234/xyz?q=p%7Br%7Ds"
+         "http://abc.com:1234/xyz?q=p{r}s&w=t{u}v"   "http://abc.com:1234/xyz?q=p%7Br%7Ds&w=t%7Bu%7Dv"
+         "http://abc.com:1234/xyz?q=prs&w=tuv#1{2}3" "http://abc.com:1234/xyz?q=prs&w=tuv#1%7B2%7D3"))
+
+  (testing "percent-encoded"
+    (are [s s] (= s (percent-encode-uri s))
+         "http://%3C%20%3E.com"
+         "http://abc.com:%3C%20%3E"
+         "http://abc.com:1234/%3C%20%3E"
+         "http://abc.com:1234/xyz?q=%3C%20%3E"
+         "http://abc.com:1234/xyz?q=prs&w=%3C%20%3E"
+         "http://abc.com:1234/xyz?q=prs&w=tuv#%3C%20%3E")))
+

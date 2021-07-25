@@ -52,13 +52,16 @@
        (unpack text)
        (node (select-keys input [:tag :destination :title]))))
 
+(defmethod inflate :autolink
+  [{:keys [destination text]} _]
+  (node {:tag :a
+         :destination destination}
+        [(node {:tag :txt
+                :content text})]))
+
 (defmethod inflate :verbatim
   [input _]
   (node (select-keys input [:tag :content])))
-
-(defmethod inflate :auto
-  [input _]
-  (node (select-keys input [:tag :uri :label])))
 
 (defmethod inflate :string
   [input tokens]

@@ -112,3 +112,17 @@
       (string/replace #"\s+" " ")
       string/lower-case))
 
+(defn percent-encode-uri
+  "Percent-encodes the path and query string, if any, of uri."
+  [uri]
+  (let [decode #(java.net.URLDecoder/decode % "UTF-8")
+        uri-re #"^(([^:/?#]+):)?(//([^/?#]*))?([^?#]*)(\?([^#]*))?(#(.*))?"
+        [_ _ scheme _ authority path _ query _ fragment] (re-find uri-re uri)]
+    (.toString (try 
+                 (java.net.URI. scheme
+                                (and authority (decode authority))
+                                (and path (decode path))
+                                (and query (decode query))
+                                (and fragment (decode fragment)))
+                 (catch java.net.URISyntaxException _ (java.net.URI. uri))))))
+
