@@ -175,7 +175,7 @@
 
 (defn autolink
   [[_ uri email]]
-  {:tag :a
+  {:tag :autolink
    :text (or uri email)
    :destination (cond email (str "mailto:" email)
                       uri (util/percent-encode-uri uri))})
@@ -254,7 +254,7 @@
 (defn priority
   "Integer representing the priorty of the tag. Greater is higher."
   [tag]
-  (let [tags [:sbr :hbr :strong :em :img :a :html-inline :cs]]
+  (let [tags [:sbr :hbr :strong :em :img :a :autolink :html-inline :cs]]
     (.indexOf tags tag)))
 
 (defn superceded?

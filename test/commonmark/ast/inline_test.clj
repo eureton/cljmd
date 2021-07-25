@@ -221,22 +221,37 @@
              "<tag attr=\"[xy\">z]"      [(html "<tag attr=\"[xy\">")
                                           (txt "z]")]))
 
-      (comment "TODO fix as soon as autolinks generate :a nodes"
       (testing "vs autolinks"
-        (are [s t] (= (-> s from-string :children)
+        (are [s t] (= (-> s
+                          (from-string {:definitions {"xyz" linkdef
+                                                      "xyz<http://123.com/" linkdef
+                                                      "xy>z" linkdef}})
+                          :children)
                       t)
-             "[abc<http://123.com?q=\"][xyz]\">" [(txt "[abc")
-                                                  (node {:tag :auto
-                                                         :uri "http://123.com?q=\"][xyz]\""
-                                                         :label "http://123.com?q=\"][xyz]\""})]
-             "<http://123.com?q=\"[abc\">][xyz]" [(node {:tag :auto
-                                                         :uri "http://123.com?q=\"[abc\""
-                                                         :label "http://123.com?q=\"[abc\""})
-                                                  (txt :content "][xyz]")]
-             "[abc<http://123.com?q=\"][]\">"    [(txt "[abc")
-                                                  (node {:tag :auto
-                                                         :uri "http://123.com?q=\"][]\""
-                                                         :label "http://123.com?q=\"][]\""})])))
+             "[abc<http://123.com/][xyz]>" [(txt "[abc")
+                                            (node {:tag :a
+                                                   :destination "http://123.com/%5D%5Bxyz%5D"}
+                                                  [(txt "http://123.com/][xyz]")])]
+             "<http://123.com/[abc>][xyz]" [(node {:tag :a
+                                                   :destination "http://123.com/%5Babc"}
+                                                  [(txt "http://123.com/[abc")])
+                                                (txt "][xyz]")]
+             "[xyz<http://123.com/][]>"    [(txt "[xyz")
+                                            (node {:tag :a
+                                                   :destination "http://123.com/%5D%5B%5D"}
+                                                  [(txt "http://123.com/][]")])]
+             "<http://123.com/[xy>z][]"    [(node {:tag :a
+                                                   :destination "http://123.com/%5Bxy"}
+                                                  [(txt "http://123.com/[xy")])
+                                            (txt "z][]")]
+             "[xyz<http://123.com/]>"      [(txt "[xyz")
+                                            (node {:tag :a
+                                                   :destination "http://123.com/%5D"}
+                                                  [(txt "http://123.com/]")])]
+             "<http://123.com/[xy>z]"      [(node {:tag :a
+                                                   :destination "http://123.com/%5Bxy"}
+                                                  [(txt "http://123.com/[xy")])
+                                            (txt "z]")]))
 
       (testing "vs emphasis markers"
         (are [s t] (= (-> s
