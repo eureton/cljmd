@@ -47,10 +47,9 @@
 
 (defmethod inflate :link
   [{:as input :keys [text] :re/keys [match]} tokens]
-  (->> tokens
-       (map #(token/translate % (- (string/index-of match text))))
-       (unpack text)
-       (node (select-keys input [:tag :destination :title]))))
+  (node (select-keys input [:tag :destination :title])
+        (:children (inflate (assoc input :tag :default :content text)
+                            tokens))))
 
 (defmethod inflate :autolink
   [{:keys [destination text]} _]
@@ -71,7 +70,6 @@
 (defmethod inflate :default
   [{:keys [tag content] :re/keys [match]} tokens]
   (->> tokens
-       ; TODO refactor this with translation in the :link case above
        (map #(token/translate % (- (string/index-of match content))))
        (unpack content)
        (node {:tag tag})))
