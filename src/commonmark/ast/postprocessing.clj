@@ -26,9 +26,9 @@
   (block-with-hbr-end? #(string/includes? % "\\")))
 
 (defn hbr-fix
-  "Deals with :hbr entities from the end of blocks."
+  "Deals with :hbr entities at the end of blocks."
   [ast]
-  (let [pop-hbr #(update % :children pop)
+  (let [pop-hbr #(update-children % pop)
         push-bslash #(update % :children conj (node {:tag :txt
                                                      :content "\\"}))]
     (treeduce/map (ufn/to-fix block-with-space-hbr-end?
@@ -59,7 +59,7 @@
 (defn empty-p-fix
   "Removes empty :p entities from the AST."
   [ast]
-  (treeduce/map #(update % :children (partial remove empty-paragraph?))
+  (treeduce/map #(update-children % (partial remove empty-paragraph?))
                 ast))
 
 (def empty-block?
