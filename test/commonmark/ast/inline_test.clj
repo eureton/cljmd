@@ -44,43 +44,57 @@
                   (node {:tag :img :destination "abc"}
                         [(txt "xyz")])))))
 
-  (testing "removes backslash escapes from ASCII punctuation"
-    (are [in out] (= (-> (str "abc" in "xyz")
-                         from-string
-                         (get-in [:children 0]))
-                     (txt (str "abc" out "xyz")))
-         "\\!" "!"
-         "\\\"" "\""
-         "\\#" "#"
-         "\\$" "$"
-         "\\%" "%"
-         "\\&" "&"
-         "\\'" "'"
-         "\\(" "("
-         "\\)" ")"
-         "\\*" "*"
-         "\\+" "+"
-         "\\," ","
-         "\\-" "-"
-         "\\." "."
-         "\\/" "/"
-         "\\:" ":"
-         "\\;" ";"
-         "\\<" "<"
-         "\\=" "="
-         "\\>" ">"
-         "\\?" "?"
-         "\\@" "@"
-         "\\[" "["
-         "\\\\" "\\"
-         "\\]" "]"
-         "\\^" "^"
-         "\\_" "_"
-         "\\`" "`"
-         "\\{" "{"
-         "\\|" "|"
-         "\\}" "}"
-         "\\~" "~"))
+  (testing "backslash escapes"
+    (testing "ASCII punctuation"
+      (are [in out] (= (-> (str "abc" in "xyz")
+                           from-string
+                           (get-in [:children 0]))
+                       (txt (str "abc" out "xyz")))
+           "\\!" "!"
+           "\\\"" "\""
+           "\\#" "#"
+           "\\$" "$"
+           "\\%" "%"
+           "\\&" "&"
+           "\\'" "'"
+           "\\(" "("
+           "\\)" ")"
+           "\\*" "*"
+           "\\+" "+"
+           "\\," ","
+           "\\-" "-"
+           "\\." "."
+           "\\/" "/"
+           "\\:" ":"
+           "\\;" ";"
+           "\\<" "<"
+           "\\=" "="
+           "\\>" ">"
+           "\\?" "?"
+           "\\@" "@"
+           "\\[" "["
+           "\\\\" "\\"
+           "\\]" "]"
+           "\\^" "^"
+           "\\_" "_"
+           "\\`" "`"
+           "\\{" "{"
+           "\\|" "|"
+           "\\}" "}"
+           "\\~" "~"))
+
+    (testing "not ASCII punctuation"
+      (are [in out] (= (-> (str "abc" in "xyz")
+                           from-string
+                           (get-in [:children 0]))
+                       (txt (str "abc" out "xyz")))
+           "\\→" "\\→"
+           "\\A" "\\A"
+           "\\a" "\\a"
+           "\\ " "\\ "
+           "\\3" "\\3"
+           "\\φ" "\\φ"
+           "\\«" "\\«")))
 
   (testing "nested emphasis"
     (let [em-tree (node {:tag :em}
