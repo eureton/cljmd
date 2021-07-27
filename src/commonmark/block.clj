@@ -4,7 +4,7 @@
             [flatland.useful.fn :as ufn]
             [commonmark.re.html :as re.html]
             [commonmark.re.link :as re.link]
-            [commonmark.inline :as inline]
+            [commonmark.re.inline :as re.inline]
             [commonmark.util :as util]))
 
 (def atx-heading-re #"^ {0,3}(#{1,6})(?:$| \s*(\p{Print}*?)\s*)(?: #+ *)?$")
@@ -61,7 +61,7 @@
 
 (def paragraph-line-re
   (re-pattern (str #"^\s*(.*?)\s*?"
-                   "(" inline/hard-line-break-re ")?"
+                   "(" re.inline/hard-line-break ")?"
                    "$")))
 
 (defn paragraph-line

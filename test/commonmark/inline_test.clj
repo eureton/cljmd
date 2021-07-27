@@ -2,12 +2,13 @@
   (:require [clojure.test :refer :all]
             [clojure.string :as string]
             [commonmark.inline :refer :all]
+            [commonmark.re.inline :as re.inline]
             [commonmark.re.link :as re.link]
             [commonmark.re.html :as re.html]))
 
 (deftest code-span-test
   (defn match [s]
-    (re-find code-span-re s))
+    (re-find re.inline/code-span s))
 
   (defn content [s]
     (some->> (match s) code-span :content))
@@ -93,18 +94,18 @@
          "`abc\r\rxyz`"     "abc  xyz")))
 
 (deftest delimeter-run-test
-  (let [e* (emphasis-delimeter-re \* 1)
-        e_ (emphasis-delimeter-re \_ 1)
-        s* (emphasis-delimeter-re \* 2)
-        s_ (emphasis-delimeter-re \_ 2)
-        le* (lfdr-re e*)
-        le_ (lfdr-re e_)
-        ls* (lfdr-re s*)
-        ls_ (lfdr-re s_)
-        re* (rfdr-re e*)
-        re_ (rfdr-re e_)
-        rs* (rfdr-re s*)
-        rs_ (rfdr-re s_)
+  (let [e* (re.inline/emphasis-delimeter \* 1)
+        e_ (re.inline/emphasis-delimeter \_ 1)
+        s* (re.inline/emphasis-delimeter \* 2)
+        s_ (re.inline/emphasis-delimeter \_ 2)
+        le* (re.inline/lfdr e*)
+        le_ (re.inline/lfdr e_)
+        ls* (re.inline/lfdr s*)
+        ls_ (re.inline/lfdr s_)
+        re* (re.inline/rfdr e*)
+        re_ (re.inline/rfdr e_)
+        rs* (re.inline/rfdr s*)
+        rs_ (re.inline/rfdr s_)
         match? (fn [s re] (->> s (re-find re) some?))]
     (testing "left-flanking"
       (are [s le*? le_? ls*? ls_? re*? re_? rs*? rs_?]
@@ -137,7 +138,7 @@
 
 (deftest emphasis-test
   (defn match [s]
-    (re-find (emphasis-re 1) s))
+    (re-find (re.inline/emphasis 1) s))
 
   (defn content [s]
     (some->> (match s) emphasis :content))
@@ -263,7 +264,7 @@
 
 (deftest strong-emphasis-test
   (defn match [s]
-    (re-find (emphasis-re 2) s))
+    (re-find (re.inline/emphasis 2) s))
 
   (defn content [s]
     (some->> (match s) strong-emphasis :content))
@@ -679,7 +680,7 @@
 
 (deftest autolink-test
   (defn match [s]
-    (re-find autolink-re s))
+    (re-find re.inline/autolink s))
 
   (defn destination [s]
     (some->> (match s) autolink :destination))
@@ -998,7 +999,7 @@
 
 (deftest hard-line-break-test
   (defn match [s]
-    (re-find hard-line-break-re s))
+    (re-find re.inline/hard-line-break s))
 
   (defn content [s]
     (some->> (match s) hard-line-break :content))
@@ -1021,7 +1022,7 @@
 
 (deftest soft-line-break-test
   (defn match [s]
-    (re-find soft-line-break-re s))
+    (re-find re.inline/soft-line-break s))
 
   (defn content [s]
     (some->> (match s) soft-line-break :content))

@@ -2,19 +2,11 @@
   (:require [clojure.string :as string]
             [flatland.useful.fn :as ufn]
             [commonmark.util :as util]
+            [commonmark.re.inline :as re.inline]
             [commonmark.re.html :as re.html]
             [commonmark.re.link :as re.link]
             [commonmark.re.common :as re.common]
             [commonmark.inline.token :as token]))
-
-(def code-span-re
-  (let [backtick "((?<!`)`+(?!`))"
-        spaced #"[ \n](.*?[^ ].*?)[ \n]"
-        non-spaced #"(.*?[^`])"
-        same-backtick #"\1(?!`)"]
-    (re-pattern (str "(?s)" backtick
-                     "(?:" spaced "|" non-spaced ")"
-                     same-backtick))))
 
 (defn code-span
   [[_ backtick-string spaced-content non-spaced-content]]
@@ -22,92 +14,6 @@
    :content (-> (or spaced-content non-spaced-content)
                 (string/replace #"(?:\r\n|\r|\n)"  " "))
    :tag :cs})
-
-(defn emphasis-delimeter-re
-  [character length]
-  (let [escaped (string/escape (str character) {\* "\\*"})]
-    (re-pattern (str "(?<!" escaped ")"
-                     escaped "{" length "}"
-                     "(?!" escaped ")"))))
-
-(defn lfdr-nopunc-re
-  [delimeter]
-  (re-pattern (str delimeter
-                   #"(?!\p{IsWhite_Space}|$)"
-                   #"(?!\p{IsPunctuation})")))
-
-(defn lfdr-punc-re
-  [delimeter]
-  (re-pattern (str #"(?<=^|\p{IsWhite_Space}|\p{IsPunctuation})"
-                   delimeter
-                   #"(?!\p{IsWhite_Space}|$)"
-                   #"(?=\p{IsPunctuation})")))
-
-(defn lfdr-re
-  [delimeter]
-  (re-pattern (str "(?:"
-                     (lfdr-nopunc-re delimeter) "|" (lfdr-punc-re delimeter)
-                   ")")))
-
-(defn rfdr-punc-re
-  [delimeter]
-  (re-pattern (str #"(?<=\p{IsPunctuation})"
-                   #"(?<!^|\p{IsWhite_Space})"
-                   delimeter
-                   #"(?=\p{IsWhite_Space}|\p{IsPunctuation}|$)")))
-
-(defn rfdr-nopunc-re
-  [delimeter]
-  (re-pattern (str #"(?<!\p{IsPunctuation})"
-                   #"(?<!^|\p{IsWhite_Space})"
-                   delimeter)))
-
-(defn rfdr-re
-  [delimeter]
-  (re-pattern (str "(?:"
-                     (rfdr-nopunc-re delimeter) "|" (rfdr-punc-re delimeter)
-                   ")")))
-
-(defn star-emphasis-re
-  [delimeter]
-  (let [open (lfdr-re delimeter)
-        close (rfdr-re delimeter)]
-    (util/balanced-re open close)))
-
-(defn lobar-open-emphasis-re
-  [delimeter]
-  (let [left (lfdr-re delimeter)
-        right (rfdr-re delimeter)
-        punctuated-right (rfdr-punc-re delimeter)]
-    (re-pattern (str "(?:"
-                       "(?=" left ")" "(?!" right ")"
-                       "|"
-                       "(?=" left ")" "(?=" punctuated-right ")"
-                     ")" left))))
-
-(defn lobar-close-emphasis-re
-  [delimeter]
-  (let [left (lfdr-re delimeter)
-        punctuated-left (lfdr-punc-re delimeter)
-        right (rfdr-re delimeter)]
-    (re-pattern (str "(?:"
-                       "(?=" right ")" "(?!" left ")"
-                       "|"
-                       "(?=" right ")" "(?=" punctuated-left ")"
-                     ")" right))))
-
-(defn lobar-emphasis-re
-  [delimeter]
-  (let [open (lobar-open-emphasis-re delimeter)
-        close (lobar-close-emphasis-re delimeter)]
-    (util/balanced-re open close)))
-
-(defn emphasis-re
-  [length]
-  (re-pattern (str "(?s)(?:"
-                     (star-emphasis-re (emphasis-delimeter-re \* length)) "|"
-                     (lobar-emphasis-re (emphasis-delimeter-re \_ length))
-                   ")")))
 
 (defn emphasis-matcher
   [length tag]
@@ -159,12 +65,6 @@
               (assoc :text (or text label)
                      :tag (if img? :img :a))))))
 
-(def autolink-re
-  (re-pattern (str (util/non-backslash-re \<)
-                   (util/or-re (str "(" re.common/absolute-uri-re ")")
-                               (str "(" re.common/email-address-re ")"))
-                   ">")))
-
 (defn autolink
   [[_ uri email]]
   {:tag :autolink
@@ -172,21 +72,10 @@
    :destination (cond email (str "mailto:" email)
                       uri (util/percent-encode-uri uri))})
 
-(def hard-line-break-re
-  (let [end #"(?:\r\n|\n|\r(?!\n)|$)"]
-    (re-pattern (str "(?:" #"(?<=\p{Print})  " end "|"
-                           #"\\" end
-                     ")"))))
-
 (defn hard-line-break
   [content]
   {:tag :hbr
    :content content})
-
-(def soft-line-break-re
-  (re-pattern (str #"(?<=.)(?<!(?:[ ]{2,}|\\))"
-                   re.common/line-ending-re
-                   #"(?=.)")))
 
 (defn soft-line-break
   [content]
@@ -200,7 +89,7 @@
 
 (defn matches
   "Returns a vector of hashes, each of which contains:
-     * the RE match (i.e. the output of (re-find re s)
+     * the RE match, i.e. the output of (re-find re s)
      * the start index (include) of re in s
      * the end index (exclusive) of re in s"
   [re s]
@@ -225,15 +114,15 @@
    parser in the string. Does not descend into the inner content of the tokens
    it finds. Expects the context of the blockphase parser as parameter."
   [{:keys [definitions] :or {definitions {}}}]
-  (->> [[code-span-re                              code-span]
+  (->> [[re.inline/code-span                       code-span]
         [re.html/tag-re                            html]
-        [autolink-re                               autolink]
+        [re.inline/autolink                        autolink]
         [re.link/inline-re                         inline-link]
         [(re.link/reference-re (keys definitions)) (reference-link definitions)]
-        [(emphasis-re 1)                           emphasis]
-        [(emphasis-re 2)                           strong-emphasis]
-        [hard-line-break-re                        hard-line-break]
-        [soft-line-break-re                        soft-line-break]]
+        [(re.inline/emphasis 1)                    emphasis]
+        [(re.inline/emphasis 2)                    strong-emphasis]
+        [re.inline/hard-line-break                 hard-line-break]
+        [re.inline/soft-line-break                 soft-line-break]]
        (remove #(some nil? %))
        (map (fn [[re f]]
               (fn [string]
