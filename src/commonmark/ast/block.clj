@@ -40,6 +40,13 @@
          (hash-map :tag tag :content)
          common/node)))
 
+(defmethod from-blockrun-entry :ofcblk
+  [[tag lines]]
+  (->> (subvec lines 1 (dec (count lines)))
+       (string/join "\r\n")
+       (hash-map :tag tag :content)
+       common/node))
+
 (defmethod from-blockrun-entry :blank
   [[_ _]]
   (common/node {:tag :blank}))

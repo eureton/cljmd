@@ -447,6 +447,29 @@
            "[abc]: xyz '123'"
            "&ouml;"))
 
+    (testing "in code span"
+      (is (= (-> "`` \\[\\` ``" from-string :children)
+             [(node {:tag :p}
+                    [(node {:tag :cs :content "\\[\\`"})])])))
+
+    (testing "in indented code block"
+      (is (= (-> "    \\[\\]" from-string :children)
+             [(node {:tag :icblk :content "\\[\\]"})])))
+
+    (testing "in fenced code block"
+      (is (= (-> "~~~\n\\[\\]\n~~~" from-string :children)
+             [(node {:tag :ofcblk :content "\\[\\]"})])))
+
+    (testing "in autolink"
+      (is (= (-> "<http://abc.com?q=\\*>" from-string :children)
+             [(node {:tag :p}
+                    [(node {:tag :a :destination "http://abc.com?q=%5C*"}
+                           [(node {:tag :txt :content "http://abc.com?q=\\*"})])])])))
+
+    (testing "in raw HTML"
+      (is (= (-> "<a href=\"abc\\/)\">" from-string :children)
+             [(node {:tag :html-block :content "<a href=\"abc\\/)\">"})])))
+
     (testing "backslash-escaped backslash escape"
       (are [m t] (= (-> (str \\ \\ m)
                         from-string
