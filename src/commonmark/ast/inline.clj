@@ -43,7 +43,7 @@
          vec)
     (when string
       [(node {:tag :txt
-              :content (string/replace string #"\\(?=\p{Punct})" "")})])))
+              :content (string/replace string #"\\(\p{Punct})" "$1")})])))
 
 (defmethod inflate :link
   [{:as input :keys [text] :re/keys [match]} tokens]

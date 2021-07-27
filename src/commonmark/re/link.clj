@@ -47,7 +47,7 @@
                            close ")"))))
 
 (def inline
-  (re-pattern (str #"(?<!\\)(!)?" text
+  (re-pattern (str no-preceding-backslash #"(!)?" text
                    #"\("
                      #"\s*"
                      destination "?"

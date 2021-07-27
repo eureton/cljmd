@@ -3,10 +3,14 @@
 (def line-ending
   #"(?:\r\n|\n|\r(?!\n))")
 
+(def no-preceding-backslash
+  "Negative lookbehind assertion that no unescaped backslash precedes."
+  #"(?<!(?<!\\)\\)")
+
 (defn unescaped
   "RE to match the input only when it is not preceded by a backslash."
   [x]
-  (re-pattern (str "(?:" #"(?<!(?<!\\)\\)" x ")")))
+  (re-pattern (str "(?:" no-preceding-backslash x ")")))
 
 (defn blank-line
   "Returns a RE which matches lines consisting of zero to limit characters, each

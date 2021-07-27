@@ -444,7 +444,27 @@
            "- abc"
            "# abc"
            "[abc]: xyz '123'"
-           "&ouml; abc"))
+           "&ouml;"))
+
+    (testing "backslash-escaped backslash escape"
+      (are [m t] (= (-> (str \\ \\ m)
+                        from-string
+                        (get-in [:children 0 :children]))
+                    t)
+           "*abc*"      [(node {:tag :txt :content "\\"})
+                         (node {:tag :em}
+                               [(node {:tag :txt :content "abc"})])]
+           "<abc/>"     [(node {:tag :txt :content "\\"})
+                         (node {:tag :html-inline, :content "<abc/>"})]
+           "[abc](xyz)" [(node {:tag :txt :content "\\"})
+                         (node {:tag :a :destination "xyz"}
+                               [(node {:tag :txt :content "abc"})])]
+           "`abc`"      [(node {:tag :txt :content "\\"})
+                         (node {:tag :cs}
+                               [(node {:tag :txt :content "abc"})])]
+           "- abc"      [(node {:tag :txt :content "\\- abc"})]
+           "# abc"      [(node {:tag :txt :content "\\# abc"})]
+           "&ouml;"     [(node {:tag :txt :content "\\&ouml;"})]))
 
     (testing "ordered list"
       (is (= (-> "1\\. abc" from-string :children)
