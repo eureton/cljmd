@@ -84,7 +84,14 @@
             (is (= (-> "[abc][qpr\\!]\n\n[qpr!]: xyz '123'"
                        from-string
                        (get-in [:children 0 :children 0 :data]))
-                   {:tag :txt :content "[abc][qpr!]"})))))
+                   {:tag :txt :content "[abc][qpr!]"}))))
+
+        (testing "image"
+          (is (= (-> "![def][abc *xyz*]\n\n[abc *xyz*]: qpr '123'"
+                     from-string
+                     (get-in [:children 0 :children 0]))
+                 (node {:tag :img :destination "qpr" :title "123"}
+                       [(node {:tag :txt :content "def"})])))))
 
       (testing "collapsed"
         (testing "standard"
@@ -134,7 +141,16 @@
             (is (= (-> "[qpr\\!][]\n\n[qpr!]: xyz '123'"
                        from-string
                        (get-in [:children 0 :children 0 :data]))
-                   {:tag :txt :content "[qpr!][]"})))))
+                   {:tag :txt :content "[qpr!][]"}))))
+
+        (testing "image"
+          (is (= (-> "![abc *xyz*][]\n\n[abc *xyz*]: qpr '123'"
+                     from-string
+                     (get-in [:children 0 :children 0]))
+                 (node {:tag :img :destination "qpr" :title "123"}
+                       [(node {:tag :txt :content "abc "})
+                        (node {:tag :em}
+                              [(node {:tag :txt :content "xyz"})])])))))
 
       (testing "shortcut"
         (testing "standard"
@@ -185,6 +201,15 @@
                        from-string
                        (get-in [:children 0 :children 0 :data]))
                    {:tag :txt :content "[qpr!]"}))))
+
+        (testing "image"
+          (is (= (-> "![abc *xyz*]\n\n[abc *xyz*]: qpr '123'"
+                     from-string
+                     (get-in [:children 0 :children 0]))
+                 (node {:tag :img :destination "qpr" :title "123"}
+                       [(node {:tag :txt :content "abc "})
+                        (node {:tag :em}
+                              [(node {:tag :txt :content "xyz"})])]))))
 
         (testing "followed by label"
           (is (= (-> "[abc][xyz][123]\n\n[123]: dest-123 'title-123'\n[abc]: dest-abc 'title-abc'"

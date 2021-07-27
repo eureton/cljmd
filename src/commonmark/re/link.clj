@@ -73,13 +73,15 @@
 
 (defn collapsed-reference-re
   [labels]
-  (re-pattern (str "(?u)(?i)" (apply util/or-re (map label-matcher labels))
+  (re-pattern (str #"(?u)(?i)(!)?"
+                   (apply util/or-re (map label-matcher labels))
                    #"\[\]")))
 
 (defn shortcut-reference-re
   [labels]
   (let [label (apply util/or-re (map label-matcher labels))]
-    (re-pattern (str "(?u)(?i)" label
+    (re-pattern (str #"(?u)(?i)(!)?"
+                     label
                      #"(?!\[\])"
                      "(?!" label-re ")"))))
 

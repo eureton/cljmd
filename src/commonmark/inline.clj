@@ -135,37 +135,29 @@
       destination (assoc :destination destination)
       title (assoc :title title))))
 
-(defn full-reference-link
-  [definitions]
-  (fn [[img? text & labels]]
-    (when-some [info (some->> labels
-                              (some identity)
-                              util/normalize-link-label
-                              definitions)]
-      (-> info
-          (select-keys [:title :destination])
-          (assoc :text text
-                 :tag (if img? :img :a))))))
-
-(defn textless-reference-link
-  [definitions]
-  (fn [[& labels]]
-    (let [label (->> labels butlast (some identity))]
-      (when-some [info (definitions (util/normalize-link-label label))]
-        (-> info
-          (select-keys [:title :destination])
-          (assoc :text label
-                 :tag :a))))))
-
 (defn reference-link
   [definitions]
-  (let [full-count (-> definitions keys count (+ 3))
-        full-items #(subvec % 1 full-count)
-        full? (comp #(some some? %) full-items)]
-    (fn [match]
-      (if (full? match)
-        ((full-reference-link definitions) (full-items match))
-        ((textless-reference-link definitions) (subvec match full-count))))))
+  (fn [match]
+    (let [label-count (count definitions)
+          full-end (+ label-count 3)
+          collapsed-end (+ full-end label-count 1)
+          shortcut-end (+ collapsed-end label-count 1)
+          full (subvec match 1 full-end)
+          collapsed (subvec match full-end collapsed-end)
+          shortcut (subvec match collapsed-end shortcut-end)
+          match? #(some some? %)
+          linear (juxt first second #(drop 2 %))
+          nil-text (juxt first (constantly nil) rest)
+          [img? text labels] (cond (match? full) (linear full)
+                                   (match? collapsed) (nil-text collapsed)
+                                   (match? shortcut) (nil-text shortcut))
+          label (some identity labels)]
+      (some-> label
+              util/normalize-link-label
+              definitions
+              (select-keys [:title :destination])
+              (assoc :text (or text label)
+                     :tag (if img? :img :a))))))
 
 (def autolink-re
   (re-pattern (str (util/non-backslash-re \<)
