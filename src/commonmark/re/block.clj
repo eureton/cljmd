@@ -53,16 +53,16 @@
                    html-block-variant-1-tag #"(?:\s|>|$).*")))
 
 (def html-block-variant-2-begin-line
-  (re-pattern (str #"^ {0,3}" re.html/comment-begin-re ".*")))
+  (re-pattern (str #"^ {0,3}" re.html/comment-begin ".*")))
 
 (def html-block-variant-3-begin-line
-  (re-pattern (str #"^ {0,3}" re.html/processing-instruction-begin-re ".*")))
+  (re-pattern (str #"^ {0,3}" re.html/processing-instruction-begin ".*")))
 
 (def html-block-variant-4-begin-line
-  (re-pattern (str #"^ {0,3}" re.html/declaration-begin-re ".*")))
+  (re-pattern (str #"^ {0,3}" re.html/declaration-begin ".*")))
 
 (def html-block-variant-5-begin-line
-  (re-pattern (str #"^ {0,3}" re.html/cdata-section-begin-re ".*")))
+  (re-pattern (str #"^ {0,3}" re.html/cdata-section-begin ".*")))
 
 (def html-block-variant-6-begin-line
   (re-pattern (str #"^ {0,3}" (util/non-backslash-re "</?")
@@ -72,9 +72,9 @@
 (def html-block-variant-7-begin-line
   (re-pattern (str "^ {0,3}"
                    "(?:"
-                   (re.html/open-tag-re {:exclude-tags ["script" "style" "pre"]})
+                   (re.html/open-tag {:exclude-tags ["script" "style" "pre"]})
                    "|"
-                   re.html/closing-tag-re
+                   re.html/closing-tag
                    ")"
                    #"\s*$")))
 
@@ -83,16 +83,16 @@
                    html-block-variant-1-tag #">.*")))
 
 (def html-block-variant-2-end-line
-  (re-pattern (str #"^ {0,3}(?! ).*?" re.html/comment-end-re ".*")))
+  (re-pattern (str #"^ {0,3}(?! ).*?" re.html/comment-end ".*")))
 
 (def html-block-variant-3-end-line
   (re-pattern (str #"^ {0,3}(?! ).*?"
-                   re.html/processing-instruction-end-re
+                   re.html/processing-instruction-end
                    ".*")))
 
 (def html-block-variant-4-end-line
-  (re-pattern (str #"^ {0,3}(?! ).*?" re.html/declaration-end-re ".*")))
+  (re-pattern (str #"^ {0,3}(?! ).*?" re.html/declaration-end ".*")))
 
 (def html-block-variant-5-end-line
-  (re-pattern (str #"^ {0,3}(?! ).*?" re.html/cdata-section-end-re ".*")))
+  (re-pattern (str #"^ {0,3}(?! ).*?" re.html/cdata-section-end ".*")))
 

@@ -42,7 +42,7 @@
   [[_ lines]]
   (->> lines
        (string/join "\n")
-       (re-find re.link/reference-definition-batch-re)
+       (re-find re.link/reference-definition-batch)
        first
        string/split-lines
        (remove empty?)))

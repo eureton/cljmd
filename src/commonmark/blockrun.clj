@@ -243,7 +243,7 @@
         split #(let [batch (entry/link-reference-definition-batch %)
                      items (->> batch
                                 (string/join "\r\n")
-                                (re-seq re.link/reference-definition-re)
+                                (re-seq re.link/reference-definition)
                                 (map (comp string/split-lines first)))
                      remainder (vec (drop (count batch) (second %)))]
                  (concat

@@ -2,10 +2,10 @@
   (:require [clojure.string :as string]
             [commonmark.util :as util]))
 
-(def tag-name-re
+(def tag-name
   #"[a-zA-Z][\w-&&[^_]]*")
 
-(defn open-tag-re
+(defn open-tag
   ([{:keys [exclude-tags]
     :or {exclude-tags []}}]
    (let [attribute-name #"[a-zA-Z_:][\w.:-]*"
@@ -18,47 +18,47 @@
          attribute-value-spec (str #"\s*=\s*" attribute-value)
          attribute (str #"\s+" attribute-name "(?:" attribute-value-spec ")?")]
      (re-pattern (str (util/non-backslash-re \<)
-                      (reduce #(str "(?!" %2 "\\b)" %1) tag-name-re exclude-tags)
+                      (reduce #(str "(?!" %2 "\\b)" %1) tag-name exclude-tags)
                       "(?:" attribute ")*"
                       #"\s*"
                       "/?>"))))
   ([]
-   (open-tag-re {})))
+   (open-tag {})))
 
-(def closing-tag-re
-  (re-pattern (str (util/non-backslash-re "</") tag-name-re #"\s*" ">")))
+(def closing-tag
+  (re-pattern (str (util/non-backslash-re "</") tag-name #"\s*" ">")))
 
-(def comment-begin-re
+(def comment-begin
   (util/non-backslash-re "<!--"))
 
-(def comment-end-re
+(def comment-end
   (util/non-backslash-re "-->"))
 
-(def processing-instruction-begin-re
+(def processing-instruction-begin
   (util/non-backslash-re #"<\?"))
 
-(def processing-instruction-end-re
+(def processing-instruction-end
   (util/non-backslash-re #"\?>"))
 
-(def declaration-begin-re
+(def declaration-begin
   (util/non-backslash-re #"<![A-Z]"))
 
-(def declaration-end-re
+(def declaration-end
   (util/non-backslash-re \>))
 
-(def cdata-section-begin-re
+(def cdata-section-begin
   (util/non-backslash-re #"<!\[CDATA\["))
 
-(def cdata-section-end-re
+(def cdata-section-end
   (util/non-backslash-re #"\]\]>"))
 
-(def tag-re
-  (re-pattern (str "(?:(?s)" (open-tag-re) "|"
-                             closing-tag-re "|"
-                             comment-begin-re #"(?:|(?!>)(?!->)(?!.*--.*-->).*?(?<!-))" comment-end-re "|"
-                             processing-instruction-begin-re ".*?" processing-instruction-end-re "|"
-                             declaration-begin-re #"[A-Z]*\s+(?:|[^>]*)" declaration-end-re "|"
-                             cdata-section-begin-re ".*?" cdata-section-end-re ")")))
+(def tag
+  (re-pattern (str "(?:(?s)" (open-tag) "|"
+                             closing-tag "|"
+                             comment-begin #"(?:|(?!>)(?!->)(?!.*--.*-->).*?(?<!-))" comment-end "|"
+                             processing-instruction-begin ".*?" processing-instruction-end "|"
+                             declaration-begin #"[A-Z]*\s+(?:|[^>]*)" declaration-end "|"
+                             cdata-section-begin ".*?" cdata-section-end ")")))
 
 (def block-variant-6-tags ["address" "article" "aside" "base" "basefont"
                            "blockquote" "body" "caption" "center" "col"

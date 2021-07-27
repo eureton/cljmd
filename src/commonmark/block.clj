@@ -135,7 +135,7 @@
   (when line
     (if-some [[_ label wrapped unwrapped
                single-quoted double-quoted
-               parenthesized] (re-find re.link/reference-definition-re line)]
+               parenthesized] (re-find re.link/reference-definition line)]
       (->> {:tag :adef
             :label label
             :destination (or wrapped unwrapped)

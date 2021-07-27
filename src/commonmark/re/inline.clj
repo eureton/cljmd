@@ -100,8 +100,8 @@
 
 (def autolink
   (re-pattern (str (util/non-backslash-re \<)
-                   (util/or-re (str "(" re.common/absolute-uri-re ")")
-                               (str "(" re.common/email-address-re ")"))
+                   (util/or-re (str "(" re.common/absolute-uri ")")
+                               (str "(" re.common/email-address ")"))
                    ">")))
 
 (def hard-line-break
@@ -112,6 +112,6 @@
 
 (def soft-line-break
   (re-pattern (str #"(?<=.)(?<!(?:[ ]{2,}|\\))"
-                   re.common/line-ending-re
+                   re.common/line-ending
                    #"(?=.)")))
 

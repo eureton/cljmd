@@ -4,29 +4,29 @@
             [commonmark.re.common :refer :all]
             [commonmark.util :as util]))
 
-(def text-re
+(def text
   (re-pattern (str "(?s)"
                    (util/non-backslash-re #"\[") "("
                      (util/balanced-unescaped-re \[ \])
-                     (util/excluding-re (blank-line-re))
+                     (util/excluding-re (blank-line))
                    ")" #"\]")))
 
-(def wrapped-destination-re
+(def wrapped-destination
   (re-pattern (str (util/but-unescaped-re \< \> {:exclude ["\r" "\n"]})
                    "*?")))
 
-(def unwrapped-destination-re
+(def unwrapped-destination
   (re-pattern (str "(?!<)"
                    (util/balanced-unescaped-re \( \) {:intersect #"[^ \p{Cntrl}]"}))))
 
-(def destination-re
+(def destination
   (re-pattern (str "(?:"
-                     "<(" wrapped-destination-re ")>"
+                     "<(" wrapped-destination ")>"
                      "|"
-                     "(" unwrapped-destination-re ")"
+                     "(" unwrapped-destination ")"
                    ")")))
 
-(def title-re
+(def title
   (let [escape #(string/escape (str %) {\( #"\(" \) #"\)"})
         inner #(str (escape %1)
                     (no-blank-line-till (escape %2))
@@ -38,7 +38,7 @@
                        (inner \( \))
                      ")"))))
 
-(def label-re
+(def label
   (let [open (util/non-backslash-re \[)
         close (util/non-backslash-re \])]
     (re-pattern (str "(?s)(?:" open
@@ -46,61 +46,60 @@
                              "(" (util/but-unescaped-re \[ \]) "{1,999})"
                            close ")"))))
 
-(def inline-re
-  (re-pattern (str #"(?<!\\)(!)?" text-re
+(def inline
+  (re-pattern (str #"(?<!\\)(!)?" text
                    #"\("
                      #"\s*"
-                     destination-re "?"
+                     destination "?"
                      "(?:"
-                       #"\s+" "(" title-re ")"
+                       #"\s+" "(" title ")"
                      ")?"
                      #"\s*"
                    #"\)")))
 
 (defn label-matcher
-  [label]
-  (as-> label v
+  [string]
+  (as-> string v
         (string/replace v #"([-\[\]{}()*+?.\\^$|#])" "\\\\$1")
         (string/replace v #"\s+" "\\\\s+")
         (str #"\[" "(" v ")" #"\]")
         (re-pattern v)))
 
-(defn full-reference-re
+(defn full-reference
   [labels]
   (when (not-empty labels)
-    (re-pattern (str #"(?u)(?i)(!)?" text-re
+    (re-pattern (str #"(?u)(?i)(!)?" text
                      (apply util/or-re (map label-matcher labels))))))
 
-(defn collapsed-reference-re
+(defn collapsed-reference
   [labels]
   (re-pattern (str #"(?u)(?i)(!)?"
                    (apply util/or-re (map label-matcher labels))
                    #"\[\]")))
 
-(defn shortcut-reference-re
+(defn shortcut-reference
   [labels]
-  (let [label (apply util/or-re (map label-matcher labels))]
-    (re-pattern (str #"(?u)(?i)(!)?"
-                     label
-                     #"(?!\[\])"
-                     "(?!" label-re ")"))))
+  (re-pattern (str #"(?u)(?i)(!)?"
+                   (apply util/or-re (map label-matcher labels))
+                   #"(?!\[\])"
+                   "(?!" label ")")))
 
-(def reference-re
+(def reference
   (ufn/to-fix not-empty (comp (ufn/ap util/or-re)
-                              (juxt full-reference-re
-                                    collapsed-reference-re
-                                    shortcut-reference-re))
+                              (juxt full-reference
+                                    collapsed-reference
+                                    shortcut-reference))
               nil))
 
-(def reference-definition-re
-  (re-pattern (str #"(?m)^ {0,3}" label-re ":"
-                   #"\s*(?=\S+(?:\s|$))" destination-re
-                   "(?:" #"\s+" title-re ")?"
+(def reference-definition
+  (re-pattern (str #"(?m)^ {0,3}" label ":"
+                   #"\s*(?=\S+(?:\s|$))" destination
+                   "(?:" #"\s+" title ")?"
                    #"\s*$")))
 
-(def reference-definition-batch-re
+(def reference-definition-batch
   (re-pattern (str #"(?m)(?s)\A"
-                   "(?:^" reference-definition-re "$"
-                          line-ending-re "?"
+                   "(?:^" reference-definition "$"
+                          line-ending "?"
                    ")*")))
 

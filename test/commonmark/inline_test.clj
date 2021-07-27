@@ -355,7 +355,7 @@
 
 (deftest inline-link-test
   (defn match [s]
-    (re-find re.link/inline-re s))
+    (re-find re.link/inline s))
 
   (defn text [s]
     (some->> (match s) inline-link :text))
@@ -787,7 +787,7 @@
 
 (deftest html-test
   (defn match [s]
-    (re-find re.html/tag-re s))
+    (re-find re.html/tag s))
 
   (defn content [s]
     (some->> (match s) html :content))
@@ -1050,7 +1050,7 @@
 
 (deftest reference-link-test
   (defn match [s context]
-    (re-find (re.link/reference-re (keys (:definitions context))) s))
+    (re-find (re.link/reference (keys (:definitions context))) s))
 
   (defn matcher [context]
     (reference-link (:definitions context)))
