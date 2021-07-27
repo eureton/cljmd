@@ -41,11 +41,12 @@
                             from-string
                             (get-in [:children 0 :children]))
                         [(node {:tag :a :destination "xyz" :title "123"}
-                               [(node {:tag t}
-                                      [(node {:tag :txt :content "abc"})])])])
-               "*abc*"   :em
-               "`abc`"   :cs
-               "**abc**" :strong))
+                               [t])])
+               "*abc*"   (node {:tag :em}
+                               [(node {:tag :txt :content "abc"})])
+               "`abc`"   (node {:tag :cs :content "abc"})
+               "**abc**" (node {:tag :strong}
+                               [(node {:tag :txt :content "abc"})])))
 
         (testing "inline image"
           (is (= (-> "[![abc](abc.png)][qpr]\n\n[qpr]: xyz '123'"
@@ -106,11 +107,12 @@
                             from-string
                             (get-in [:children 0 :children]))
                         [(node {:tag :a :destination "xyz" :title "123"}
-                               [(node {:tag t}
-                                      [(node {:tag :txt :content "abc"})])])])
-               "*abc*"   :em
-               "`abc`"   :cs
-               "**abc**" :strong))
+                               [t])])
+               "*abc*"   (node {:tag :em}
+                               [(node {:tag :txt :content "abc"})])
+               "`abc`"   (node {:tag :cs :content "abc"})
+               "**abc**" (node {:tag :strong}
+                               [(node {:tag :txt :content "abc"})])))
 
         (testing "match"
           (testing "case-insensitive"
@@ -165,11 +167,12 @@
                             from-string
                             (get-in [:children 0 :children]))
                         [(node {:tag :a :destination "xyz" :title "123"}
-                               [(node {:tag t}
-                                      [(node {:tag :txt :content "abc"})])])])
-               "*abc*"   :em
-               "`abc`"   :cs
-               "**abc**" :strong))
+                               [t])])
+               "*abc*"   (node {:tag :em}
+                               [(node {:tag :txt :content "abc"})])
+               "`abc`"   (node {:tag :cs :content "abc"})
+               "**abc**" (node {:tag :strong}
+                               [(node {:tag :txt :content "abc"})])))
 
         (testing "match"
           (testing "case-insensitive"
@@ -310,8 +313,7 @@
 
     (testing "inside code span"
       (are [s c] (= (-> s from-string (get-in [:children 0 :children]))
-                    [(node {:tag :cs}
-                           [(node {:tag :txt :content c})])])
+                    [(node {:tag :cs :content c})])
            "`abc  \nxyz`" "abc   xyz"
            "`abc\\\nxyz`" "abc\\ xyz"))
 
@@ -352,8 +354,7 @@
 
     (testing "inside code span"
       (is (= (-> "`abc\nxyz`" from-string (get-in [:children 0 :children]))
-             [(node {:tag :cs}
-                    [(node {:tag :txt :content "abc xyz"})])])))
+             [(node {:tag :cs :content "abc xyz"})])))
 
     (testing "inside raw HTML"
       (are [e] (= (-> (str "<a href=\"xyz" e "abc\">")
@@ -460,8 +461,7 @@
                          (node {:tag :a :destination "xyz"}
                                [(node {:tag :txt :content "abc"})])]
            "`abc`"      [(node {:tag :txt :content "\\"})
-                         (node {:tag :cs}
-                               [(node {:tag :txt :content "abc"})])]
+                         (node {:tag :cs :content "abc"})]
            "- abc"      [(node {:tag :txt :content "\\- abc"})]
            "# abc"      [(node {:tag :txt :content "\\# abc"})]
            "&ouml;"     [(node {:tag :txt :content "\\&ouml;"})]))
