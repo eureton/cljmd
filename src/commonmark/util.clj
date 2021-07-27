@@ -82,22 +82,6 @@
                            "[" (string/join "&&" char-classes) "]"
                      ")"))))
 
-(defn non-backslash-re
-  "Returns a RE to match the input only when it is not preceded by a backslash.
-   Expects input to be either a character, a string or a RE."
-  [input]
-  (let [split (fn [x]
-                (let [x (str x)]
-                  [(first x)
-                   (subs x (min 1 (count x)))]))
-        splittable? (some-fn string?
-                             #(= java.util.regex.Pattern (type %)))]
-    (when-some [[x trail] (cond (splittable? input) (split input)
-                                (char? input) [input])]
-      (re-pattern (str #"(?<!(?<!\\)\\)"
-                       (escape-re-delimiter x)
-                       trail)))))
-
 (defn or-re
   "Returns a RE which matches any of the given expressions."
   [& exps]

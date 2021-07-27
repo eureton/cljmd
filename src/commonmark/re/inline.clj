@@ -8,7 +8,7 @@
         spaced #"[ \n](.*?[^ ].*?)[ \n]"
         non-spaced #"(.*?[^`])"
         same-backtick #"\1(?!`)"]
-    (re-pattern (str "(?s)" re.common/no-backslash-escape backtick
+    (re-pattern (str "(?s)" (re.common/unescaped backtick)
                      "(?:" spaced "|" non-spaced ")"
                      same-backtick))))
 
@@ -16,7 +16,7 @@
   [character length]
   (let [escaped (string/escape (str character) {\* "\\*"})]
     (re-pattern (str "(?<!" escaped ")"
-                     re.common/no-backslash-escape escaped "{" length "}"
+                     (re.common/unescaped escaped) "{" length "}"
                      "(?!" escaped ")"))))
 
 (defn lfdr-nopunc
@@ -99,7 +99,7 @@
                    ")")))
 
 (def autolink
-  (re-pattern (str (util/non-backslash-re \<)
+  (re-pattern (str (re.common/unescaped \<)
                    (util/or-re (str "(" re.common/absolute-uri ")")
                                (str "(" re.common/email-address ")"))
                    ">")))

@@ -6,7 +6,7 @@
 
 (def text
   (re-pattern (str "(?s)"
-                   (util/non-backslash-re #"\[") "("
+                   (unescaped #"\[") "("
                      (util/balanced-unescaped-re \[ \])
                      (util/excluding-re (blank-line))
                    ")" #"\]")))
@@ -39,8 +39,8 @@
                      ")"))))
 
 (def label
-  (let [open (util/non-backslash-re \[)
-        close (util/non-backslash-re \])]
+  (let [open (unescaped "\\[")
+        close (unescaped "\\]")]
     (re-pattern (str "(?s)(?:" open
                              "(?=" #"\s*(?!\\\])[\S&&[^\]]].*?" close ")"
                              "(" (util/but-unescaped-re \[ \]) "{1,999})"

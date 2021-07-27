@@ -1,8 +1,8 @@
 (ns commonmark.re.block
   (:require [clojure.string :as string]
             [commonmark.re.html :as re.html]
-            [commonmark.re.inline :as re.inline]
-            [commonmark.util :as util]))
+            [commonmark.re.common :as re.common]
+            [commonmark.re.inline :as re.inline]))
 
 (def atx-heading
   #"^ {0,3}(#{1,6})(?:$| \s*(\p{Print}*?)\s*)(?: #+ *)?$")
@@ -49,7 +49,7 @@
   #"(?:(?i)script|pre|style)")
 
 (def html-block-variant-1-begin-line
-  (re-pattern (str #"^ {0,3}" (util/non-backslash-re \<)
+  (re-pattern (str #"^ {0,3}" (re.common/unescaped \<)
                    html-block-variant-1-tag #"(?:\s|>|$).*")))
 
 (def html-block-variant-2-begin-line
@@ -65,7 +65,7 @@
   (re-pattern (str #"^ {0,3}" re.html/cdata-section-begin ".*")))
 
 (def html-block-variant-6-begin-line
-  (re-pattern (str #"^ {0,3}" (util/non-backslash-re "</?")
+  (re-pattern (str #"^ {0,3}" (re.common/unescaped "</?")
                    "(?:(?i)" (string/join "|" re.html/block-variant-6-tags) ")"
                    #"(?:\s+|/?>|$).*")))
 
@@ -79,7 +79,7 @@
                    #"\s*$")))
 
 (def html-block-variant-1-end-line
-  (re-pattern (str #"^ {0,3}(?! ).*?" (util/non-backslash-re "</")
+  (re-pattern (str #"^ {0,3}(?! ).*?" (re.common/unescaped "</")
                    html-block-variant-1-tag #">.*")))
 
 (def html-block-variant-2-end-line

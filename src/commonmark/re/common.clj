@@ -1,13 +1,12 @@
-(ns commonmark.re.common
-  (:require [clojure.string :as string]
-            [commonmark.re.html :as re.html]))
+(ns commonmark.re.common)
 
 (def line-ending
   #"(?:\r\n|\n|\r(?!\n))")
 
-(def no-backslash-escape
-  "Prepend to RE which should not match when preceded by a backslash."
-  #"(?<!(?<!\\)\\)")
+(defn unescaped
+  "RE to match the input only when it is not preceded by a backslash."
+  [x]
+  (re-pattern (str "(?:" #"(?<!(?<!\\)\\)" x ")")))
 
 (defn blank-line
   "Returns a RE which matches lines consisting of zero to limit characters, each
