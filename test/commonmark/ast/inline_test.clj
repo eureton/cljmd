@@ -46,55 +46,55 @@
 
   (testing "backslash escapes"
     (testing "ASCII punctuation"
-      (are [in out] (= (-> (str "abc" in "xyz")
+      (are [c] (= (-> (str "abc\\" c "xyz")
                            from-string
                            (get-in [:children 0]))
-                       (txt (str "abc" out "xyz")))
-           "\\!" "!"
-           "\\\"" "\""
-           "\\#" "#"
-           "\\$" "$"
-           "\\%" "%"
-           "\\&" "&"
-           "\\'" "'"
-           "\\(" "("
-           "\\)" ")"
-           "\\*" "*"
-           "\\+" "+"
-           "\\," ","
-           "\\-" "-"
-           "\\." "."
-           "\\/" "/"
-           "\\:" ":"
-           "\\;" ";"
-           "\\<" "<"
-           "\\=" "="
-           "\\>" ">"
-           "\\?" "?"
-           "\\@" "@"
-           "\\[" "["
-           "\\\\" "\\"
-           "\\]" "]"
-           "\\^" "^"
-           "\\_" "_"
-           "\\`" "`"
-           "\\{" "{"
-           "\\|" "|"
-           "\\}" "}"
-           "\\~" "~"))
+                       (txt (str "abc" c "xyz")))
+           \!
+           \"
+           \#
+           \$
+           \%
+           \&
+           \'
+           \(
+           \)
+           \*
+           \+
+           \,
+           \-
+           \.
+           \/
+           \:
+           \;
+           \<
+           \=
+           \>
+           \?
+           \@
+           \[
+           \\
+           \]
+           \^
+           \_
+           \`
+           \{
+           \|
+           \}
+           \~))
 
     (testing "not ASCII punctuation"
-      (are [in out] (= (-> (str "abc" in "xyz")
+      (are [c] (= (-> (str "abc\\" c "xyz")
                            from-string
                            (get-in [:children 0]))
-                       (txt (str "abc" out "xyz")))
-           "\\→" "\\→"
-           "\\A" "\\A"
-           "\\a" "\\a"
-           "\\ " "\\ "
-           "\\3" "\\3"
-           "\\φ" "\\φ"
-           "\\«" "\\«")))
+                       (txt (str "abc\\" c "xyz")))
+           \→
+           \A
+           \a
+           \space
+           \3
+           \φ
+           \«)))
 
   (testing "nested emphasis"
     (let [em-tree (node {:tag :em}
