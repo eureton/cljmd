@@ -30,30 +30,15 @@
 
 (defmethod from-blockrun-entry :leaf
   [[tag lines]]
-  (->> lines
-       (string/join "\r\n")
-       (hash-map :tag tag :content)
-       common/node))
-
-(defmethod from-blockrun-entry :p
-  [[_ lines]]
-  (let [fetch (comp string/join
-                    (juxt (comp :content block/paragraph-line)
-                          (comp (ufn/to-fix some? #(string/replace % #"\\" ""))
-                                #(re-find inline/hard-line-break-re %))))]
+  (let [parsers {:atxh block/atx-heading
+                 :icblk block/indented-chunk-line
+                 :p block/paragraph-line}
+        parsed (parsers tag #(hash-map :content %))]
     (->> lines
-         (map fetch)
+         (map (comp :content parsed))
          (string/join "\r\n")
-         (hash-map :tag :p :content)
+         (hash-map :tag tag :content)
          common/node)))
-
-(defmethod from-blockrun-entry :atxh
-  [[_ lines]]
-  (->> lines
-       (map (comp :content block/atx-heading))
-       (string/join "\r\n")
-       (hash-map :tag :atxh :content)
-       common/node))
 
 (defmethod from-blockrun-entry :blank
   [[_ _]]

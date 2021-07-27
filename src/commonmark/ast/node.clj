@@ -8,7 +8,7 @@
    form, false otherwise."
   (every-pred leaf?
               (comp not
-                    #{:txt :hbr :sbr :html-inline :blank :html-block}
+                    #{:txt :hbr :sbr :html-inline :blank :html-block :icblk}
                     :tag
                     :data)))
 

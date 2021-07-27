@@ -4,6 +4,7 @@
             [flatland.useful.fn :as ufn]
             [commonmark.re.html :as re.html]
             [commonmark.re.link :as re.link]
+            [commonmark.inline :as inline]
             [commonmark.util :as util]))
 
 (comment "ATX Headings
@@ -173,13 +174,16 @@ OK  forms a paragraph.
     The paragraph’s raw content is formed by concatenating the lines
 OK  and removing initial and final whitespace.")
 
-(def paragraph-line-re #"^\s*(.*?)\s*$")
+(def paragraph-line-re
+  (re-pattern (str #"^\s*(.*?)\s*?"
+                   "(" inline/hard-line-break-re ")?"
+                   "$")))
 
 (defn paragraph-line
   [line]
-  (when-some [[_ content] (re-find paragraph-line-re line)]
+  (when-some [[_ content break] (re-find paragraph-line-re line)]
     {:tag :p
-     :content content}))
+     :content (str content break)}))
 
 (defn blank-line
   [line]
