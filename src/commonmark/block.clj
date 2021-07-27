@@ -2,71 +2,54 @@
   (:require [clojure.string :as string]
             [clojure.set]
             [flatland.useful.fn :as ufn]
-            [commonmark.re.html :as re.html]
-            [commonmark.re.link :as re.link]
-            [commonmark.re.inline :as re.inline]
-            [commonmark.util :as util]))
-
-(def atx-heading-re #"^ {0,3}(#{1,6})(?:$| \s*(\p{Print}*?)\s*)(?: #+ *)?$")
+            [commonmark.re.block :as re.block]
+            [commonmark.re.link :as re.link]))
 
 (defn atx-heading
   [line]
-  (when-some [[_ opening content] (re-find atx-heading-re line)]
+  (when-some [[_ opening content] (re-find re.block/atx-heading line)]
     {:tag :atxh
      :level (count opening)
      :content (-> content (or "") (string/replace #"\\#" "#"))}))
 
-(def setext-heading-underline-re #"^ {0,3}(=+|-+) *$")
-
 (defn setext-heading
   [line]
-  (when-some [[_ underline] (re-find setext-heading-underline-re line)]
+  (when-some [[_ underline] (re-find re.block/setext-heading-underline line)]
     {:tag :stxh
      :level (if (string/starts-with? underline "=") 1 2)}))
 
-(def thematic-break-re #"^ {0,3}(?:(?:- *){3,}|(?:_ *){3,}|(?:[*] *){3,})\s*$")
-
 (defn thematic-break
   [line]
-  (when (re-find thematic-break-re line)
+  (when (re-find re.block/thematic-break line)
     {:tag :tbr}))
-
-(def indented-chunk-line-re #"^(?:\t| {4})(.*)$")
 
 (defn indented-chunk-line
   [line]
-  (when-some [[_ content] (re-find indented-chunk-line-re line)]
+  (when-some [[_ content] (re-find re.block/indented-chunk-line line)]
     {:tag :icblk
      :content content}))
 
-(def opening-code-fence-re #"^( {0,3})((`{3,})\s*([^`]*?)|(~{3,})\s*(\p{Print}*?))\s*$")
-
 (defn opening-code-fence
   [line]
-  (when-some [[_ indent _ backtick-fence backtick-info
-               tilde-fence tilde-info] (re-find opening-code-fence-re line)]
+  (when-some [[_ indent _ backtick-fence
+               backtick-info tilde-fence
+               tilde-info] (re-find re.block/opening-code-fence line)]
     {:tag :ofcblk
      :indent indent
      :info (or backtick-info tilde-info)
      :fence (or backtick-fence tilde-fence)}))
 
-(def closing-code-fence-re #"^( {0,3})(`{3,}|~{3,}) *$")
-
 (defn closing-code-fence
   [line]
-  (when-some [[_ indent backtick-fence tilde-fence] (re-find closing-code-fence-re line)]
+  (when-some [[_ indent backtick-fence
+               tilde-fence] (re-find re.block/closing-code-fence line)]
     {:tag :cfcblk
      :indent indent
      :fence (or backtick-fence tilde-fence)}))
 
-(def paragraph-line-re
-  (re-pattern (str #"^\s*(.*?)\s*?"
-                   "(" re.inline/hard-line-break ")?"
-                   "$")))
-
 (defn paragraph-line
   [line]
-  (when-some [[_ content break] (re-find paragraph-line-re line)]
+  (when-some [[_ content break] (re-find re.block/paragraph-line line)]
     {:tag :p
      :content (str content break)}))
 
@@ -75,77 +58,34 @@
   (when ((every-pred string? empty?) line)
     {:tag :blank}))
 
-(def list-item-marker-re #"( {0,3})([-+*]|\d{1,9}[.)])")
-
-(def list-item-basic-lead-line-re (re-pattern (str "^" list-item-marker-re #"( {1,4})(\S\p{Print}*)$")))
-
-(def list-item-indented-code-lead-line-re (re-pattern (str "^" list-item-marker-re #"( )(?= {4,})(\p{Print}*)$")))
-
-(def list-item-blank-lead-line-re (re-pattern (str "^" list-item-marker-re #" *$")))
-
 (defn list-item-lead-line
   [line]
   (some->> line
-           ((some-fn #(re-find list-item-basic-lead-line-re %)
-                     #(re-find list-item-indented-code-lead-line-re %)
-                     #(re-find list-item-blank-lead-line-re %)))
+           ((some-fn #(re-find re.block/list-item-basic-lead-line %)
+                     #(re-find re.block/list-item-indented-code-lead-line %)
+                     #(re-find re.block/list-item-blank-lead-line %)))
            (drop 1)
            (concat [:li])
            (zipmap [:tag :indent :marker :space :content])))
 
-(def block-quote-marker-re #"( {0,3})>( ?)")
-
-(def block-quote-line-re (re-pattern (str "^" block-quote-marker-re #"(\p{Print}*)$")))
-
 (defn block-quote-line
   [line]
   (some->> line
-           (re-find block-quote-line-re)
+           (re-find re.block/block-quote-line)
            (drop 1)
            (concat [:bq])
            (zipmap [:tag :indent :space :content])))
 
-(def html-block-variant-1-tag-re #"(?:(?i)script|pre|style)")
-
-(def html-block-variant-1-begin-line-re
-  (re-pattern (str #"^ {0,3}" (util/non-backslash-re \<)
-                   html-block-variant-1-tag-re #"(?:\s|>|$).*")))
-
-(def html-block-variant-2-begin-line-re
-  (re-pattern (str #"^ {0,3}" re.html/comment-begin-re ".*")))
-
-(def html-block-variant-3-begin-line-re
-  (re-pattern (str #"^ {0,3}" re.html/processing-instruction-begin-re ".*")))
-
-(def html-block-variant-4-begin-line-re
-  (re-pattern (str #"^ {0,3}" re.html/declaration-begin-re ".*")))
-
-(def html-block-variant-5-begin-line-re
-  (re-pattern (str #"^ {0,3}" re.html/cdata-section-begin-re ".*")))
-
-(def html-block-variant-6-begin-line-re
-  (re-pattern (str #"^ {0,3}" (util/non-backslash-re "</?")
-                   "(?:(?i)" (string/join "|" re.html/block-variant-6-tags) ")"
-                   #"(?:\s+|/?>|$).*")))
-
-(def html-block-variant-7-begin-line-re
-  (re-pattern (str "^ {0,3}"
-                   "(?:"
-                     (re.html/open-tag-re {:exclude-tags ["script" "style" "pre"]}) "|"
-                     re.html/closing-tag-re
-                   ")"
-                   #"\s*$")))
-
 (defn html-block-begin
   [line]
   (when line
-    (let [re-info {html-block-variant-1-begin-line-re 1
-                   html-block-variant-2-begin-line-re 2
-                   html-block-variant-3-begin-line-re 3
-                   html-block-variant-4-begin-line-re 4
-                   html-block-variant-5-begin-line-re 5
-                   html-block-variant-6-begin-line-re 6
-                   html-block-variant-7-begin-line-re 7}]
+    (let [re-info {re.block/html-block-variant-1-begin-line 1
+                   re.block/html-block-variant-2-begin-line 2
+                   re.block/html-block-variant-3-begin-line 3
+                   re.block/html-block-variant-4-begin-line 4
+                   re.block/html-block-variant-5-begin-line 5
+                   re.block/html-block-variant-6-begin-line 6
+                   re.block/html-block-variant-7-begin-line 7}]
       (->> (keys re-info)
            (filter #(re-find % line))
            (map re-info)
@@ -153,32 +93,14 @@
            (hash-map :content line :variant)
            ((ufn/validator (comp not-empty :variant)))))))
 
-(def html-block-variant-1-end-line-re
-  (re-pattern (str #"^ {0,3}(?! ).*?" (util/non-backslash-re "</")
-                   html-block-variant-1-tag-re #">.*")))
-
-(def html-block-variant-2-end-line-re
-  (re-pattern (str #"^ {0,3}(?! ).*?" re.html/comment-end-re ".*")))
-
-(def html-block-variant-3-end-line-re
-  (re-pattern (str #"^ {0,3}(?! ).*?"
-                   re.html/processing-instruction-end-re
-                   ".*")))
-
-(def html-block-variant-4-end-line-re
-  (re-pattern (str #"^ {0,3}(?! ).*?" re.html/declaration-end-re ".*")))
-
-(def html-block-variant-5-end-line-re
-  (re-pattern (str #"^ {0,3}(?! ).*?" re.html/cdata-section-end-re ".*")))
-
 (defn html-block-end
   [line]
   (when line
-    (let [re-info {html-block-variant-1-end-line-re 1
-                   html-block-variant-2-end-line-re 2
-                   html-block-variant-3-end-line-re 3
-                   html-block-variant-4-end-line-re 4
-                   html-block-variant-5-end-line-re 5
+    (let [re-info {re.block/html-block-variant-1-end-line 1
+                   re.block/html-block-variant-2-end-line 2
+                   re.block/html-block-variant-3-end-line 3
+                   re.block/html-block-variant-4-end-line 4
+                   re.block/html-block-variant-5-end-line 5
                    #"^\s*$" [6 7]}]
       (->> (keys re-info)
            (filter #(re-find % line))

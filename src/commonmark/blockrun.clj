@@ -3,7 +3,8 @@
             [flatland.useful.fn :as ufn]
             [commonmark.block :as block]
             [commonmark.blockrun.entry :as entry]
-            [commonmark.re.link :as re.link]))
+            [commonmark.re.link :as re.link]
+            [commonmark.re.block :as re.block]))
 
 (def zero
   "Identity element of the add binary operation."
@@ -127,7 +128,11 @@
 
 (defmethod add [:p :li]
   [x y]
-  (if (->> y first entry/origin (re-find block/list-item-blank-lead-line-re) some?)
+  (if (->> y
+           first
+           entry/origin
+           (re-find re.block/list-item-blank-lead-line)
+           some?)
     (fuse-split (retag x :last :stxh) y 1)
     (concat x y)))
 

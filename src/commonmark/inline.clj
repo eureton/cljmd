@@ -5,7 +5,6 @@
             [commonmark.re.inline :as re.inline]
             [commonmark.re.html :as re.html]
             [commonmark.re.link :as re.link]
-            [commonmark.re.common :as re.common]
             [commonmark.inline.token :as token]))
 
 (defn code-span
