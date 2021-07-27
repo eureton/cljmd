@@ -8,7 +8,7 @@
         spaced #"[ \n](.*?[^ ].*?)[ \n]"
         non-spaced #"(.*?[^`])"
         same-backtick #"\1(?!`)"]
-    (re-pattern (str "(?s)" backtick
+    (re-pattern (str "(?s)" re.common/no-backslash-escape backtick
                      "(?:" spaced "|" non-spaced ")"
                      same-backtick))))
 
@@ -16,7 +16,7 @@
   [character length]
   (let [escaped (string/escape (str character) {\* "\\*"})]
     (re-pattern (str "(?<!" escaped ")"
-                     escaped "{" length "}"
+                     re.common/no-backslash-escape escaped "{" length "}"
                      "(?!" escaped ")"))))
 
 (defn lfdr-nopunc

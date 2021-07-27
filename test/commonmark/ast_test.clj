@@ -430,5 +430,24 @@
     (testing "empty paragraph"
       (is (= (map (comp :tag :data)
                   (-> "- abc\r\n\r\n  \r\n> xyz" from-string :children))
-             [:li :bq])))))
+             [:li :bq]))))
+
+  (testing "backslash escapes"
+    (testing "entity markers"
+      (are [m] (= (-> (str \\ m) from-string :children)
+                  [(node {:tag :p}
+                         [(node {:tag :txt :content m})])])
+           "*abc*"
+           "<br/>abc"
+           "[abc](xyz)"
+           "`abc`"
+           "- abc"
+           "# abc"
+           "[abc]: xyz '123'"
+           "&ouml; abc"))
+
+    (testing "ordered list"
+      (is (= (-> "1\\. abc" from-string :children)
+             [(node {:tag :p}
+                    [(node {:tag :txt :content "1. abc"})])])))))
 

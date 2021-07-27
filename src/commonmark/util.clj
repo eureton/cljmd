@@ -83,8 +83,8 @@
                      ")"))))
 
 (defn non-backslash-re
-  "Returns a RE to match the input, not preceded by a backslash. Expects input
-   to be either a character, a string or a RE."
+  "Returns a RE to match the input only when it is not preceded by a backslash.
+   Expects input to be either a character, a string or a RE."
   [input]
   (let [split (fn [x]
                 (let [x (str x)]

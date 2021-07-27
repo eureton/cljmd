@@ -5,6 +5,10 @@
 (def line-ending
   #"(?:\r\n|\n|\r(?!\n))")
 
+(def no-backslash-escape
+  "Prepend to RE which should not match when preceded by a backslash."
+  #"(?<!(?<!\\)\\)")
+
 (defn blank-line
   "Returns a RE which matches lines consisting of zero to limit characters, each
    of which may be either a space or a tab."
