@@ -63,6 +63,13 @@
   (node {:tag :txt}
         (unpack input tokens)))
 
+(defmethod inflate :strong-in-em
+  [input tokens]
+  (node {:tag :em}
+        [(node {:tag :strong}
+               (:children (inflate (assoc input :tag :default)
+                                   tokens)))]))
+
 (defmethod inflate :default
   [{:keys [tag content] :re/keys [match]} tokens]
   (->> tokens

@@ -45,6 +45,10 @@
                   (derive :hbr    :inline)
                   (derive :sbr    :inline)
 
+                  (derive :em           :emphasis)
+                  (derive :strong       :emphasis)
+                  (derive :strong-in-em :emphasis)
+
                   (derive :a      :link)
                   (derive :img    :link)
 

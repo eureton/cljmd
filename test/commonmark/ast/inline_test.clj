@@ -54,6 +54,12 @@
            "_(_xyz_)_"
            "*(*xyz*)*")))
 
+  (testing "strong emphasis directly in emphasis"
+    (is (= (-> "***abc***" from-string (get-in [:children 0]))
+           (node {:tag :em}
+                 [(node {:tag :strong}
+                        [(txt "abc")])]))))
+
   (testing "inlines within link text"
     (is (= (-> "[`xyz` 123 *abc*](qpr)" from-string (get-in [:children 0]))
                 (node {:tag :a

@@ -27,6 +27,9 @@
 (def strong-emphasis
   (emphasis-matcher 2 :strong))
 
+(def double-emphasis
+  (emphasis-matcher 3 :strong-in-em))
+
 (defn inline-link
   [[_ img? text
     destination-wrapped destination-unwrapped _
@@ -120,6 +123,7 @@
         [(re.link/reference (keys definitions)) (reference-link definitions)]
         [(re.inline/emphasis 1)                 emphasis]
         [(re.inline/emphasis 2)                 strong-emphasis]
+        [(re.inline/emphasis 3)                 double-emphasis]
         [re.inline/hard-line-break              hard-line-break]
         [re.inline/soft-line-break              soft-line-break]]
        (remove #(some nil? %))

@@ -7,11 +7,7 @@
   :tag
   :hierarchy common/ontology)
 
-(defmethod inner :em
-  [{:keys [content]}]
-  content)
-
-(defmethod inner :strong
+(defmethod inner :emphasis
   [{:keys [content]}]
   content)
 
