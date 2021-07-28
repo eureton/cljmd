@@ -7,7 +7,7 @@
    Merging is done by calling (f x y)."
   [pred f coll]
   (reduce (fn [acc y]
-            (let [x (peek acc)]
+            (let [x (last acc)]
               (if (pred x y)
                 (-> acc pop (conj (f x y)))
                 (conj acc y))))

@@ -4,7 +4,8 @@
             [commonmark.block :as block]
             [commonmark.blockrun.entry :as entry]
             [commonmark.re.link :as re.link]
-            [commonmark.re.block :as re.block]))
+            [commonmark.re.block :as re.block]
+            [commonmark.util :as util]))
 
 (def zero
   "Identity element of the add binary operation."
@@ -223,15 +224,11 @@
 (defn coalesce
   "Merges adjacent entries of the same type."
   [blockrun]
-  (reduce (fn [acc x]
-            (let [left (last acc)
-                  tag (first x)]
-              (if (and (= (first left) tag)
-                       (not= tag :adef))
-                (-> acc pop (conj (update left 1 (comp vec concat) (second x))))
-                (conj acc x))))
-          []
-          blockrun))
+  (util/coalesce #(let [tag (first %2)]
+                    (and (= (first %1) tag)
+                         (not= tag :adef)))
+                 #(update %1 1 (comp vec concat) (second %2))
+                 blockrun))
 
 (defn extract-link-reference-definitions
   "Searches blockrun for link reference definitions and extracts them into
