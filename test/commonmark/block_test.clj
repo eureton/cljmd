@@ -98,6 +98,54 @@
          "#"       1
          "### ###" 3)))
 
+(deftest setext-heading-test
+  (testing "minimal"
+    (is (some? (setext-heading "==="))))
+
+  (testing "length"
+    (are [s] (some? (setext-heading s))
+         "="
+         "-"
+         "=="
+         "--"
+         "==="
+         "---"
+         "===="
+         "----"
+         "====="
+         "-----"
+         "======"
+         "------"))
+
+  (testing "character"
+    (testing "="
+      (is (= (-> "===" setext-heading :level)
+             1)))
+
+    (testing "-"
+      (is (= (-> "---" setext-heading :level)
+             2)))
+
+    (testing "both - and ="
+      (is (nil? (setext-heading "=-=")))))
+
+  (testing "indentation"
+    (testing "valid"
+      (are [s] (some? (setext-heading s))
+           " ==="
+           " ---"
+           "  ==="
+           "  ---"
+           "   ==="
+           "   ---"))
+
+    (testing "invalid"
+      (are [s] (nil? (setext-heading s))
+           "\t==="
+           "\t---"
+           "    ==="
+           "    ---"))))
+
 (deftest thematic-break-test
   (testing "minimal"
     (are [s] (some? (thematic-break s))
