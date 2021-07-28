@@ -13,7 +13,14 @@
          "### foo"
          "#### foo"
          "##### foo"
-         "###### foo"))
+         "###### foo"
+         "#\tfoo"
+         "##\tfoo"
+         "###\tfoo"
+         "####\tfoo"
+         "#####\tfoo"
+         "######\tfoo"
+         ))
 
   (testing "more than six # characters => nil"
     (is (nil? (atx-heading "####### foo"))))
@@ -27,8 +34,10 @@
     (is (nil? (atx-heading "\\## foo"))))
   
   (testing "leading and trailing whitespace ignored in parsing inline content"
-    (is (= (-> "#                  foo  " atx-heading :content)
-           "foo")))
+    (are [s] (= (-> s atx-heading :content)
+                "foo")
+         "#                  foo  "
+         "#\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\tfoo\t\t"))
 
   (testing "0-3 spaces indentation allowed"
     (are [s] (some? (atx-heading s))
@@ -40,16 +49,32 @@
     (is (nil? (atx-heading "    # foo"))))
 
   (testing "closing sequence of #"
-    (testing "optional"
-      (is (some? (atx-heading "## foo ##"))))
+    (testing "preceded by spaces"
+      (are [s] (= (-> s atx-heading :content)
+                  "foo")
+           "## foo ##"
+           "## foo  ##"
+           "## foo   ##"))
+
+    (testing "preceded by tabs"
+      (are [s] (= (-> s atx-heading :content)
+                  "foo")
+           "## foo\t##"
+           "## foo\t\t##"
+           "## foo\t\t\t##"))
 
     (testing "not the same length as opening sequence"
       (are [s] (some? (atx-heading s))
            "# foo ##################################"
            "##### foo ##"))
 
-    (testing "trailing spaces allowed"
-      (is (some? (atx-heading "### foo ###  "))))
+    (testing "followed by spaces"
+      (is (= (-> "### foo ###  " atx-heading :content)
+             "foo")))
+
+    (testing "followed by tabs"
+      (is (= (-> "### foo ###\t\t" atx-heading :content)
+             "foo")))
 
     (testing "if non-spaces follow => part of contents"
       (is (= (-> "### foo ### b" atx-heading :content)
