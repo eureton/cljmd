@@ -109,8 +109,17 @@
          " **  * ** * ** * **"
          "-     -      -      -"))
 
+  (testing "tabs between characters => true"
+    (are [s] (some? (thematic-break s))
+         " -\t-\t-"
+         " **\t\t*\t**\t*\t**\t*\t**"
+         "-\t\t\t\t\t-\t\t\t\t\t\t-\t\t\t\t\t\t-"))
+
   (testing "spaces at the end => true"
     (is (some? (thematic-break "- - - -  "))))
+
+  (testing "tabs at the end => true"
+    (is (some? (thematic-break "- - - -\t\t"))))
 
   (testing "non-spaces => false"
     (are [s] (nil? (thematic-break s))
