@@ -40,6 +40,16 @@
          (hash-map :tag tag :content)
          common/node)))
 
+(defmethod from-blockrun-entry :stxh
+  [[tag lines]]
+  (->> lines
+       pop
+       (string/join "\r\n")
+       (hash-map :tag tag
+                 :level (-> lines peek block/setext-heading :level)
+                 :content)
+       common/node))
+
 (defmethod from-blockrun-entry :ofcblk
   [[tag lines]]
   (let [info (->> lines first block/opening-code-fence :info)]
