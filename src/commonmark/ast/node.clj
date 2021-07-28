@@ -6,8 +6,8 @@
 (def has-inline?
   "Returns true if the node has inline content which may be expanded into AST
    form, false otherwise."
-  (let [leaf-tags #{:txt :hbr :sbr :html-inline :cs :blank :html-block :icblk
-                    :ofcblk}]
+  (let [leaf-tags #{:txt :tbr :hbr :sbr :html-inline :cs :blank :html-block
+                    :icblk :ofcblk}]
     (every-pred leaf?
                 (comp not
                       leaf-tags

@@ -134,7 +134,31 @@
                [(node {:tag :stxh :level 2}
                       [(node {:tag :txt :content "<a href=\"abc"})])
                 (node {:tag :p}
-                      [(node {:tag :txt :content "xyz\"/>"})])])))))
+                      [(node {:tag :txt :content "xyz\"/>"})])]))))
+
+    (testing "as lazy continuation line"
+      (testing "in blockquote"
+        (is (= (-> "> abc\n---" from-string :children)
+               [(node {:tag :bq}
+                      [(node {:tag :p}
+                             [(node {:tag :txt :content "abc"})])])
+                (node {:tag :tbr :content "---"})])))
+
+      (testing "in multiline lazy blockquote"
+        (is (= (-> "> abc\nxyz\n---" from-string :children)
+               [(node {:tag :bq}
+                      [(node {:tag :p}
+                             [(node {:tag :txt :content "abc"})
+                              (node {:tag :sbr :content "\r\n"})
+                              (node {:tag :txt :content "xyz"})])])
+                (node {:tag :tbr :content "---"})])))
+
+      (testing "in list item"
+        (is (= (-> "- abc\n---" from-string :children)
+               [(node {:tag :li}
+                      [(node {:tag :p}
+                             [(node {:tag :txt :content "abc"})])])
+                (node {:tag :tbr :content "---"})])))))
 
   (testing "link"
     (testing "inline"
