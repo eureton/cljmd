@@ -44,6 +44,7 @@
   [[tag lines]]
   (->> lines
        pop
+       (map string/trim)
        (string/join "\r\n")
        (hash-map :tag tag
                  :level (-> lines peek block/setext-heading :level)

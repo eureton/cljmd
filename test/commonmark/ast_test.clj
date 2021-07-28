@@ -1,5 +1,6 @@
 (ns commonmark.ast-test
   (:require [clojure.test :refer :all]
+            [clojure.string :as string]
             [commonmark.ast :refer :all]
             [commonmark.ast.common :refer [node]]))
 
@@ -71,7 +72,47 @@
                                          [(node {:tag :txt :content "abc"})])
                                    (node {:tag :txt :content ")"})])
                             (node {:tag :txt :content " "})
-                            (node {:tag :cs :content "def"})])])]))))
+                            (node {:tag :cs :content "def"})])])])))
+
+    (testing "multiline"
+      (are [ls] (= (->> ls
+                        (string/join "\n")
+                        from-string
+                        :children)
+                   [(node {:tag :stxh :level 1}
+                          [(node {:tag :txt :content "abc "})
+                           (node {:tag :em}
+                                 [(node {:tag :txt :content "xyz"})
+                                  (node {:tag :sbr :content "\r\n"})
+                                  (node {:tag :txt :content "123"})])])])
+           ["abc *xyz" "123*"           "===="]
+           ["abc *xyz" " 123*"          "===="]
+           ["abc *xyz" "  123*"         "===="]
+           ["abc *xyz" "   123*"        "===="]
+           ["abc *xyz" "    123*"       "===="]
+           ["abc *xyz" "     123*"      "===="]
+           ["abc *xyz" "\t123*"         "===="]
+           ["abc *xyz" "\t\t123*"       "===="]
+           ["abc *xyz" "\t\t\t123*"     "===="]
+           ["abc *xyz" "\t\t\t\t123*"   "===="]
+           ["abc *xyz" "\t\t\t\t\t123*" "===="]))
+
+    (testing "leading whitespace alignment"
+      (are [c u] (= (-> (str c \newline u) from-string :children)
+             [(node {:tag :stxh :level 1}
+                    [(node {:tag :txt :content "abc"})])])
+           "abc"    " ==="
+           "abc"    "  ==="
+           "abc"    "   ==="
+           " abc"   " ==="
+           " abc"   "  ==="
+           " abc"   "   ==="
+           "  abc"  " ==="
+           "  abc"  "  ==="
+           "  abc"  "   ==="
+           "   abc" " ==="
+           "   abc" "  ==="
+           "   abc" "   ===")))
 
   (testing "link"
     (testing "inline"
