@@ -44,58 +44,6 @@
                   (node {:tag :img :destination "abc"}
                         [(txt "xyz")])))))
 
-  (testing "backslash escapes"
-    (testing "ASCII punctuation"
-      (are [c] (= (-> (str "abc\\" c "xyz")
-                           from-string
-                           (get-in [:children 0]))
-                       (txt (str "abc" c "xyz")))
-           \!
-           \"
-           \#
-           \$
-           \%
-           \&
-           \'
-           \(
-           \)
-           \*
-           \+
-           \,
-           \-
-           \.
-           \/
-           \:
-           \;
-           \<
-           \=
-           \>
-           \?
-           \@
-           \[
-           \\
-           \]
-           \^
-           \_
-           \`
-           \{
-           \|
-           \}
-           \~))
-
-    (testing "not ASCII punctuation"
-      (are [c] (= (-> (str "abc\\" c "xyz")
-                           from-string
-                           (get-in [:children 0]))
-                       (txt (str "abc\\" c "xyz")))
-           \→
-           \A
-           \a
-           \space
-           \3
-           \φ
-           \«)))
-
   (testing "nested emphasis"
     (let [em-tree (node {:tag :em}
                         [(node {:tag :txt :content "("})
@@ -138,8 +86,7 @@
     (testing "URI"
       (testing "standard"
         (are [s] (= (-> (str "<" s ">") from-string :children)
-                    [(node {:tag :a :destination s}
-                           [(txt s)])])
+                    [(node {:tag :autolink :destination s :text s})])
              "http://abc.com"
              "http://abc.com?q=xyz"
              "http://abc.com#123"
@@ -148,8 +95,7 @@
 
       (testing "percent coding"
         (are [s d] (= (-> (str "<" s ">") from-string :children)
-                      [(node {:tag :a :destination d}
-                             [(txt s)])])
+                      [(node {:tag :autolink :destination d :text s})])
              "http://a%3Cb%20c.com"      "http://a%3Cb%20c.com"
              "http://abc.com?q=1%3C%202" "http://abc.com?q=1%3C%202"
              "http://a%5Bb%5Dc.com"      "http://a%5Bb%5Dc.com"))))
@@ -243,28 +189,28 @@
                           :children)
                       t)
              "[abc<http://123.com/][xyz]>" [(txt "[abc")
-                                            (node {:tag :a
-                                                   :destination "http://123.com/%5D%5Bxyz%5D"}
-                                                  [(txt "http://123.com/][xyz]")])]
-             "<http://123.com/[abc>][xyz]" [(node {:tag :a
-                                                   :destination "http://123.com/%5Babc"}
-                                                  [(txt "http://123.com/[abc")])
+                                            (node {:tag :autolink
+                                                   :destination "http://123.com/%5D%5Bxyz%5D"
+                                                   :text "http://123.com/][xyz]"})]
+             "<http://123.com/[abc>][xyz]" [(node {:tag :autolink
+                                                   :destination "http://123.com/%5Babc"
+                                                   :text "http://123.com/[abc"})
                                                 (txt "][xyz]")]
              "[xyz<http://123.com/][]>"    [(txt "[xyz")
-                                            (node {:tag :a
-                                                   :destination "http://123.com/%5D%5B%5D"}
-                                                  [(txt "http://123.com/][]")])]
-             "<http://123.com/[xy>z][]"    [(node {:tag :a
-                                                   :destination "http://123.com/%5Bxy"}
-                                                  [(txt "http://123.com/[xy")])
+                                            (node {:tag :autolink
+                                                   :destination "http://123.com/%5D%5B%5D"
+                                                   :text "http://123.com/][]"})]
+             "<http://123.com/[xy>z][]"    [(node {:tag :autolink
+                                                   :destination "http://123.com/%5Bxy"
+                                                   :text "http://123.com/[xy"})
                                             (txt "z][]")]
              "[xyz<http://123.com/]>"      [(txt "[xyz")
-                                            (node {:tag :a
-                                                   :destination "http://123.com/%5D"}
-                                                  [(txt "http://123.com/]")])]
-             "<http://123.com/[xy>z]"      [(node {:tag :a
-                                                   :destination "http://123.com/%5Bxy"}
-                                                  [(txt "http://123.com/[xy")])
+                                            (node {:tag :autolink
+                                                   :destination "http://123.com/%5D"
+                                                   :text "http://123.com/]"})]
+             "<http://123.com/[xy>z]"      [(node {:tag :autolink
+                                                   :destination "http://123.com/%5Bxy"
+                                                   :text "http://123.com/[xy"})
                                             (txt "z]")]))
 
       (testing "vs emphasis markers"

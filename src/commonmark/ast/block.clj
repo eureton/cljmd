@@ -42,10 +42,13 @@
 
 (defmethod from-blockrun-entry :ofcblk
   [[tag lines]]
-  (->> (subvec lines 1 (dec (count lines)))
-       (string/join "\r\n")
-       (hash-map :tag tag :content)
-       common/node))
+  (let [info (->> lines first block/opening-code-fence :info)]
+    (->> (subvec lines 1 (dec (count lines)))
+         (string/join "\r\n")
+         (hash-map :tag tag :content)
+         (merge (cond-> {}
+                  (not (string/blank? info)) (assoc :info info)))
+         common/node)))
 
 (defmethod from-blockrun-entry :blank
   [[_ _]]

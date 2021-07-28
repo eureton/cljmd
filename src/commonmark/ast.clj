@@ -38,7 +38,7 @@
 (defn from-string
   "Parses markdown AST from string."
   [string]
-  (reduce #(tree/map %2 %1)
+  (reduce #(%2 %1)
           (->> string
                blockrun/from-string
                blockrun/postprocess

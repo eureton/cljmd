@@ -434,6 +434,55 @@
              [:li :bq]))))
 
   (testing "backslash escapes"
+    (testing "ASCII punctuation"
+      (are [c] (= (-> (str "abc\\" c "xyz") from-string :children)
+                  [(node {:tag :p}
+                         [(node {:tag :txt :content (str "abc" c "xyz")})])])
+           \!
+           \"
+           \#
+           \$
+           \%
+           \&
+           \'
+           \(
+           \)
+           \*
+           \+
+           \,
+           \-
+           \.
+           \/
+           \:
+           \;
+           \<
+           \=
+           \>
+           \?
+           \@
+           \[
+           \\
+           \]
+           \^
+           \_
+           \`
+           \{
+           \|
+           \}
+           \~))
+
+    (testing "not ASCII punctuation"
+      (are [c] (= (-> (str "abc\\" c "xyz") from-string :children)
+                  [(node {:tag :p}
+                         [(node {:tag :txt :content (str "abc\\" c "xyz")})])])
+           \→
+           \A
+           \a
+           \space
+           \3
+           \φ
+           \«))
+
     (testing "entity markers"
       (are [m] (= (-> (str \\ m) from-string :children)
                   [(node {:tag :p}
@@ -469,6 +518,26 @@
     (testing "in raw HTML"
       (is (= (-> "<a href=\"abc\\/)\">" from-string :children)
              [(node {:tag :html-block :content "<a href=\"abc\\/)\">"})])))
+
+    (testing "in link destination"
+      (are [s] (= (-> s from-string :children)
+                  [(node {:tag :p}
+                         [(node {:tag :a :destination "xyz*"}
+                                [(node {:tag :txt :content "abc"})])])])
+           "[abc](xyz\\*)"
+           "[abc]\n\n[abc]: xyz\\*"))
+
+    (testing "in link title"
+      (are [s] (= (-> s from-string :children)
+                  [(node {:tag :p}
+                         [(node {:tag :a :destination "xyz" :title "12*3"}
+                                [(node {:tag :txt :content "abc"})])])])
+           "[abc](xyz '12\\*3')"
+           "[abc]\n\n[abc]: xyz '12\\*3'"))
+
+    (testing "in fenced code block info string"
+      (is (= (-> "``` abc\\+xyz\n123\n```" from-string :children)
+             [(node {:tag :ofcblk :info "abc+xyz" :content "123"})])))
 
     (testing "backslash-escaped backslash escape"
       (are [m t] (= (-> (str \\ \\ m)

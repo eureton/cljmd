@@ -3,8 +3,7 @@
             [flatland.useful.fn :as ufn]
             [commonmark.inline :as inline]
             [commonmark.inline.token :as token]
-            [commonmark.ast.common :refer [node ontology]]
-            [commonmark.util :as util]))
+            [commonmark.ast.common :refer [node ontology]]))
 
 (def degenerate?
   "Returns true if the AST node is degenerate, false otherwise.
@@ -43,7 +42,7 @@
          vec)
     (when string
       [(node {:tag :txt
-              :content (string/replace string #"\\(\p{Punct})" "$1")})])))
+              :content string})])))
 
 (defmethod inflate :link
   [{:as input :keys [text] :re/keys [match]} tokens]
@@ -52,11 +51,8 @@
                             tokens))))
 
 (defmethod inflate :autolink
-  [{:keys [destination text]} _]
-  (node {:tag :a
-         :destination destination}
-        [(node {:tag :txt
-                :content text})]))
+  [input _]
+  (node (select-keys input [:tag :destination :text])))
 
 (defmethod inflate :verbatim
   [input _]

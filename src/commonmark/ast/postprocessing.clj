@@ -1,5 +1,6 @@
 (ns commonmark.ast.postprocessing
   (:require [clojure.string :as string]
+            [clojure.core.incubator :refer [dissoc-in]]
             [flatland.useful.fn :as ufn]
             [treeduce.core :as treeduce]
             [commonmark.ast.common :refer [block? node update-children]]))
@@ -84,10 +85,45 @@
                                                                 :data))))
                 ast))
 
+(defn unescape
+  "Cleans up backslash escapes."
+  [string]
+  (string/replace string #"\\(\p{Punct})" "$1"))
+
+(defn backslash-fix
+  "Clean up backslash escapes from fields which require doing so."
+  [ast]
+  (let [fix (fn [node & fields]
+              (reduce #(cond-> %1
+                         ((:data %1) %2) (update-in [:data %2] unescape))
+                      node
+                      fields))
+        txt? (comp #{:txt} :tag :data)
+        link? (comp #{:a :img} :tag :data)
+        fcblk? (comp #{:ofcblk} :tag :data)]
+    (treeduce/map (ufn/to-fix txt? #(fix % :content)
+                              link? #(fix % :destination :title)
+                              fcblk? #(fix % :info))
+                  ast)))
+
+(defn autolink-fix
+  "Unfold :autolink into :a with a :txt child."
+  [ast]
+  (let [autolink? (comp #{:autolink} :tag :data)
+        unfold #(-> %
+                    (assoc-in [:data :tag] :a)
+                    (assoc :children [(node {:tag :txt
+                                             :content (-> % :data :text)})])
+                    (dissoc-in [:data :text]))]
+    (treeduce/map (ufn/to-fix autolink? unfold)
+                  ast)))
+
 (def queue
   "A collection of post-processing fixes to apply to the AST."
   [hbr-fix
    empty-p-fix
    empty-block-fix
-   blank-fix])
+   blank-fix
+   backslash-fix
+   autolink-fix])
 
