@@ -9,6 +9,37 @@
            [(node {:tag :p}
                   [(node {:tag :txt :content "abc"})])])))
 
+  (testing "ATX heading"
+    (testing "minimal"
+      (is (= (-> "# abc" from-string :children)
+             [(node {:tag :atxh}
+                    [(node {:tag :txt :content "abc"})])])))
+
+    (testing "nested inline"
+      (are [s t] (= (-> s from-string :children)
+                    [(node {:tag :atxh}
+                           t)])
+           "# *abc*"      [(node {:tag :em}
+                                 [(node {:tag :txt :content "abc"})])]
+           "# **abc**"    [(node {:tag :strong}
+                                 [(node {:tag :txt :content "abc"})])]
+           "# `abc`"      [(node {:tag :cs :content "abc"})]
+           "# [abc](xyz)" [(node {:tag :a :destination "xyz"}
+                                 [(node {:tag :txt :content "abc"})])]))
+
+    (testing "deeply nested inline"
+      (is (= (-> "# qpr [*(**abc**)* `def`](xyz)" from-string :children)
+                    [(node {:tag :atxh}
+                           [(node {:tag :txt :content "qpr "})
+                            (node {:tag :a :destination "xyz"}
+                                  [(node {:tag :em}
+                                         [(node {:tag :txt :content "("})
+                                          (node {:tag :strong}
+                                                [(node {:tag :txt :content "abc"})])
+                                          (node {:tag :txt :content ")"})])
+                                   (node {:tag :txt :content " "})
+                                   (node {:tag :cs :content "def"})])])]))))
+
   (testing "link"
     (testing "inline"
       (testing "minimal"
