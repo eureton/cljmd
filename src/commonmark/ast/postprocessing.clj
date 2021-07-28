@@ -2,8 +2,9 @@
   (:require [clojure.string :as string]
             [clojure.core.incubator :refer [dissoc-in]]
             [flatland.useful.fn :as ufn]
-            [treeduce.core :as treeduce]
-            [commonmark.ast.common :refer [block? node update-children]]))
+            [treeduce.core :as tree]
+            [commonmark.ast.common :refer [block? node update-children]]
+            [commonmark.util :as util]))
 
 (defn block-with-hbr-end?
   "True if the node is a block and its last child is an :hbr whose content
@@ -32,11 +33,10 @@
   (let [pop-hbr #(update-children % pop)
         push-bslash #(update % :children conj (node {:tag :txt
                                                      :content "\\"}))]
-    (treeduce/map (ufn/to-fix block-with-space-hbr-end?
-                              pop-hbr
-                              block-with-backslash-hbr-end?
-                              (comp push-bslash pop-hbr))
-                  ast)))
+    (tree/map (ufn/to-fix block-with-space-hbr-end? pop-hbr
+                          block-with-backslash-hbr-end? (comp push-bslash
+                                                              pop-hbr))
+              ast)))
 
 (def empty-text?
   "True if the parameter is a text node whose :content is either nil or \"\"."
@@ -60,8 +60,8 @@
 (defn empty-p-fix
   "Removes empty :p entities from the AST."
   [ast]
-  (treeduce/map #(update-children % (partial remove empty-paragraph?))
-                ast))
+  (tree/map #(update-children % (partial remove empty-paragraph?))
+            ast))
 
 (def empty-block?
   "True if all of the following apply to the parameter:
@@ -73,17 +73,17 @@
 (defn empty-block-fix
   "Removes empty :p entities from the AST."
   [ast]
-  (treeduce/map (ufn/to-fix empty-block? #(dissoc % :children))
-                ast))
+  (tree/map (ufn/to-fix empty-block? #(dissoc % :children))
+            ast))
 
 (defn blank-fix
   "Removes :blank entities from the AST."
   [ast]
-  (treeduce/map #(update-children % (comp vec
-                                          (partial remove (comp #{:blank}
-                                                                :tag
-                                                                :data))))
-                ast))
+  (tree/map #(update-children % (comp vec
+                                      (partial remove (comp #{:blank}
+                                                            :tag
+                                                            :data))))
+            ast))
 
 (defn unescape
   "Cleans up backslash escapes."
@@ -101,10 +101,10 @@
         txt? (comp #{:txt} :tag :data)
         link? (comp #{:a :img} :tag :data)
         fcblk? (comp #{:ofcblk} :tag :data)]
-    (treeduce/map (ufn/to-fix txt? #(fix % :content)
-                              link? #(fix % :destination :title)
-                              fcblk? #(fix % :info))
-                  ast)))
+    (tree/map (ufn/to-fix txt? #(fix % :content)
+                          link? #(fix % :destination :title)
+                          fcblk? #(fix % :info))
+              ast)))
 
 (defn autolink-fix
   "Unfold :autolink into :a with a :txt child."
@@ -115,8 +115,19 @@
                     (assoc :children [(node {:tag :txt
                                              :content (-> % :data :text)})])
                     (dissoc-in [:data :text]))]
-    (treeduce/map (ufn/to-fix autolink? unfold)
-                  ast)))
+    (tree/map (ufn/to-fix autolink? unfold)
+              ast)))
+
+(defn coalesce-txt
+  "Merges adjacent sibling :txt nodes."
+  [ast]
+  (let [merge? (comp #(every? #{:txt} %)
+                     #(map (comp :tag :data) %)
+                     vector)
+        merger #(update-in %1 [:data :content] str (-> %2 :data :content))]
+    (tree/map (fn [node]
+                (update node :children #(util/coalesce merge? merger %)))
+              ast)))
 
 (def queue
   "A collection of post-processing fixes to apply to the AST."
@@ -125,5 +136,6 @@
    empty-block-fix
    blank-fix
    backslash-fix
-   autolink-fix])
+   autolink-fix
+   coalesce-txt])
 

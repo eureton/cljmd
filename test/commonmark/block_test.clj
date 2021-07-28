@@ -129,6 +129,13 @@
     (testing "both - and ="
       (is (nil? (setext-heading "=-=")))))
 
+  (testing "internal space"
+    (are [s] (nil? (setext-heading "=-="))
+         "= ="
+         "- -"
+         "=\t="
+         "-\t-"))
+
   (testing "indentation"
     (testing "valid"
       (are [s] (some? (setext-heading s))

@@ -2,6 +2,18 @@
   (:require [clojure.string :as string]
             [flatland.useful.fn :as ufn]))
 
+(defn coalesce
+  "Merges adjacent items x and y in coll for which (pred x y) returns true.
+   Merging is done by calling (f x y)."
+  [pred f coll]
+  (reduce (fn [acc y]
+            (let [x (peek acc)]
+              (if (pred x y)
+                (-> acc pop (conj (f x y)))
+                (conj acc y))))
+          (empty coll)
+          coll))
+
 (def re-delimiter-escape-hash
   (->> "()[]{}\""
        ((juxt identity #(map (partial str "\\") %)))

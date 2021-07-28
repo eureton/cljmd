@@ -112,7 +112,14 @@
            "  abc"  "   ==="
            "   abc" " ==="
            "   abc" "  ==="
-           "   abc" "   ===")))
+           "   abc" "   ==="))
+
+    (testing "hard line break at end of content line"
+      (are [l c] (= (-> (str l "\n===") from-string :children)
+                    [(node {:tag :stxh :level 1}
+                           [(node {:tag :txt :content c})])])
+           "abc  " "abc"
+           "abc\\" "abc\\")))
 
   (testing "link"
     (testing "inline"
@@ -516,8 +523,7 @@
            "*abc*\\"    [(node {:tag :em}
                                [(node {:tag :txt :content "abc"})])
                          (node {:tag :txt :content "\\"})]
-           "abc\\"      [(node {:tag :txt :content "abc"})
-                         (node {:tag :txt :content "\\"})]
+           "abc\\"      [(node {:tag :txt :content "abc\\"})]
            "\\"         [(node {:tag :txt :content "\\"})]
            "## *abc*  " [(node {:tag :em}
                                [(node {:tag :txt :content "abc"})])]
@@ -526,8 +532,7 @@
            "## *abc*\\" [(node {:tag :em}
                                [(node {:tag :txt :content "abc"})])
                          (node {:tag :txt :content "\\"})]
-           "## abc\\"   [(node {:tag :txt :content "abc"})
-                         (node {:tag :txt :content "\\"})]
+           "## abc\\"   [(node {:tag :txt :content "abc\\"})]
            "## \\"      [(node {:tag :txt :content "\\"})]))
 
     (testing "block containing only a hard line break"
