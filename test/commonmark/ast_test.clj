@@ -119,7 +119,22 @@
                     [(node {:tag :stxh :level 1}
                            [(node {:tag :txt :content c})])])
            "abc  " "abc"
-           "abc\\" "abc\\")))
+           "abc\\" "abc\\"))
+
+    (testing "precedence vs inline markers"
+      (testing "vs code span"
+        (is (= (-> "`abc\n---\n`" from-string :children)
+               [(node {:tag :stxh :level 2}
+                      [(node {:tag :txt :content "`abc"})])
+                (node {:tag :p}
+                      [(node {:tag :txt :content "`"})])])))
+
+      (testing "vs raw HTML"
+        (is (= (-> "<a href=\"abc\n---\nxyz\"/>" from-string :children)
+               [(node {:tag :stxh :level 2}
+                      [(node {:tag :txt :content "<a href=\"abc"})])
+                (node {:tag :p}
+                      [(node {:tag :txt :content "xyz\"/>"})])])))))
 
   (testing "link"
     (testing "inline"
