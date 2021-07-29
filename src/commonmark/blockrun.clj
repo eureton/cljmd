@@ -123,7 +123,7 @@
 
 (defmethod add [:p :tbr]
   [x y]
-  (if (some? (block/setext-heading (->> y first entry/origin)))
+  (if (-> y first entry/origin block/setext-heading some?)
     (fuse-split (retag x :last :stxh) y 1)
     (concat x y)))
 
@@ -193,11 +193,12 @@
 
 (defmethod add [:html-block-unpaired :_]
   [x y]
-  (let [origin (->> x last entry/origin)]
-    (if (block/html-block-pair? origin origin)
-      (concat x y)
-      (add (fuse-left x (take 1 y))
-           (rest y)))))
+  (let [x-begins? (->> x last entry/origin block/html-block-begin some?)
+        y-tbr? (-> y first first (= :tbr))]
+    (cond x-begins? (add (fuse-left x (take 1 y))
+                         (rest y))
+          y-tbr?    (fuse-split (retag x :last :stxh) y 1)
+          :else     (concat x y))))
 
 (defmethod add :default
   ([] zero)
@@ -207,10 +208,13 @@
          y-entry (first y)
          x-tag (first x-entry)
          y-tag (first y-entry)
-         left-handler ((methods add) [x-tag :_])]
+         method-map (methods add)
+         left-handler (method-map [x-tag :_])
+         right-handler (method-map [:_ y-tag])]
      (cond
        (empty? y)      x
        left-handler    (left-handler x y)
+       right-handler   (right-handler x y)
        (= x-tag y-tag) (fuse-left x y)
        :else           (concat x y)))))
 

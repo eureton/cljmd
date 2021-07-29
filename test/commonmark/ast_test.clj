@@ -205,7 +205,18 @@
                                              [(node {:tag :txt :content "xyz"})])])
            "- xyz"              (node {:tag :li}
                                       [(node {:tag :p}
-                                             [(node {:tag :txt :content "xyz"})])]))))
+                                             [(node {:tag :txt :content "xyz"})])])))
+
+    (testing "escaped block markers in text line"
+      (are [b c] (= (-> (str b "\n---") from-string :children)
+                    [(node {:tag :stxh :level 2}
+                           [(node {:tag :txt :content c})])])
+           "\\---"              "---"
+           "\\# xyz"            "# xyz"
+           "\\    xyz"          "\\    xyz"
+           "\\<pre>xyz\\</pre>" "<pre>xyz</pre>"
+           "\\> xyz"            "> xyz"
+           "\\- xyz"            "- xyz")))
 
   (testing "link"
     (testing "inline"
