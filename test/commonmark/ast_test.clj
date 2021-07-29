@@ -216,7 +216,16 @@
            "\\    xyz"          "\\    xyz"
            "\\<pre>xyz\\</pre>" "<pre>xyz</pre>"
            "\\> xyz"            "> xyz"
-           "\\- xyz"            "- xyz")))
+           "\\- xyz"            "- xyz"))
+
+    (testing "text-before-text-after grey area"
+      (is (= (-> "abc\nxyz\n---\n123" from-string :children)
+             [(node {:tag :stxh :level 2}
+                    [(node {:tag :txt :content "abc"})
+                     (node {:tag :sbr :content "\r\n"})
+                     (node {:tag :txt :content "xyz"})])
+              (node {:tag :p}
+                    [(node {:tag :txt :content "123"})])]))))
 
   (testing "link"
     (testing "inline"
