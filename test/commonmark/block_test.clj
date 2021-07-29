@@ -1047,6 +1047,9 @@
          "[abc]: xyz '123'"
          "[abc]: xyz '123' "))
 
+  (testing "non-whitespace character after title"
+    (is (nil? (link-reference-definition "[abc]: xyz '123' q"))))
+
   (testing "valid"
     (are [s] (some? (link-reference-definition s))
          "[abc\\\\]: xyz"))
