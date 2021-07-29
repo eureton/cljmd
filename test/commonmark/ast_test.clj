@@ -158,7 +158,37 @@
                [(node {:tag :li}
                       [(node {:tag :p}
                              [(node {:tag :txt :content "abc"})])])
-                (node {:tag :tbr :content "---"})])))))
+                (node {:tag :tbr :content "---"})]))))
+
+    (testing "preceded by block"
+      (are [b n] (= (-> (str b "\nabc\n---") from-string :children)
+                    [n
+                     (node {:tag :stxh :level 2}
+                           [(node {:tag :txt :content "abc"})])])
+           "---"                (node {:tag :tbr :content "---"})
+           "# xyz"              (node {:tag :atxh}
+                                      [(node {:tag :txt :content "xyz"})])
+           "    xyz"            (node {:tag :icblk :content "xyz"})
+           "```\nxyz\n```"      (node {:tag :ofcblk :content "xyz"})
+           "<pre>\nxyz\n</pre>" (node {:tag :html-block :content "<pre>\r\nxyz\r\n</pre>"})))
+
+    (testing "followed by block"
+      (are [b n] (= (-> (str "abc\n---\n" b) from-string :children)
+                    [(node {:tag :stxh :level 2}
+                           [(node {:tag :txt :content "abc"})])
+                     n])
+           "---"                (node {:tag :tbr :content "---"})
+           "# xyz"              (node {:tag :atxh}
+                                      [(node {:tag :txt :content "xyz"})])
+           "    xyz"            (node {:tag :icblk :content "xyz"})
+           "```\nxyz\n```"      (node {:tag :ofcblk :content "xyz"})
+           "<pre>\nxyz\n</pre>" (node {:tag :html-block :content "<pre>\r\nxyz\r\n</pre>"})
+           "> xyz"              (node {:tag :bq}
+                                      [(node {:tag :p}
+                                             [(node {:tag :txt :content "xyz"})])])
+           "- xyz"              (node {:tag :li}
+                                      [(node {:tag :p}
+                                             [(node {:tag :txt :content "xyz"})])]))))
 
   (testing "link"
     (testing "inline"
