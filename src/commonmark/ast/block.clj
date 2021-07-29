@@ -44,7 +44,7 @@
   [[tag lines]]
   (let [munch #(-> %
                    (string/replace #"(?<=^ {0,3})\t" "    ")
-                   (string/replace #"^ {1,4}" ""))]
+                   (util/trim-leading-spaces 4))]
     (->> lines
          (split-with clojure.string/blank?)
          second
