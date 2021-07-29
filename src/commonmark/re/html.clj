@@ -42,7 +42,7 @@
   (re.common/unescaped #"\?>"))
 
 (def declaration-begin
-  (re.common/unescaped #"<![A-Z]"))
+  (re.common/unescaped #"<![a-zA-Z]"))
 
 (def declaration-end
   (re.common/unescaped \>))

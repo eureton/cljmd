@@ -46,11 +46,11 @@
   (re-pattern (str "^" block-quote-marker #"(\p{Print}*)$")))
 
 (def html-block-variant-1-tag
-  #"(?:(?i)script|pre|style)")
+  #"(?:(?i)script|pre|style|textarea)")
 
 (def html-block-variant-1-begin-line
   (re-pattern (str #"^ {0,3}" (re.common/unescaped \<)
-                   html-block-variant-1-tag #"(?:\s|>|$).*")))
+                   html-block-variant-1-tag #"(?:[ \t>]|$).*")))
 
 (def html-block-variant-2-begin-line
   (re-pattern (str #"^ {0,3}" re.html/comment-begin ".*")))
@@ -67,12 +67,13 @@
 (def html-block-variant-6-begin-line
   (re-pattern (str #"^ {0,3}" (re.common/unescaped "</?")
                    "(?:(?i)" (string/join "|" re.html/block-variant-6-tags) ")"
-                   #"(?:\s+|/?>|$).*")))
+                   #"(?:\s|/?>|$).*")))
 
 (def html-block-variant-7-begin-line
   (re-pattern (str "^ {0,3}"
                    "(?:"
-                   (re.html/open-tag {:exclude-tags ["script" "style" "pre"]})
+                   (re.html/open-tag {:exclude-tags ["script" "style"
+                                                     "pre" "textarea"]})
                    "|"
                    re.html/closing-tag
                    ")"

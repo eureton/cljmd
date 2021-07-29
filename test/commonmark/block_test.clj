@@ -411,7 +411,8 @@
                             1)
              "<pre>"
              "<script>"
-             "<style>"))
+             "<style>"
+             "<textarea>"))
 
       (testing "invalid"
         (are [t] (not (contains? (-> (str t "xyz") html-block-begin :variant)
@@ -421,7 +422,8 @@
              "<>"
              "\\<pre>"
              "\\<script>"
-             "\\<style>")))
+             "\\<style>"
+             "\\<textarea>")))
 
     (testing "capture"
       (are [s] (let [res (html-block-begin s)]
@@ -430,12 +432,15 @@
            "<pre"
            "<script"
            "<style"
+           "<textarea"
            "<pre>xyz"
            "<script>xyz"
            "<style>xyz"
+           "<textarea>xyz"
            "<pre xyz"
            "<script xyz"
-           "<style xyz"))
+           "<style xyz"
+           "<textarea xyz"))
 
     (testing "indentation"
       (testing "valid"
@@ -686,9 +691,11 @@
              "<a href=\"xyz\" />"
              "</a>"
              "</a >"
+             "</textarea>"
              "</script>"
              "</style>"
              "</pre>"
+             "</textarea >"
              "</script >"
              "</style >"
              "</pre >"))
@@ -696,27 +703,35 @@
       (testing "invalid"
         (are [s] (not (contains? (-> s html-block-begin :variant)
                                  7))
+             "<textarea>"
              "<script>"
              "<style>"
              "<pre>"
+             "<textarea >"
              "<script >"
              "<style >"
              "<pre >"
+             "<textarea abc>"
              "<script abc>"
              "<style abc>"
              "<pre abc>"
+             "<textarea abc=\"xyz\">"
              "<script abc=\"xyz\">"
              "<style abc=\"xyz\">"
              "<pre abc=\"xyz\">"
+             "<textarea/>"
              "<script/>"
              "<style/>"
              "<pre/>"
+             "<textarea />"
              "<script />"
              "<style />"
              "<pre />"
+             "<textarea abc/>"
              "<script abc/>"
              "<style abc/>"
              "<pre abc/>"
+             "<textarea abc=\"xyz\"/>"
              "<script abc=\"xyz\"/>"
              "<style abc=\"xyz\"/>"
              "<pre abc=\"xyz\"/>"
@@ -754,6 +769,7 @@
         (are [t] (contains? (-> t html-block-end :variant)
                             1)
              "</pre>"
+             "</textarea>"
              "</script>"
              "</style>"))
 
@@ -764,6 +780,7 @@
              "</xyz>"
              "</>"
              "\\</pre>"
+             "\\</textarea>"
              "\\</script>"
              "\\</style>")))
 
@@ -772,12 +789,15 @@
                  (and (contains? (:variant res) 1)
                       (= s (:content res))))
            "</pre>"
+           "</textarea>"
            "</script>"
            "</style>"
            "</pre> xyz"
+           "</textarea> xyz"
            "</script> xyz"
            "</style> xyz"
            "abc </pre> xyz"
+           "abc </textarea> xyz"
            "abc </script> xyz"
            "abc </style> xyz"))
 
