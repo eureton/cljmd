@@ -14,6 +14,12 @@
           (empty coll)
           coll))
 
+(defn trim-leading-spaces
+  "Remove max n spaces from the beginning of string s."
+  [s n]
+  (cond-> s
+    (>= n 1) (string/replace (re-pattern (str "^ {1," n "}")) "")))
+
 (def re-delimiter-escape-hash
   (->> "()[]{}\""
        ((juxt identity #(map (partial str "\\") %)))

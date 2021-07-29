@@ -5,7 +5,8 @@
             [commonmark.block :as block]
             [commonmark.inline :as inline]
             [commonmark.blockrun :as blockrun]
-            [commonmark.blockrun.entry :as blockrun.entry]))
+            [commonmark.blockrun.entry :as blockrun.entry]
+            [commonmark.util :as util]))
 
 (defmulti from-blockrun-entry
   "Parses markdown AST from blockrun entry."
@@ -69,8 +70,10 @@
 
 (defmethod from-blockrun-entry :ofcblk
   [[tag lines]]
-  (let [info (->> lines first block/opening-code-fence :info)]
-    (->> (subvec lines 1 (dec (count lines)))
+  (let [opener (->> lines first block/opening-code-fence)
+        info (:info opener)]
+    (->> (subvec lines 1 (-> lines count dec (max 1)))
+         (map #(util/trim-leading-spaces % (-> opener :indent count)))
          (string/join "\r\n")
          (hash-map :tag tag :content)
          (merge (cond-> {}

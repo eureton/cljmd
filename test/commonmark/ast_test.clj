@@ -377,6 +377,79 @@
                              [(node {:tag :p}
                                     [(node {:tag :txt :content "xyz"})])])])])))))
 
+  (testing "fenced code block"
+    (testing "minimal"
+      (are [f] (= (-> (string/join "\n" [f "abc" f])
+                      from-string
+                      :children)
+                  [(node {:tag :ofcblk :content "abc"})])
+           "```"
+           "````"
+           "`````"
+           "~~~"
+           "~~~~"
+           "~~~~~"))
+
+    (testing "info string"
+      (testing "without backtick"
+        (are [i] (= (-> (str "``` " i "\nabc\n```")
+                        from-string
+                        :children)
+               [(node {:tag :ofcblk :info i :content "abc"})])
+             "xyz"
+             "~xyz~"))
+
+      (testing "with backtick"
+        (testing "tilde fence"
+          (is (= (-> "~~~ 12`34\nabc\n~~~" from-string :children)
+                 [(node {:tag :ofcblk :info "12`34" :content "abc"})])))
+
+        (testing "backtick fence"
+          (is (= (-> "``` 12`34\nabc\n```" from-string :children)
+                 [(node {:tag :p}
+                        [(node {:tag :txt :content "``` 12`34"})
+                         (node {:tag :sbr :content "\r\n"})
+                         (node {:tag :txt :content "abc"})])
+                  (node {:tag :ofcblk :content ""})])))))
+
+    (testing "content parsing"
+      (is (= (-> "```\n*abc*\n`xyz`\n**123**\n> def\n```"
+                 from-string
+                 :children)
+             [(node {:tag :ofcblk :content "*abc*\r\n`xyz`\r\n**123**\r\n> def"})])))
+
+    (testing "indentation removal"
+      (is (= (-> " ```\n abc\n  xyz\n 123\n ```" from-string :children)
+             [(node {:tag :ofcblk :content "abc\r\n xyz\r\n123"})])))
+
+    (testing "preceded by block"
+      (are [b n] (= (-> (str b "\n```\nabc\n```") from-string :children)
+                    [n
+                     (node {:tag :ofcblk :content "abc"})])
+           "---"                (node {:tag :tbr :content "---"})
+           "# xyz"              (node {:tag :atxh}
+                                      [(node {:tag :txt :content "xyz"})])
+           "xyz\n---"           (node {:tag :stxh :level 2}
+                                      [(node {:tag :txt :content "xyz"})])
+           "    xyz"            (node {:tag :icblk :content "xyz"})
+           "<pre>\nxyz\n</pre>" (node {:tag :html-block :content "<pre>\r\nxyz\r\n</pre>"})
+           "xyz"                (node {:tag :p}
+                                      [(node {:tag :txt :content "xyz"})])))
+
+    (testing "followed by block"
+      (are [b n] (= (-> (str "```\nabc\n```\n" b) from-string :children)
+                    [(node {:tag :ofcblk :content "abc"})
+                     n])
+           "---"                (node {:tag :tbr :content "---"})
+           "# xyz"              (node {:tag :atxh}
+                                      [(node {:tag :txt :content "xyz"})])
+           "xyz\n---"           (node {:tag :stxh :level 2}
+                                      [(node {:tag :txt :content "xyz"})])
+           "    xyz"            (node {:tag :icblk :content "xyz"})
+           "<pre>\nxyz\n</pre>" (node {:tag :html-block :content "<pre>\r\nxyz\r\n</pre>"})
+           "xyz"                (node {:tag :p}
+                                      [(node {:tag :txt :content "xyz"})]))))
+
   (testing "link"
     (testing "inline"
       (testing "minimal"
