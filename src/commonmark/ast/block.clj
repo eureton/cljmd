@@ -31,11 +31,27 @@
 (defmethod from-blockrun-entry :leaf
   [[tag lines]]
   (let [parsers {:atxh block/atx-heading
-                 :icblk block/indented-chunk-line
                  :p block/paragraph-line}
         parsed (parsers tag #(hash-map :content %))]
     (->> lines
          (map (comp :content parsed))
+         (string/join "\r\n")
+         (hash-map :tag tag :content)
+         common/node)))
+
+(defmethod from-blockrun-entry :icblk
+  [[tag lines]]
+  (let [munch #(-> %
+                   (string/replace #"(?<=^ {0,3})\t" "    ")
+                   (string/replace #"^ {1,4}" ""))]
+    (->> lines
+         (split-with clojure.string/blank?)
+         second
+         reverse
+         (split-with clojure.string/blank?)
+         second
+         reverse
+         (map munch)
          (string/join "\r\n")
          (hash-map :tag tag :content)
          common/node)))

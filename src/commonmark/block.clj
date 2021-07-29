@@ -55,7 +55,7 @@
 
 (defn blank-line
   [line]
-  (when ((every-pred string? empty?) line)
+  (when (string/blank? line)
     {:tag :blank}))
 
 (defn list-item-lead-line

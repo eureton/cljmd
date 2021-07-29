@@ -60,11 +60,11 @@
   [x y direction]
   (let [x-block (last x)
         y-block (first y)
-        [destination source] (case direction
-                               :ltor [y-block x-block]
-                               :rtol [x-block y-block])
+        destination (case direction
+                      :ltor y-block
+                      :rtol x-block)
         mid (some-> destination
-                    (update 1 #(apply conj %1 %2) (second source))
+                    (assoc 1 (apply conj (second x-block) (second y-block)))
                     vector)]
     (concat (butlast x)
             mid

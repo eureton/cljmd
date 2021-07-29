@@ -227,6 +227,126 @@
               (node {:tag :p}
                     [(node {:tag :txt :content "123"})])]))))
 
+  (testing "indented code block"
+    (testing "minimal"
+      (are [s] (= (-> s from-string :children)
+                  [(node {:tag :icblk :content "abc"})])
+           "    abc"
+           "\tabc"))
+
+    (testing "content parsing"
+      (is (= (-> "    *abc*\n    `xyz`\n    **123**\n    > def"
+                 from-string
+                 :children)
+             [(node {:tag :icblk :content "*abc*\r\n`xyz`\r\n**123**\r\n> def"})])))
+
+    (testing "blank lines within (less than 4 spaces of whitespace)"
+      (are [l] (= (-> (string/join "\n" ["    abc" l "    xyz"])
+                      from-string
+                      :children)
+                  [(node {:tag :icblk :content "abc\r\n\r\nxyz"})])
+           ""
+           " "
+           "  "
+           "   "
+           "    "
+           "\t"))
+
+    (testing "spaces/tabs beyond 4"
+      (testing "text"
+        (are [s c] (= (-> s from-string :children)
+                      [(node {:tag :icblk :content c})])
+             "     abc"    " abc"
+             "      abc"   "  abc"
+             "       abc"  "   abc"
+             "        abc" "    abc"
+             "\t abc"      " abc"
+             "\t  abc"     "  abc"
+             "\t   abc"    "   abc"
+             "\t    abc"   "    abc"
+             "\t\tabc"     "\tabc"
+             "\t\t\tabc"   "\t\tabc"
+             "\t \tabc"    " \tabc"
+             "\t\t abc"    "\t abc"))
+
+      (testing "blank"
+        (are [l c] (= (-> (str "\tabc\n" l "\n\txyz")
+                          from-string
+                          :children)
+                      [(node {:tag :icblk
+                              :content (str "abc\r\n" c "\r\nxyz")})])
+             "     "   " "
+             "      "  "  "
+             "       " "   "
+             "\t "     " "
+             "\t  "    "  "
+             "\t\t"    "\t"
+             "\t \t"   " \t"
+             " \t"     " "
+             "  \t"    "  "
+             "   \t"   "   ")))
+
+    (testing "preceded by paragraph"
+      (is (= (-> "abc\n    xyz" from-string :children)
+             [(node {:tag :p}
+                    [(node {:tag :txt :content "abc"})
+                     (node {:tag :sbr :content "\r\n"})
+                     (node {:tag :txt :content "xyz"})])])))
+
+    (testing "followed by paragraph"
+      (is (= (-> "    abc\nxyz" from-string :children)
+             [(node {:tag :icblk :content "abc"})
+              (node {:tag :p}
+                    [(node {:tag :txt :content "xyz"})])])))
+
+    (testing "preceded by block"
+      (are [b n] (= (-> (str b "\n    abc") from-string :children)
+                    [n
+                     (node {:tag :icblk :content "abc"})])
+           "---"                (node {:tag :tbr :content "---"})
+           "# xyz"              (node {:tag :atxh}
+                                      [(node {:tag :txt :content "xyz"})])
+           "xyz\n---"           (node {:tag :stxh :level 2}
+                                      [(node {:tag :txt :content "xyz"})])
+           "```\nxyz\n```"      (node {:tag :ofcblk :content "xyz"})
+           "<pre>\nxyz\n</pre>" (node {:tag :html-block :content "<pre>\r\nxyz\r\n</pre>"})))
+
+    (testing "followed by block"
+      (are [b n] (= (-> (str "    abc\n" b) from-string :children)
+                    [(node {:tag :icblk :content "abc"})
+                     n])
+           "---"                (node {:tag :tbr :content "---"})
+           "# xyz"              (node {:tag :atxh}
+                                      [(node {:tag :txt :content "xyz"})])
+           "xyz\n---"           (node {:tag :stxh :level 2}
+                                      [(node {:tag :txt :content "xyz"})])
+           "```\nxyz\n```"      (node {:tag :ofcblk :content "xyz"})
+           "<pre>\nxyz\n</pre>" (node {:tag :html-block :content "<pre>\r\nxyz\r\n</pre>"})))
+
+    (testing "preceded by indented blank line"
+      (are [l] (= (-> (str l "\n    abc") from-string :children)
+                  [(node {:tag :icblk :content "abc"})])
+           "    "
+           "     "
+           "      "
+           "\t"
+           "\t\t"
+           "\t\t\t"
+           "\t "
+           "\t  \t"))
+
+    (testing "followed by indented blank line"
+      (are [l] (= (-> (str "    abc\n" l) from-string :children)
+                  [(node {:tag :icblk :content "abc"})])
+           "    "
+           "     "
+           "      "
+           "\t"
+           "\t\t"
+           "\t\t\t"
+           "\t "
+           "\t  \t")))
+
   (testing "link"
     (testing "inline"
       (testing "minimal"
