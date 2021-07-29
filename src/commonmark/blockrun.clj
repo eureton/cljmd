@@ -127,6 +127,10 @@
     (fuse-split (retag x :last :stxh) y 1)
     (concat x y)))
 
+(defmethod add [:tbr :tbr]
+  [x y]
+  (concat x y))
+
 (defmethod add [:p :li]
   [x y]
   (if (->> y
@@ -226,7 +230,7 @@
   [blockrun]
   (util/coalesce #(let [tag (first %2)]
                     (and (= (first %1) tag)
-                         (not= tag :adef)))
+                         (nil? (#{:tbr :adef} tag))))
                  #(update %1 1 (comp vec concat) (second %2))
                  blockrun))
 

@@ -188,6 +188,23 @@
                                              [(node {:tag :txt :content "xyz"})])])
            "- xyz"              (node {:tag :li}
                                       [(node {:tag :p}
+                                             [(node {:tag :txt :content "xyz"})])])))
+
+    (testing "non-paragraph text line"
+      (are [l n] (= (-> (str l "\n---") from-string :children)
+                    [n
+                     (node {:tag :tbr :content "---"})])
+           "---"                (node {:tag :tbr :content "---"})
+           "# xyz"              (node {:tag :atxh}
+                                      [(node {:tag :txt :content "xyz"})])
+           "    xyz"            (node {:tag :icblk :content "xyz"})
+           "```\nxyz\n```"      (node {:tag :ofcblk :content "xyz"})
+           "<pre>\nxyz\n</pre>" (node {:tag :html-block :content "<pre>\r\nxyz\r\n</pre>"})
+           "> xyz"              (node {:tag :bq}
+                                      [(node {:tag :p}
+                                             [(node {:tag :txt :content "xyz"})])])
+           "- xyz"              (node {:tag :li}
+                                      [(node {:tag :p}
                                              [(node {:tag :txt :content "xyz"})])]))))
 
   (testing "link"
