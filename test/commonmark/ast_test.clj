@@ -345,7 +345,19 @@
            "\t\t"
            "\t\t\t"
            "\t "
-           "\t  \t")))
+           "\t  \t"))
+
+    (testing "trailing spaces/tabs"
+      (are [s] (= (-> (str "    abc" s) from-string :children)
+                  [(node {:tag :icblk :content (str "abc" s)})])
+           " "
+           "  "
+           "   "
+           "\t"
+           "\t\t"
+           "\t\t\t"
+           "\t "
+           " \t")))
 
   (testing "link"
     (testing "inline"
