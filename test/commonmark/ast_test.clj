@@ -357,7 +357,25 @@
            "\t\t"
            "\t\t\t"
            "\t "
-           " \t")))
+           " \t"))
+
+    (testing "list item ambiguity"
+      (testing "first level"
+        (is (= (-> "  - abc\n\n    xyz" from-string :children)
+               [(node {:tag :li}
+                      [(node {:tag :p}
+                             [(node {:tag :txt :content "abc"})])
+                       (node {:tag :p}
+                             [(node {:tag :txt :content "xyz"})])])])))
+
+      (testing "second level"
+        (is (= (-> "1.  abc\n\n    - xyz" from-string :children)
+               [(node {:tag :li}
+                      [(node {:tag :p}
+                             [(node {:tag :txt :content "abc"})])
+                       (node {:tag :li}
+                             [(node {:tag :p}
+                                    [(node {:tag :txt :content "xyz"})])])])])))))
 
   (testing "link"
     (testing "inline"
