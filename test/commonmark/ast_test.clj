@@ -617,6 +617,57 @@
                                       [(node {:tag :p}
                                              [(node {:tag :txt :content "xyz"})])]))))
 
+  (testing "list"
+    (testing "minimal"
+      (are [s n] (= (-> s from-string :children)
+                    [(node {:tag :li}
+                           n)])
+           "- abc"               [(node {:tag :p}
+                                        [(node {:tag :txt :content "abc"})])]
+           "- # abc"             [(node {:tag :atxh}
+                                        [(node {:tag :txt :content "abc"})])]
+           "- abc\n  ---"        [(node {:tag :stxh :level 2}
+                                        [(node {:tag :txt :content "abc"})])]
+           "-     abc"           [(node {:tag :icblk :content "abc"})]
+           "- ```\n  abc\n  ```" [(node {:tag :ofcblk :content "abc"})]
+           "- <pre>abc</pre>"    [(node {:tag :html-block
+                                         :content "<pre>abc</pre>"})]
+           "- > abc\n  > xyz"    [(node {:tag :bq}
+                                        [(node {:tag :p}
+                                               [(node {:tag :txt
+                                                       :content "abc"})
+                                                (node {:tag :sbr
+                                                       :content "\r\n"})
+                                                (node {:tag :txt
+                                                       :content "xyz"})])])]
+           "- - abc"             [(node {:tag :li}
+                                        [(node {:tag :p}
+                                               [(node {:tag :txt :content "abc"})])])]))
+    (testing "asymmetrical embedding"
+      (is (= (-> "   > > 1. abc\n>>     xyz"
+                 from-string
+                 :children)
+             [(node {:tag :bq}
+                    [(node {:tag :bq}
+                           [(node {:tag :li}
+                                  [(node {:tag :p}
+                                         [(node {:tag :txt
+                                                 :content "abc"})
+                                          (node {:tag :sbr
+                                                 :content "\r\n"})
+                                          (node {:tag :txt
+                                                 :content "xyz"})])])])])])))
+    (testing "blank lines within blocks"
+      (are [n] (= (-> (str "- abc" (string/join (repeat n "\n")) "  xyz")
+                      from-string
+                      :children)
+                  [(node {:tag :li}
+                         [(node {:tag :p}
+                                [(node {:tag :txt :content "abc"})])
+                          (node {:tag :p}
+                                [(node {:tag :txt :content "xyz"})])])])
+           2 3 4)))
+
   (testing "link"
     (testing "inline"
       (testing "minimal"
