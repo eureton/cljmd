@@ -450,6 +450,173 @@
            "xyz"                (node {:tag :p}
                                       [(node {:tag :txt :content "xyz"})]))))
 
+  (testing "blockquote"
+    (testing "minimal"
+      (are [s n] (= (-> s from-string :children)
+                    [(node {:tag :bq}
+                           n)])
+           "> abc"               [(node {:tag :p}
+                                        [(node {:tag :txt :content "abc"})])]
+           "> # abc"             [(node {:tag :atxh}
+                                        [(node {:tag :txt :content "abc"})])]
+           "> abc\n> ---"        [(node {:tag :stxh :level 2}
+                                        [(node {:tag :txt :content "abc"})])]
+           ">     abc"           [(node {:tag :icblk :content "abc"})]
+           "> ```\n> abc\n> ```" [(node {:tag :ofcblk :content "abc"})]
+           "> <pre>abc</pre>"    [(node {:tag :html-block
+                                         :content "<pre>abc</pre>"})]
+           "> - abc\n> - xyz"    [(node {:tag :li}
+                                        [(node {:tag :p}
+                                               [(node {:tag :txt
+                                                       :content "abc"})])])
+                                  (node {:tag :li}
+                                        [(node {:tag :p}
+                                               [(node {:tag :txt
+                                                       :content "xyz"})])])]
+           "> > abc"             [(node {:tag :bq}
+                                        [(node {:tag :p}
+                                               [(node {:tag :txt :content "abc"})])])]))
+
+    (testing "less 4 spaces of non-marker indentation"
+      (is (= (-> ">    abc" from-string :children)
+                    [(node {:tag :bq}
+                           [(node {:tag :p}
+                                  [(node {:tag :txt :content "abc"})])])])))
+
+    (testing "marker immediately followed by content"
+      (is (= (-> ">abc"
+                 from-string
+                 :children)
+             [(node {:tag :bq}
+                    [(node {:tag :p}
+                           [(node {:tag :txt :content "abc"})])])])))
+
+    (testing "lazy"
+      (testing "paragraph continuation line"
+        (are [s] (= (-> s from-string :children)
+                    [(node {:tag :bq}
+                           [(node {:tag :p}
+                                  [(node {:tag :txt :content "abc"})
+                                   (node {:tag :sbr :content "\r\n"})
+                                   (node {:tag :txt :content "xyz"})
+                                   (node {:tag :sbr :content "\r\n"})
+                                   (node {:tag :txt :content "123"})])])])
+             "> abc\nxyz\n123"
+             "> abc\n> xyz\n123"
+             "> abc\nxyz\n> 123"))
+
+      (testing "not paragraph continuation line"
+        (is (= (-> "> abc\n---" from-string :children)
+               [(node {:tag :bq}
+                      [(node {:tag :p}
+                             [(node {:tag :txt :content "abc"})])])
+                (node {:tag :tbr :content "---"})])))
+
+      (testing "4 or more spaces of indentation"
+        (are [s] (= (-> (str "> abc\n    " s)
+                        from-string
+                        :children)
+                    [(node {:tag :bq}
+                           [(node {:tag :p}
+                                  [(node {:tag :txt :content "abc"})
+                                   (node {:tag :sbr :content "\r\n"})
+                                   (node {:tag :txt :content s})])])])
+             "- xyz"
+             "# xyz"
+             "> xyz"))
+
+      (testing "blank line with marker, then paragraph"
+        (is (= (-> "> abc\n>\nxyz" from-string :children)
+               [(node {:tag :bq}
+                      [(node {:tag :p}
+                             [(node {:tag :txt :content "abc"})])])
+                (node {:tag :p}
+                      [(node {:tag :txt :content "xyz"})])])))
+
+      (testing "deep nesting"
+        (are [s] (= (-> (str "> > > abc\n" s)
+                        from-string
+                        :children)
+                    [(node {:tag :bq}
+                           [(node {:tag :bq}
+                                  [(node {:tag :bq}
+                                         [(node {:tag :p}
+                                                [(node {:tag :txt
+                                                        :content "abc"})
+                                                 (node {:tag :sbr
+                                                        :content "\r\n"})
+                                                 (node {:tag :txt
+                                                        :content "xyz"})])])])])])
+             "> > xyz"
+             "> xyz"
+             "xyz")))
+
+    (testing "consecutive"
+      (is (= (-> "> abc\n>\n> xyz" from-string :children)
+             [(node {:tag :bq}
+                    [(node {:tag :p}
+                           [(node {:tag :txt :content "abc"})])
+                     (node {:tag :p}
+                           [(node {:tag :txt :content "xyz"})])])])))
+
+    (testing "empty"
+      (are [s] (= (-> s from-string :children)
+                  [(node {:tag :bq})])
+           ">"
+           ">\n>  "
+           ">\n>  \n> "))
+
+    (testing "blank lines"
+      (testing "inside"
+        (is (= (-> ">\n> abc\n>" from-string :children)
+               [(node {:tag :bq}
+                      [(node {:tag :p}
+                             [(node {:tag :txt :content "abc"})])])])))
+
+      (testing "outside"
+        (is (= (-> "> abc\n\n> xyz" from-string :children)
+               [(node {:tag :bq}
+                      [(node {:tag :p}
+                             [(node {:tag :txt :content "abc"})])])
+                (node {:tag :bq}
+                      [(node {:tag :p}
+                             [(node {:tag :txt :content "xyz"})])])]))))
+
+    (testing "preceded by block"
+      (are [b n] (= (-> (str b "\n> abc") from-string :children)
+                    [n
+                     (node {:tag :bq}
+                           [(node {:tag :p}
+                                  [(node {:tag :txt :content "abc"})])])])
+           "---"                (node {:tag :tbr :content "---"})
+           "# xyz"              (node {:tag :atxh}
+                                      [(node {:tag :txt :content "xyz"})])
+           "xyz\n---"           (node {:tag :stxh :level 2}
+                                      [(node {:tag :txt :content "xyz"})])
+           "    xyz"            (node {:tag :icblk :content "xyz"})
+           "```\nxyz\n```"      (node {:tag :ofcblk :content "xyz"})
+           "<pre>\nxyz\n</pre>" (node {:tag :html-block :content "<pre>\r\nxyz\r\n</pre>"})
+           "- xyz"              (node {:tag :li}
+                                      [(node {:tag :p}
+                                             [(node {:tag :txt :content "xyz"})])])
+           "xyz"                (node {:tag :p}
+                                      [(node {:tag :txt :content "xyz"})])))
+
+    (testing "followed by block"
+      (are [b n] (= (-> (str "> abc\n" b) from-string :children)
+                    [(node {:tag :bq}
+                           [(node {:tag :p}
+                                  [(node {:tag :txt :content "abc"})])])
+                     n])
+           "---"                (node {:tag :tbr :content "---"})
+           "# xyz"              (node {:tag :atxh}
+                                      [(node {:tag :txt :content "xyz"})])
+           "```\nxyz\n```"      (node {:tag :ofcblk :content "xyz"})
+           "<pre>\nxyz\n</pre>" (node {:tag :html-block :content "<pre>\r\nxyz\r\n</pre>"})
+           "- xyz"              (node {:tag :li}
+                                      [(node {:tag :p}
+                                             [(node {:tag :txt :content "xyz"})])]))))
+
   (testing "link"
     (testing "inline"
       (testing "minimal"

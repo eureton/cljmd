@@ -68,10 +68,10 @@
            (concat [:li])
            (zipmap [:tag :indent :marker :space :content])))
 
-(defn block-quote-line
+(defn blockquote-line
   [line]
   (some->> line
-           (re-find re.block/block-quote-line)
+           (re-find re.block/blockquote-line)
            (drop 1)
            (concat [:bq])
            (zipmap [:tag :indent :space :content])))
@@ -150,7 +150,7 @@
     ((some-fn thematic-break
               atx-heading
               list-item-lead-line
-              block-quote-line
+              blockquote-line
               setext-heading
               indented-chunk-line
               opening-code-fence
@@ -222,7 +222,7 @@
           (lazy-continuation-line? current previous)
           (= :blank (->> current tagger :tag))))))
 
-(defn belongs-to-block-quote?
+(defn belongs-to-blockquote?
   [current previous]
   (or (->> current tagger :tag (= :bq))
       (paragraph-continuation-text? current previous)))

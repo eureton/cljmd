@@ -39,11 +39,11 @@
 (def list-item-blank-lead-line
   (re-pattern (str "^" list-item-marker #" *$")))
 
-(def block-quote-marker
+(def blockquote-marker
   #"( {0,3})>( ?)")
 
-(def block-quote-line
-  (re-pattern (str "^" block-quote-marker #"(\p{Print}*)$")))
+(def blockquote-line
+  (re-pattern (str "^" blockquote-marker #"(\p{Print}*)$")))
 
 (def html-block-variant-1-tag
   #"(?:(?i)script|pre|style|textarea)")

@@ -116,8 +116,8 @@
 
 (defmethod add [:bq :_]
   [x y]
-  (if (block/belongs-to-block-quote? (->> y first entry/origin)
-                                     (->> x last second reverse))
+  (if (block/belongs-to-blockquote? (->> y first entry/origin)
+                                    (->> x last second reverse))
     (fuse-left x y)
     (concat x y)))
 
@@ -234,7 +234,7 @@
   [blockrun]
   (util/coalesce #(let [tag (first %2)]
                     (and (= (first %1) tag)
-                         (nil? (#{:tbr :adef} tag))))
+                         (nil? (#{:tbr :adef :li} tag))))
                  #(update %1 1 (comp vec concat) (second %2))
                  blockrun))
 
