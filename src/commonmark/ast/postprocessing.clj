@@ -147,9 +147,9 @@
   [hbr-fix
    empty-p-fix
    empty-block-fix
-   blank-fix
    backslash-fix
    autolink-fix
    coalesce-txt
-   group-list-items])
+   group-list-items
+   blank-fix])
 

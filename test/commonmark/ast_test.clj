@@ -365,7 +365,7 @@
     (testing "list item ambiguity"
       (testing "first level"
         (is (= (-> "  - abc\n\n    xyz" from-string :children)
-               [(node {:tag :list :type "bullet" :tight "true"}
+               [(node {:tag :list :type "bullet" :tight "false"}
                       [(node {:tag :li}
                              [(node {:tag :p}
                                     [(node {:tag :txt :content "abc"})])
@@ -376,7 +376,7 @@
         (is (= (-> "1.  abc\n\n    - xyz" from-string :children)
                [(node {:tag :list
                        :type "ordered"
-                       :tight "true"
+                       :tight "false"
                        :delimiter "period"
                        :start "1"}
                       [(node {:tag :li}
@@ -677,17 +677,69 @@
                                                         :content "\r\n"})
                                                  (node {:tag :txt
                                                         :content "xyz"})])])])])])])))
-    (testing "blank lines within item"
-      (are [n] (= (-> (str "- abc" (string/join (repeat n "\n")) "  xyz")
-                      from-string
-                      :children)
-                  [(node {:tag :list :type "bullet" :tight "true"}
-                         [(node {:tag :li}
-                                [(node {:tag :p}
-                                       [(node {:tag :txt :content "abc"})])
-                                 (node {:tag :p}
-                                       [(node {:tag :txt :content "xyz"})])])])])
-           2 3 4)))
+    (testing "tightness"
+      (testing "no blank lines"
+        (is (= (-> "- abc\n- xyz" from-string :children)
+               [(node {:tag :list :type "bullet" :tight "true"}
+                      [(node {:tag :li}
+                             [(node {:tag :p}
+                                    [(node {:tag :txt :content "abc"})])])
+                       (node {:tag :li}
+                             [(node {:tag :p}
+                                    [(node {:tag :txt :content "xyz"})])])])])))
+
+      (testing "blank lines between items"
+        (are [n] (= (-> (str "- abc" (string/join (repeat n "\n")) "- xyz")
+                        from-string
+                        :children)
+                    [(node {:tag :list :type "bullet" :tight "false"}
+                           [(node {:tag :li}
+                                  [(node {:tag :p}
+                                         [(node {:tag :txt :content "abc"})])])
+                            (node {:tag :li}
+                                  [(node {:tag :p}
+                                         [(node {:tag :txt :content "xyz"})])])])])
+             2 3 4))
+
+      (testing "blank lines between block-level elements directly within item"
+        (are [n] (= (-> (str "- abc" (string/join (repeat n "\n")) "  xyz")
+                        from-string
+                        :children)
+                    [(node {:tag :list :type "bullet" :tight "false"}
+                           [(node {:tag :li}
+                                  [(node {:tag :p}
+                                         [(node {:tag :txt :content "abc"})])
+                                   (node {:tag :p}
+                                         [(node {:tag :txt :content "xyz"})])])])])
+             2 3 4))
+
+      (testing "blank lines within block-level elements directly within item"
+        (are [n] (= (-> (str "- ```\n  abc" (string/join (repeat n "\n")) "  xyz\n  ```")
+                        from-string
+                        :children)
+                    [(node {:tag :list :type "bullet" :tight "true"}
+                           [(node {:tag :li}
+                                  [(node {:tag :ofcblk
+                                          :content (str "abc"
+                                                        (string/join (repeat n "\r\n"))
+                                                        "xyz")})])])])
+             2 3 4))
+
+      (testing "blank lines between block-level elements indirectly within item"
+        (are [n] (= (-> (str "- - abc" (string/join (repeat n "\n")) "    # xyz")
+                        from-string
+                        :children)
+                    [(node {:tag :list :type "bullet" :tight "true"}
+                           [(node {:tag :li}
+                                  [(node {:tag :list :type "bullet" :tight "false"}
+                                         [(node {:tag :li}
+                                                [(node {:tag :p}
+                                                       [(node {:tag :txt
+                                                               :content "abc"})])
+                                                 (node {:tag :atxh}
+                                                       [(node {:tag :txt
+                                                               :content "xyz"})])])])])])])
+             2 3 4))))
 
   (testing "link"
     (testing "inline"

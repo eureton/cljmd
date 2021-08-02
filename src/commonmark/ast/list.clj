@@ -42,20 +42,21 @@
 
 (defn empty-for
   "List AST node with no children, configured for marker."
-  [marker]
+  [marker tight?]
   (let [list-type (-> marker marker-type name)
         delimiter (delimiter marker)
         start (start marker)]
     (node (cond-> {:tag :list
                    :type list-type
-                   :tight "true"}
+                   :tight (str tight?)}
             delimiter (assoc :delimiter delimiter)
             start (assoc :start start)))))
 
 (defn from-items
   "AST node which represents a list comprising items."
   [items]
-  (->> items
-       (map #(assoc % :data {:tag :li}))
-       (reduce add (-> items first :data :marker empty-for))))
+  (let [tight? (every? (comp :tight? :data) items)]
+    (->> items
+         (map #(assoc % :data {:tag :li}))
+         (reduce add (-> items first :data :marker (empty-for tight?))))))
 

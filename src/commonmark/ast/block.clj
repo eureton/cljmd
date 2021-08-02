@@ -50,10 +50,11 @@
                     second
                     first
                     block/list-item-lead-line
-                    :marker)]
-    (-> entry
-        from-container-blockrun-entry
-        (assoc-in [:data :marker] marker))))
+                    :marker)
+        raw (from-container-blockrun-entry entry)
+        loose? (->> raw :children (some (comp #{:blank} :tag :data)))]
+    (update raw :data merge {:marker marker
+                             :tight? (not loose?)})))
 
 (defmethod from-blockrun-entry :icblk
   [[tag lines]]
