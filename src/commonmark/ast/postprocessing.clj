@@ -4,6 +4,7 @@
             [flatland.useful.fn :as ufn]
             [treeduce.core :as tree]
             [commonmark.ast.common :refer [block? node update-children]]
+            [commonmark.ast.list :as ast.list]
             [commonmark.util :as util]))
 
 (defn block-with-hbr-end?
@@ -119,14 +120,26 @@
               ast)))
 
 (defn coalesce-txt
-  "Merges adjacent sibling :txt nodes."
+  "Merges adjacent :txt nodes."
   [ast]
   (let [merge? (comp #(every? #{:txt} %)
                      #(map (comp :tag :data) %)
                      vector)
         merger #(update-in %1 [:data :content] str (-> %2 :data :content))]
     (tree/map (fn [node]
-                (update node :children #(util/coalesce merge? merger %)))
+                (update node :children (comp vec
+                                             #(util/coalesce merge? merger %))))
+              ast)))
+
+(defn group-list-items
+  "Groups adjacent matching :li nodes into :list nodes."
+  [ast]
+  (let [grouper #(->> %
+                      (util/cluster ast.list/sibling-items?)
+                      (mapcat (ufn/to-fix (comp #{:li} :tag :data first)
+                                          (comp vector ast.list/from-items))))]
+    (tree/map (ufn/to-fix (comp nil? #{:list} :tag :data)
+                          #(update % :children grouper))
               ast)))
 
 (def queue
@@ -137,5 +150,6 @@
    blank-fix
    backslash-fix
    autolink-fix
-   coalesce-txt])
+   coalesce-txt
+   group-list-items])
 

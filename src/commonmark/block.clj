@@ -166,6 +166,7 @@
   (when-some [{:keys [indent marker space]
                :or {space " "}} (list-item-lead-line origin)]
     (let [prefix-length (->> [indent marker space] (map count) (reduce +))
+          ; TODO replace this with util/trim-leading
           trim-re (re-pattern (str "^ {0," prefix-length "}"))]
       (string/replace current trim-re ""))))
 

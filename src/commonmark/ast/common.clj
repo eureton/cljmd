@@ -68,8 +68,6 @@
                   (derive :hbr         :verbatim)
                   (derive :sbr         :verbatim)
 
-                  (derive :bq :container)
-                  (derive :li :container)
                   atom))
 
 (defn block?

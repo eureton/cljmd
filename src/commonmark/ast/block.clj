@@ -20,7 +20,7 @@
   (common/node {:tag :doc}
                (mapv from-blockrun-entry blockrun)))
 
-(defmethod from-blockrun-entry :container
+(defn from-container-blockrun-entry
   [entry]
   (->> entry
        blockrun.entry/content
@@ -39,6 +39,21 @@
          (string/join "\r\n")
          (hash-map :tag tag :content)
          common/node)))
+
+(defmethod from-blockrun-entry :bq
+  [entry]
+  (from-container-blockrun-entry entry))
+
+(defmethod from-blockrun-entry :li
+  [entry]
+  (let [marker (->> entry
+                    second
+                    first
+                    block/list-item-lead-line
+                    :marker)]
+    (-> entry
+        from-container-blockrun-entry
+        (assoc-in [:data :marker] marker))))
 
 (defmethod from-blockrun-entry :icblk
   [[tag lines]]

@@ -2,17 +2,25 @@
   (:require [clojure.string :as string]
             [flatland.useful.fn :as ufn]))
 
-(defn coalesce
-  "Merges adjacent items x and y in coll for which (pred x y) returns true.
-   Merging is done by calling (f x y)."
-  [pred f coll]
-  (reduce (fn [acc y]
-            (let [x (last acc)]
-              (if (pred x y)
-                (-> acc pop (conj (f x y)))
-                (conj acc y))))
-          (empty coll)
+(defn cluster
+  "Groups subsequent items x and y in coll for which (pred x y) returns true.
+   Returns a vector of vectors."
+  [pred coll]
+  (reduce (fn [acc x]
+            (let [tail (peek acc)]
+              (if (pred (peek tail) x)
+                (-> acc pop (conj (conj tail x)))
+                (conj acc [x]))))
+          []
           coll))
+
+(defn coalesce
+  "Merges subsequent items x and y in coll for which (pred x y) returns true by
+   reducing with rf over the items."
+  [pred rf coll]
+  (->> coll
+       (cluster pred)
+       (map #(reduce rf %))))
 
 (defn trim-leading-spaces
   "Remove max n spaces from the beginning of string s."

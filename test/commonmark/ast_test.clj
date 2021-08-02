@@ -155,9 +155,10 @@
 
       (testing "in list item"
         (is (= (-> "- abc\n---" from-string :children)
-               [(node {:tag :li}
-                      [(node {:tag :p}
-                             [(node {:tag :txt :content "abc"})])])
+               [(node {:tag :list :type "bullet" :tight "true"}
+                      [(node {:tag :li}
+                             [(node {:tag :p}
+                                    [(node {:tag :txt :content "abc"})])])])
                 (node {:tag :tbr :content "---"})]))))
 
     (testing "preceded by block"
@@ -186,9 +187,10 @@
            "> xyz"              (node {:tag :bq}
                                       [(node {:tag :p}
                                              [(node {:tag :txt :content "xyz"})])])
-           "- xyz"              (node {:tag :li}
-                                      [(node {:tag :p}
-                                             [(node {:tag :txt :content "xyz"})])])))
+           "- xyz"              (node {:tag :list :type "bullet" :tight "true"}
+                                      [(node {:tag :li}
+                                             [(node {:tag :p}
+                                                    [(node {:tag :txt :content "xyz"})])])])))
 
     (testing "non-paragraph text line"
       (are [l n] (= (-> (str l "\n---") from-string :children)
@@ -203,9 +205,10 @@
            "> xyz"              (node {:tag :bq}
                                       [(node {:tag :p}
                                              [(node {:tag :txt :content "xyz"})])])
-           "- xyz"              (node {:tag :li}
-                                      [(node {:tag :p}
-                                             [(node {:tag :txt :content "xyz"})])])))
+           "- xyz"              (node {:tag :list :type "bullet" :tight "true"}
+                                      [(node {:tag :li}
+                                             [(node {:tag :p}
+                                                    [(node {:tag :txt :content "xyz"})])])])))
 
     (testing "escaped block markers in text line"
       (are [b c] (= (-> (str b "\n---") from-string :children)
@@ -362,20 +365,27 @@
     (testing "list item ambiguity"
       (testing "first level"
         (is (= (-> "  - abc\n\n    xyz" from-string :children)
-               [(node {:tag :li}
-                      [(node {:tag :p}
-                             [(node {:tag :txt :content "abc"})])
-                       (node {:tag :p}
-                             [(node {:tag :txt :content "xyz"})])])])))
+               [(node {:tag :list :type "bullet" :tight "true"}
+                      [(node {:tag :li}
+                             [(node {:tag :p}
+                                    [(node {:tag :txt :content "abc"})])
+                              (node {:tag :p}
+                                    [(node {:tag :txt :content "xyz"})])])])])))
 
       (testing "second level"
         (is (= (-> "1.  abc\n\n    - xyz" from-string :children)
-               [(node {:tag :li}
-                      [(node {:tag :p}
-                             [(node {:tag :txt :content "abc"})])
-                       (node {:tag :li}
+               [(node {:tag :list
+                       :type "ordered"
+                       :tight "true"
+                       :delimiter "period"
+                       :start "1"}
+                      [(node {:tag :li}
                              [(node {:tag :p}
-                                    [(node {:tag :txt :content "xyz"})])])])])))))
+                                    [(node {:tag :txt :content "abc"})])
+                              (node {:tag :list :type "bullet" :tight "true"}
+                                    [(node {:tag :li}
+                                           [(node {:tag :p}
+                                                  [(node {:tag :txt :content "xyz"})])])])])])])))))
 
   (testing "fenced code block"
     (testing "minimal"
@@ -465,14 +475,15 @@
            "> ```\n> abc\n> ```" [(node {:tag :ofcblk :content "abc"})]
            "> <pre>abc</pre>"    [(node {:tag :html-block
                                          :content "<pre>abc</pre>"})]
-           "> - abc\n> - xyz"    [(node {:tag :li}
-                                        [(node {:tag :p}
-                                               [(node {:tag :txt
-                                                       :content "abc"})])])
-                                  (node {:tag :li}
-                                        [(node {:tag :p}
-                                               [(node {:tag :txt
-                                                       :content "xyz"})])])]
+           "> - abc\n> - xyz"    [(node {:tag :list :type "bullet" :tight "true"}
+                                        [(node {:tag :li}
+                                               [(node {:tag :p}
+                                                      [(node {:tag :txt
+                                                              :content "abc"})])])
+                                         (node {:tag :li}
+                                               [(node {:tag :p}
+                                                      [(node {:tag :txt
+                                                              :content "xyz"})])])])]
            "> > abc"             [(node {:tag :bq}
                                         [(node {:tag :p}
                                                [(node {:tag :txt :content "abc"})])])]))
@@ -596,9 +607,10 @@
            "    xyz"            (node {:tag :icblk :content "xyz"})
            "```\nxyz\n```"      (node {:tag :ofcblk :content "xyz"})
            "<pre>\nxyz\n</pre>" (node {:tag :html-block :content "<pre>\r\nxyz\r\n</pre>"})
-           "- xyz"              (node {:tag :li}
-                                      [(node {:tag :p}
-                                             [(node {:tag :txt :content "xyz"})])])
+           "- xyz"              (node {:tag :list :type "bullet" :tight "true"}
+                                      [(node {:tag :li}
+                                             [(node {:tag :p}
+                                                    [(node {:tag :txt :content "xyz"})])])])
            "xyz"                (node {:tag :p}
                                       [(node {:tag :txt :content "xyz"})])))
 
@@ -613,15 +625,17 @@
                                       [(node {:tag :txt :content "xyz"})])
            "```\nxyz\n```"      (node {:tag :ofcblk :content "xyz"})
            "<pre>\nxyz\n</pre>" (node {:tag :html-block :content "<pre>\r\nxyz\r\n</pre>"})
-           "- xyz"              (node {:tag :li}
-                                      [(node {:tag :p}
-                                             [(node {:tag :txt :content "xyz"})])]))))
+           "- xyz"              (node {:tag :list :type "bullet" :tight "true"}
+                                      [(node {:tag :li}
+                                             [(node {:tag :p}
+                                                    [(node {:tag :txt :content "xyz"})])])]))))
 
   (testing "list"
     (testing "minimal"
       (are [s n] (= (-> s from-string :children)
-                    [(node {:tag :li}
-                           n)])
+                    [(node {:tag :list :type "bullet" :tight "true"}
+                           [(node {:tag :li}
+                                  n)])])
            "- abc"               [(node {:tag :p}
                                         [(node {:tag :txt :content "abc"})])]
            "- # abc"             [(node {:tag :atxh}
@@ -640,32 +654,39 @@
                                                        :content "\r\n"})
                                                 (node {:tag :txt
                                                        :content "xyz"})])])]
-           "- - abc"             [(node {:tag :li}
-                                        [(node {:tag :p}
-                                               [(node {:tag :txt :content "abc"})])])]))
+           "- - abc"             [(node {:tag :list :type "bullet" :tight "true"}
+                                        [(node {:tag :li}
+                                               [(node {:tag :p}
+                                                      [(node {:tag :txt :content "abc"})])])])]))
     (testing "asymmetrical embedding"
       (is (= (-> "   > > 1. abc\n>>     xyz"
                  from-string
                  :children)
              [(node {:tag :bq}
                     [(node {:tag :bq}
-                           [(node {:tag :li}
-                                  [(node {:tag :p}
-                                         [(node {:tag :txt
-                                                 :content "abc"})
-                                          (node {:tag :sbr
-                                                 :content "\r\n"})
-                                          (node {:tag :txt
-                                                 :content "xyz"})])])])])])))
-    (testing "blank lines within blocks"
+                           [(node {:tag :list
+                                   :type "ordered"
+                                   :tight "true"
+                                   :delimiter "period"
+                                   :start "1"}
+                                  [(node {:tag :li}
+                                         [(node {:tag :p}
+                                                [(node {:tag :txt
+                                                        :content "abc"})
+                                                 (node {:tag :sbr
+                                                        :content "\r\n"})
+                                                 (node {:tag :txt
+                                                        :content "xyz"})])])])])])])))
+    (testing "blank lines within item"
       (are [n] (= (-> (str "- abc" (string/join (repeat n "\n")) "  xyz")
                       from-string
                       :children)
-                  [(node {:tag :li}
-                         [(node {:tag :p}
-                                [(node {:tag :txt :content "abc"})])
-                          (node {:tag :p}
-                                [(node {:tag :txt :content "xyz"})])])])
+                  [(node {:tag :list :type "bullet" :tight "true"}
+                         [(node {:tag :li}
+                                [(node {:tag :p}
+                                       [(node {:tag :txt :content "abc"})])
+                                 (node {:tag :p}
+                                       [(node {:tag :txt :content "xyz"})])])])])
            2 3 4)))
 
   (testing "link"
@@ -1087,8 +1108,8 @@
 
     (testing "empty paragraph"
       (is (= (map (comp :tag :data)
-                  (-> "- abc\r\n\r\n  \r\n> xyz" from-string :children))
-             [:li :bq]))))
+                  (-> "# abc\r\n\r\n  \r\n> xyz" from-string :children))
+             [:atxh :bq]))))
 
   (testing "backslash escapes"
     (testing "ASCII punctuation"
