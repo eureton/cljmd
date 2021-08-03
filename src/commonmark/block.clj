@@ -3,7 +3,8 @@
             [clojure.set]
             [flatland.useful.fn :as ufn]
             [commonmark.re.block :as re.block]
-            [commonmark.re.link :as re.link]))
+            [commonmark.re.link :as re.link]
+            [commonmark.util :as util]))
 
 (defn atx-heading
   [line]
@@ -165,10 +166,7 @@
   [current origin]
   (when-some [{:keys [indent marker space]
                :or {space " "}} (list-item-lead-line origin)]
-    (let [prefix-length (->> [indent marker space] (map count) (reduce +))
-          ; TODO replace this with util/trim-leading
-          trim-re (re-pattern (str "^ {0," prefix-length "}"))]
-      (string/replace current trim-re ""))))
+    (util/trim-leading-spaces current (count (str indent marker space)))))
 
 (defn fenced-code-block-pair?
   "True if lines x and y are matching code block fences, false otherwise."
@@ -216,9 +214,8 @@
   (when-some [{:keys [indent marker space]
                :or {space " "}} (list-item-lead-line origin)]
     (let [prefix (string/replace (str indent marker space) #"."  " ")
-          trim-re (re-pattern (str "^ {0," (count prefix) "}"))
           ; TODO refactor this to use list-item-content
-          previous (string/replace previous trim-re "")]
+          previous (util/trim-leading-spaces previous (count prefix))]
       (or (string/starts-with? current prefix)
           (lazy-continuation-line? current previous)
           (= :blank (->> current tagger :tag))))))
