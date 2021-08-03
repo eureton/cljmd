@@ -213,12 +213,11 @@
   [current previous origin]
   (when-some [{:keys [indent marker space]
                :or {space " "}} (list-item-lead-line origin)]
-    (let [prefix (string/replace (str indent marker space) #"."  " ")
-          ; TODO refactor this to use list-item-content
-          previous (util/trim-leading-spaces previous (count prefix))]
+    (let [prefix (-> (str indent marker space) count (repeat " ") string/join)
+          previous (list-item-content previous origin)]
       (or (string/starts-with? current prefix)
           (lazy-continuation-line? current previous)
-          (= :blank (->> current tagger :tag))))))
+          (some? (blank-line current))))))
 
 (defn belongs-to-blockquote?
   [current previous]
