@@ -5,6 +5,7 @@
             [commonmark.blockrun.entry :as entry]
             [commonmark.re.link :as re.link]
             [commonmark.re.block :as re.block]
+            [commonmark.ast.list :as ast.list]
             [commonmark.util :as util]))
 
 (def zero
@@ -133,13 +134,18 @@
 
 (defmethod add [:p :li]
   [x y]
-  (if (->> y
-           first
-           entry/origin
-           (re-find re.block/list-item-blank-lead-line)
-           some?)
-    (fuse-split (retag x :last :stxh) y 1)
-    (concat x y)))
+  (let [lead-line (->> y first entry/origin)
+        blank-lead? (->> lead-line
+                         (re-find re.block/list-item-blank-lead-line)
+                         some?)
+        ordered-from-not-one? (->> lead-line
+                                   block/list-item-lead-line
+                                   :marker
+                                   ast.list/start
+                                   ((every-pred some? #(not= % "1"))))]
+    (cond blank-lead?           (fuse-split (retag x :last :stxh) y 1)
+          ordered-from-not-one? (fuse-split x y 1)
+          :else                 (concat x y))))
 
 (defmethod add [:p :stxh]
   [x y]

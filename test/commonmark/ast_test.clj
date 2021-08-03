@@ -803,7 +803,69 @@
                       :children
                       (map (comp #(select-keys % [:tag :type :delimiter]) :data)))
                  [{:tag :list :type "ordered" :delimiter "period"}
-                  {:tag :list :type "ordered" :delimiter "paren"}]))))))
+                  {:tag :list :type "ordered" :delimiter "paren"}]))))
+
+      (testing "interrupt paragraph"
+        (testing "start is 1"
+          (are [s d] (= (-> s from-string :children)
+                        [(node {:tag :p}
+                               [(node {:tag :txt :content "abc"})])
+                         (node {:tag :list
+                                :type "ordered"
+                                :tight "true"
+                                :delimiter d
+                                :start "1"}
+                               [(node {:tag :li}
+                                      [(node {:tag :p}
+                                             [(node {:tag :txt :content "xyz"})])])])])
+               "abc\n1. xyz" "period"
+               "abc\n1) xyz" "paren"))
+
+        (testing "start is not 1"
+          (are [s t] (= (-> s from-string :children)
+                        [(node {:tag :p}
+                               [(node {:tag :txt :content "abc"})
+                                (node {:tag :sbr :content "\r\n"})
+                                (node {:tag :txt :content t})])])
+               "abc\n2. xyz" "2. xyz"
+               "abc\n2) xyz" "2) xyz"))))
+
+    (testing "preceded by block"
+      (are [b n] (= (-> (str b "\n- abc") from-string :children)
+                    [n
+                     (node {:tag :list :type "bullet" :tight "true"}
+                           [(node {:tag :li}
+                                  [(node {:tag :p}
+                                         [(node {:tag :txt :content "abc"})])])])])
+           "---"                (node {:tag :tbr :content "---"})
+           "# xyz"              (node {:tag :atxh}
+                                      [(node {:tag :txt :content "xyz"})])
+           "xyz\n---"           (node {:tag :stxh :level 2}
+                                      [(node {:tag :txt :content "xyz"})])
+           "    xyz"            (node {:tag :icblk :content "xyz"})
+           "```\nxyz\n```"      (node {:tag :ofcblk :content "xyz"})
+           "<pre>\nxyz\n</pre>" (node {:tag :html-block :content "<pre>\r\nxyz\r\n</pre>"})
+           "> xyz"              (node {:tag :bq}
+                                      [(node {:tag :p}
+                                             [(node {:tag :txt :content "xyz"})])])
+           "xyz"                (node {:tag :p}
+                                      [(node {:tag :txt :content "xyz"})])))
+
+    (testing "followed by block"
+      (are [b n] (= (-> (str "- abc\n" b) from-string :children)
+                    [(node {:tag :list :type "bullet" :tight "true"}
+                           [(node {:tag :li}
+                                  [(node {:tag :p}
+                                         [(node {:tag :txt :content "abc"})])])])
+                     n])
+           "---"                (node {:tag :tbr :content "---"})
+           "# xyz"              (node {:tag :atxh}
+                                      [(node {:tag :txt :content "xyz"})])
+           "```\nxyz\n```"      (node {:tag :ofcblk :content "xyz"})
+           "<pre>\nxyz\n</pre>" (node {:tag :html-block :content "<pre>\r\nxyz\r\n</pre>"})
+           "> xyz"              (node {:tag :bq}
+                                      [(node {:tag :p}
+                                             [(node {:tag :txt :content "xyz"})])]))))
 
   (testing "link"
     (testing "inline"
