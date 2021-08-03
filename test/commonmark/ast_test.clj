@@ -741,6 +741,17 @@
                                                                :content "xyz"})])])])])])])
              2 3 4)))
 
+    (testing "item indentation"
+      (are [s] (= (->> s
+                       from-string
+                       :children
+                       first
+                       :children
+                       (map (comp :tag :data)))
+                  [:li :li :li :li :li :li :li])
+           "- a\n - b\n  - c\n   - d\n  - e\n - f\n- g"
+           "1. a\n 1. b\n  1. c\n   1. d\n  1. e\n 1. f\n1. g"))
+
     (testing "bullet"
       (testing "grouping"
         (testing "positive"
