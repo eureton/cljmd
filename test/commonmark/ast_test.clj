@@ -739,7 +739,40 @@
                                                  (node {:tag :atxh}
                                                        [(node {:tag :txt
                                                                :content "xyz"})])])])])])])
-             2 3 4))))
+             2 3 4)))
+
+    (testing "ordered"
+      (testing "start"
+        (are [s n] (= (-> s
+                          from-string
+                          (get-in [:children 0 :data])
+                          (select-keys [:tag :type :start]))
+                      {:tag :list
+                       :type "ordered"
+                       :start n})
+             "1. abc"         "1"
+             "3. abc"         "3"
+             "7. abc\n1. xyz" "7"))
+
+      (testing "delimiter"
+        (testing "attribute"
+          (are [s d] (= (-> s
+                            from-string
+                            (get-in [:children 0 :data])
+                            (select-keys [:tag :type :delimiter]))
+                        {:tag :list
+                         :type "ordered"
+                         :delimiter d})
+               "1. abc" "period"
+               "1) abc" "paren"))
+
+        (testing "grouping"
+          (is (= (->> "1. abc\n1) xyz"
+                      from-string
+                      :children
+                      (map (comp #(select-keys % [:tag :type :delimiter]) :data)))
+                 [{:tag :list :type "ordered" :delimiter "period"}
+                  {:tag :list :type "ordered" :delimiter "paren"}]))))))
 
   (testing "link"
     (testing "inline"
