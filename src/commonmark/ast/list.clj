@@ -5,9 +5,10 @@
 (defn marker-type
   "Classifies as either :bullet or :ordered."
   [marker]
-  (if (some? (re-find #"[-+*]" marker))
-    :bullet
-    :ordered))
+  (when marker
+    (if (some? (re-find #"[-+*]" marker))
+      :bullet
+      :ordered)))
 
 (defn delimiter
   "Classifies as either \"paren\" or \"period\" if ordered, nil otherwise."
@@ -29,16 +30,17 @@
 (defn sibling-items?
   "True if items x and y belong in the same list, false otherwise."
   [x y]
-  (and (-> x :data :tag (= :li))
-       (-> y :data :tag (= :li))
-       (or (= (-> x :data :marker)
-              (-> y :data :marker))
-           (and (= (-> x :data :marker marker-type)
-                   :ordered)
-                (= (-> x :data :marker marker-type)
-                   (-> y :data :marker marker-type))
-                (= (-> x :data :marker last)
-                   (-> y :data :marker last))))))
+  (let [{{x-tag :tag x-marker :marker} :data} x
+        {{y-tag :tag y-marker :marker} :data} y
+        x-type (marker-type x-marker)
+        y-type (marker-type y-marker)]
+    (and (= x-tag :li)
+         (= y-tag :li)
+         (or (= x-marker y-marker)
+             (and (= x-type :ordered)
+                  (= y-type :ordered)
+                  (= (last x-marker)
+                     (last y-marker)))))))
 
 (defn empty-for
   "List AST node with no children, configured for marker."
