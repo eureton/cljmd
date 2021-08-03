@@ -31,8 +31,7 @@
 
 (defmethod from-blockrun-entry :leaf
   [[tag lines]]
-  (let [parsers {:atxh block/atx-heading
-                 :p block/paragraph-line}
+  (let [parsers {:p block/paragraph-line}
         parsed (parsers tag #(hash-map :content %))]
     (->> lines
          (map (comp :content parsed))
@@ -72,6 +71,13 @@
          (string/join "\r\n")
          (hash-map :tag tag :content)
          common/node)))
+
+(defmethod from-blockrun-entry :atxh
+  [[tag [line _]]]
+  (-> line
+      block/atx-heading
+      (select-keys [:tag :level :content])
+      common/node))
 
 (defmethod from-blockrun-entry :stxh
   [[tag lines]]

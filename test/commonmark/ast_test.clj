@@ -13,12 +13,12 @@
   (testing "ATX heading"
     (testing "minimal"
       (is (= (-> "# abc" from-string :children)
-             [(node {:tag :atxh}
+             [(node {:tag :atxh :level 1}
                     [(node {:tag :txt :content "abc"})])])))
 
     (testing "nested inline"
       (are [s t] (= (-> s from-string :children)
-                    [(node {:tag :atxh}
+                    [(node {:tag :atxh :level 1}
                            t)])
            "# *abc*"      [(node {:tag :em}
                                  [(node {:tag :txt :content "abc"})])]
@@ -30,7 +30,7 @@
 
     (testing "deeply nested inline"
       (is (= (-> "# qpr [*(**abc**)* `def`](xyz)" from-string :children)
-             [(node {:tag :atxh}
+             [(node {:tag :atxh :level 1}
                     [(node {:tag :txt :content "qpr "})
                      (node {:tag :a :destination "xyz"}
                            [(node {:tag :em}
@@ -39,7 +39,49 @@
                                          [(node {:tag :txt :content "abc"})])
                                    (node {:tag :txt :content ")"})])
                             (node {:tag :txt :content " "})
-                            (node {:tag :cs :content "def"})])])]))))
+                            (node {:tag :cs :content "def"})])])])))
+
+    (testing "preceded by block"
+      (are [b n] (= (-> (str b "\n# abc") from-string :children)
+                    [n
+                     (node {:tag :atxh :level 1}
+                           [(node {:tag :txt :content "abc"})])])
+           "---"                (node {:tag :tbr :content "---"})
+           "- xyz"              (node {:tag :list :type "bullet" :tight "true"}
+                                      [(node {:tag :li}
+                                             [(node {:tag :p}
+                                                    [(node {:tag :txt :content "xyz"})])])])
+           "xyz\n---"           (node {:tag :stxh :level 2}
+                                      [(node {:tag :txt :content "xyz"})])
+           "    xyz"            (node {:tag :icblk :content "xyz"})
+           "```\nxyz\n```"      (node {:tag :ofcblk :content "xyz"})
+           "<pre>\nxyz\n</pre>" (node {:tag :html-block :content "<pre>\r\nxyz\r\n</pre>"})
+           "> xyz"              (node {:tag :bq}
+                                      [(node {:tag :p}
+                                             [(node {:tag :txt :content "xyz"})])])
+           "xyz"                (node {:tag :p}
+                                      [(node {:tag :txt :content "xyz"})])))
+
+    (testing "followed by block"
+      (are [b n] (= (-> (str "# abc\n" b) from-string :children)
+                    [(node {:tag :atxh :level 1}
+                           [(node {:tag :txt :content "abc"})])
+                     n])
+           "---"                (node {:tag :tbr :content "---"})
+           "- xyz"              (node {:tag :list :type "bullet" :tight "true"}
+                                      [(node {:tag :li}
+                                             [(node {:tag :p}
+                                                    [(node {:tag :txt :content "xyz"})])])])
+           "xyz\n---"           (node {:tag :stxh :level 2}
+                                      [(node {:tag :txt :content "xyz"})])
+           "    xyz"            (node {:tag :icblk :content "xyz"})
+           "```\nxyz\n```"      (node {:tag :ofcblk :content "xyz"})
+           "<pre>\nxyz\n</pre>" (node {:tag :html-block :content "<pre>\r\nxyz\r\n</pre>"})
+           "> xyz"              (node {:tag :bq}
+                                      [(node {:tag :p}
+                                             [(node {:tag :txt :content "xyz"})])])
+           "xyz"                (node {:tag :p}
+                                      [(node {:tag :txt :content "xyz"})]))))
 
   (testing "Setext heading"
     (testing "minimal"
@@ -167,7 +209,7 @@
                      (node {:tag :stxh :level 2}
                            [(node {:tag :txt :content "abc"})])])
            "---"                (node {:tag :tbr :content "---"})
-           "# xyz"              (node {:tag :atxh}
+           "# xyz"              (node {:tag :atxh :level 1}
                                       [(node {:tag :txt :content "xyz"})])
            "    xyz"            (node {:tag :icblk :content "xyz"})
            "```\nxyz\n```"      (node {:tag :ofcblk :content "xyz"})
@@ -179,7 +221,7 @@
                            [(node {:tag :txt :content "abc"})])
                      n])
            "---"                (node {:tag :tbr :content "---"})
-           "# xyz"              (node {:tag :atxh}
+           "# xyz"              (node {:tag :atxh :level 1}
                                       [(node {:tag :txt :content "xyz"})])
            "    xyz"            (node {:tag :icblk :content "xyz"})
            "```\nxyz\n```"      (node {:tag :ofcblk :content "xyz"})
@@ -197,7 +239,7 @@
                     [n
                      (node {:tag :tbr :content "---"})])
            "---"                (node {:tag :tbr :content "---"})
-           "# xyz"              (node {:tag :atxh}
+           "# xyz"              (node {:tag :atxh :level 1}
                                       [(node {:tag :txt :content "xyz"})])
            "    xyz"            (node {:tag :icblk :content "xyz"})
            "```\nxyz\n```"      (node {:tag :ofcblk :content "xyz"})
@@ -307,7 +349,7 @@
                     [n
                      (node {:tag :icblk :content "abc"})])
            "---"                (node {:tag :tbr :content "---"})
-           "# xyz"              (node {:tag :atxh}
+           "# xyz"              (node {:tag :atxh :level 1}
                                       [(node {:tag :txt :content "xyz"})])
            "xyz\n---"           (node {:tag :stxh :level 2}
                                       [(node {:tag :txt :content "xyz"})])
@@ -319,7 +361,7 @@
                     [(node {:tag :icblk :content "abc"})
                      n])
            "---"                (node {:tag :tbr :content "---"})
-           "# xyz"              (node {:tag :atxh}
+           "# xyz"              (node {:tag :atxh :level 1}
                                       [(node {:tag :txt :content "xyz"})])
            "xyz\n---"           (node {:tag :stxh :level 2}
                                       [(node {:tag :txt :content "xyz"})])
@@ -437,7 +479,7 @@
                     [n
                      (node {:tag :ofcblk :content "abc"})])
            "---"                (node {:tag :tbr :content "---"})
-           "# xyz"              (node {:tag :atxh}
+           "# xyz"              (node {:tag :atxh :level 1}
                                       [(node {:tag :txt :content "xyz"})])
            "xyz\n---"           (node {:tag :stxh :level 2}
                                       [(node {:tag :txt :content "xyz"})])
@@ -451,7 +493,7 @@
                     [(node {:tag :ofcblk :content "abc"})
                      n])
            "---"                (node {:tag :tbr :content "---"})
-           "# xyz"              (node {:tag :atxh}
+           "# xyz"              (node {:tag :atxh :level 1}
                                       [(node {:tag :txt :content "xyz"})])
            "xyz\n---"           (node {:tag :stxh :level 2}
                                       [(node {:tag :txt :content "xyz"})])
@@ -467,7 +509,7 @@
                            n)])
            "> abc"               [(node {:tag :p}
                                         [(node {:tag :txt :content "abc"})])]
-           "> # abc"             [(node {:tag :atxh}
+           "> # abc"             [(node {:tag :atxh :level 1}
                                         [(node {:tag :txt :content "abc"})])]
            "> abc\n> ---"        [(node {:tag :stxh :level 2}
                                         [(node {:tag :txt :content "abc"})])]
@@ -600,7 +642,7 @@
                            [(node {:tag :p}
                                   [(node {:tag :txt :content "abc"})])])])
            "---"                (node {:tag :tbr :content "---"})
-           "# xyz"              (node {:tag :atxh}
+           "# xyz"              (node {:tag :atxh :level 1}
                                       [(node {:tag :txt :content "xyz"})])
            "xyz\n---"           (node {:tag :stxh :level 2}
                                       [(node {:tag :txt :content "xyz"})])
@@ -621,7 +663,7 @@
                                   [(node {:tag :txt :content "abc"})])])
                      n])
            "---"                (node {:tag :tbr :content "---"})
-           "# xyz"              (node {:tag :atxh}
+           "# xyz"              (node {:tag :atxh :level 1}
                                       [(node {:tag :txt :content "xyz"})])
            "```\nxyz\n```"      (node {:tag :ofcblk :content "xyz"})
            "<pre>\nxyz\n</pre>" (node {:tag :html-block :content "<pre>\r\nxyz\r\n</pre>"})
@@ -638,7 +680,7 @@
                                   n)])])
            "- abc"               [(node {:tag :p}
                                         [(node {:tag :txt :content "abc"})])]
-           "- # abc"             [(node {:tag :atxh}
+           "- # abc"             [(node {:tag :atxh :level 1}
                                         [(node {:tag :txt :content "abc"})])]
            "- abc\n  ---"        [(node {:tag :stxh :level 2}
                                         [(node {:tag :txt :content "abc"})])]
@@ -736,7 +778,7 @@
                                                 [(node {:tag :p}
                                                        [(node {:tag :txt
                                                                :content "abc"})])
-                                                 (node {:tag :atxh}
+                                                 (node {:tag :atxh :level 1}
                                                        [(node {:tag :txt
                                                                :content "xyz"})])])])])])])
              2 3 4)))
@@ -849,7 +891,7 @@
                                   [(node {:tag :p}
                                          [(node {:tag :txt :content "abc"})])])])])
            "---"                (node {:tag :tbr :content "---"})
-           "# xyz"              (node {:tag :atxh}
+           "# xyz"              (node {:tag :atxh :level 1}
                                       [(node {:tag :txt :content "xyz"})])
            "xyz\n---"           (node {:tag :stxh :level 2}
                                       [(node {:tag :txt :content "xyz"})])
@@ -870,7 +912,7 @@
                                          [(node {:tag :txt :content "abc"})])])])
                      n])
            "---"                (node {:tag :tbr :content "---"})
-           "# xyz"              (node {:tag :atxh}
+           "# xyz"              (node {:tag :atxh :level 1}
                                       [(node {:tag :txt :content "xyz"})])
            "```\nxyz\n```"      (node {:tag :ofcblk :content "xyz"})
            "<pre>\nxyz\n</pre>" (node {:tag :html-block :content "<pre>\r\nxyz\r\n</pre>"})
