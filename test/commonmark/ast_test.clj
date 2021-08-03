@@ -741,6 +741,37 @@
                                                                :content "xyz"})])])])])])])
              2 3 4)))
 
+    (testing "bullet"
+      (testing "grouping"
+        (testing "positive"
+          (are [s] (= (-> s from-string :children)
+                      [(node {:tag :list :type "bullet" :tight "true"}
+                             [(node {:tag :li}
+                                    [(node {:tag :p}
+                                           [(node {:tag :txt
+                                                   :content "abc"})])])
+                              (node {:tag :li}
+                                    [(node {:tag :p}
+                                           [(node {:tag :txt 
+                                                   :content "xyz"})])])])])
+               "- abc\n- xyz"
+               "+ abc\n+ xyz"
+               "* abc\n* xyz"))
+
+        (testing "negative"
+          (are [s] (= (->> s
+                           from-string
+                           :children
+                           (map (comp #(select-keys % [:tag :type]) :data)))
+                      [{:tag :list :type "bullet"}
+                       {:tag :list :type "bullet"}])
+               "- abc\n* xyz"
+               "- abc\n+ xyz"
+               "* abc\n- xyz"
+               "* abc\n+ xyz"
+               "+ abc\n- xyz"
+               "+ abc\n* xyz"))))
+
     (testing "ordered"
       (testing "start"
         (are [s n] (= (-> s
