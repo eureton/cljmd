@@ -16,6 +16,17 @@
              [(node {:tag :atxh :level 1}
                     [(node {:tag :txt :content "abc"})])])))
 
+    (testing "level"
+      (are [s l] (= (-> s from-string :children)
+                    [(node {:tag :atxh :level l}
+                           [(node {:tag :txt :content "abc"})])])
+           "# abc"      1
+           "## abc"     2
+           "### abc"    3
+           "#### abc"   4
+           "##### abc"  5
+           "###### abc" 6))
+
     (testing "nested inline"
       (are [s t] (= (-> s from-string :children)
                     [(node {:tag :atxh :level 1}
