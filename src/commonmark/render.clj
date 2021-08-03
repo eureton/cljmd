@@ -13,15 +13,25 @@
   [s]
   (str "</" s ">"))
 
+(def ontology (-> (make-hierarchy)
+                  (derive :atxh :heading)
+                  (derive :stxh :heading)
+
+                  (derive :ofcblk :code-block)
+                  (derive :icblk  :code-block)
+                  atom))
+
 (defmulti html
   "HTML representation of the node as a string."
-  (comp :tag :data))
+  (comp :tag :data)
+  :hierarchy ontology)
 
 (defmulti tag
   ""
-  (comp :tag :data))
+  (comp :tag :data)
+  :hierarchy ontology)
 
-(defmethod tag :atxh
+(defmethod tag :heading
   [n]
   (str "h" (:level (:data n))))
 
@@ -65,7 +75,7 @@
 
 (defmethod html :sbr [_] "\r\n")
 
-(defmethod html :ofcblk
+(defmethod html :code-block
   [n]
   (str "<pre><code"
        (when-some [info (:info (:data n))]
@@ -74,15 +84,9 @@
        (:content (:data n))
        "</code></pre>"))
 
-(defmethod html :icblk
-  [n]
-  (str "<pre><code>"
-       (:content (:data n))
-       "</code></pre>"))
-
 (def from-string
   "Removes nodes tagged with :adef."
   (comp html ast/from-string))
 
-(from-string "## *italic* `mono` **strong**\n---\n\n``` clj\ncode\nblock\n```\n\n    one\n    two")
+(from-string "abc\n===\n\n``` clj\none\ntwo\n```")
 

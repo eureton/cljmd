@@ -6,5 +6,6 @@
             [commonmark.ast.block]
             [commonmark.ast]
             [commonmark.blockrun.entry]
-            [commonmark.blockrun]))
+            [commonmark.blockrun]
+            [commonmark.render]))
 
