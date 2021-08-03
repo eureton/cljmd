@@ -218,8 +218,7 @@
     (let [prefix (string/replace (str indent marker space) #"."  " ")
           trim-re (re-pattern (str "^ {0," (count prefix) "}"))
           ; TODO refactor this to use list-item-content
-          previous (string/replace previous trim-re "")
-          current (subs current (-> current list-item-lead-line :indent count))]
+          previous (string/replace previous trim-re "")]
       (or (string/starts-with? current prefix)
           (lazy-continuation-line? current previous)
           (= :blank (->> current tagger :tag))))))
