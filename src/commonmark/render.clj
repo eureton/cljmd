@@ -3,12 +3,22 @@
             [flatland.useful.fn :as ufn]
             [commonmark.ast :as ast]))
 
+(defn escape
+  "Replaces special characters with HTML entities."
+  [s]
+  (let [smap {\& "&amp;"
+              \< "&lt;"
+              \> "&gt;"
+              \" "&quot;"
+              \' "&apos;"}]
+    (string/join (replace smap s))))
+
 (defn open
   ""
   [s & attrs]
   (let [attrs-str (->> attrs
                        (partition 2)
-                       (map (fn [[n v]] (str n "=\"" v "\"")))
+                       (map (fn [[n v]] (str n "=\"" (escape v) "\"")))
                        (string/join " "))]
     (str "<" s
          (ufn/fix attrs-str not-empty #(str " " %))
@@ -58,7 +68,7 @@
   ""
   (comp (ufn/to-fix coll? (comp string/join #(map html %)))
         (some-fn :children
-                 (comp :content :data))))
+                 (comp escape :content :data))))
 
 (def full
   ""
