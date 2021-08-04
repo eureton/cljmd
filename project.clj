@@ -1,4 +1,4 @@
-(defproject commonmark "0.1.0-SNAPSHOT"
+(defproject commonmark "0.1.0"
   :description "FIXME: write description"
   :url "http://example.com/FIXME"
   :license {:name "EPL-2.0 OR GPL-2.0-or-later WITH Classpath-exception-2.0"
@@ -6,5 +6,6 @@
   :dependencies [[org.clojure/clojure "1.10.3"]
                  [org.clojure/core.incubator "0.1.4"]
                  [treeduce "0.1.0"]
-                 [org.flatland/useful "0.11.6"]]
+                 [org.flatland/useful "0.11.6"]
+                 [cheshire "5.10.0"]]
   :repl-options {:init-ns commonmark.core})
