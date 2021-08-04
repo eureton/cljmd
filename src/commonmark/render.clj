@@ -19,15 +19,23 @@
   [s]
   (str "</" s ">"))
 
-(def ontology (-> (make-hierarchy)
-                  (derive :ofcblk :code-block)
-                  (derive :icblk  :code-block)
-                  atom))
+(def hierarchy (-> (make-hierarchy)
+                   (derive :ofcblk :code-block)
+                   (derive :icblk  :code-block)
+
+                   (derive :doc        :bare)
+                   (derive :txt        :bare)
+                   (derive :html-block :bare)
+
+                   (derive :hbr :compact)
+                   (derive :hbr :compact)
+                   atom))
 
 (defmulti html
   "HTML representation of the node as a string."
   (comp :tag :data)
-  :hierarchy ontology)
+  :hierarchy hierarchy
+  :default :full)
 
 (def tag-map
   ""
@@ -64,17 +72,11 @@
   [n]
   (str "<" (tag n) " />"))
 
-(defmethod html :doc [n] (inner n))
+(defmethod html :bare [n] (inner n))
 
-(defmethod html :default [n] (full n))
+(defmethod html :full [n] (full n))
 
-(defmethod html :txt [n] (inner n))
-
-(defmethod html :html-block [n] (inner n))
-
-(defmethod html :hbr [n] (compact n))
-
-(defmethod html :tbr [n] (compact n))
+(defmethod html :compact [n] (compact n))
 
 (defmethod html :sbr [_] "\r\n")
 
@@ -106,8 +108,10 @@
   (let [tag (case (:type data)
               "bullet" "ul"
               "ordered" "ol")
-        start-validator (ufn/validator (every-pred integer?
-                                                   #(> % 1)))
+        start-validator (ufn/validator (every-pred some?
+                                                   #(-> %
+                                                        (Integer/parseInt)
+                                                        (> 1))))
         start (start-validator (:start data))
         tight? (= "true" (:tight data))]
     (str (apply open (cond-> [tag]
@@ -125,6 +129,8 @@
 (from-string "> [*abc*](xyz)\n123\none\ntwo\nthree")
 (from-string "[abc](xyz '123')  \nhello")
 (from-string "- one\n- two\n- three")
+(from-string "2. one\n2. two\n2. three")
 (from-string "- one\n  one-and-a-half\n- two\n- three")
 (from-string "- ## one\n  one-and-a-half\n\n\n- two\n- three")
+(from-string "2. ## one\n   one-and-a-half\n\n\n2. two\n2. three")
 
