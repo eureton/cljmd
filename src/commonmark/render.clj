@@ -14,20 +14,22 @@
     (string/join (replace smap s))))
 
 (defn open
-  ""
-  [s & attrs]
+  "String representation of an opening HTML tag. The optional attrs parameter
+   is expected to be a flat series of name / value strings to make HTML
+   attributes of, e.g. (open \"a\" \"href\" \"/url\")"
+  [tag & attrs]
   (let [attrs-str (->> attrs
                        (partition 2)
                        (map (fn [[n v]] (str n "=\"" (escape v) "\"")))
                        (string/join " "))]
-    (str "<" s
+    (str "<" tag
          (ufn/fix attrs-str not-empty #(str " " %))
          ">")))
 
 (defn close
-  ""
-  [s]
-  (str "</" s ">"))
+  "String representation of a closing HTML tag."
+  [tag]
+  (str "</" tag ">"))
 
 (def hierarchy (-> (make-hierarchy)
                    (derive :ofcblk :code-block)
@@ -42,13 +44,13 @@
                    atom))
 
 (defmulti html
-  "HTML representation of the node as a string."
+  "HTML representation of the AST node as a string."
   (comp :tag :data)
   :hierarchy hierarchy
   :default :full)
 
 (def tag-map
-  ""
+  "Maps AST node tags to HTML tag names."
   {:tbr "hr"
    :hbr "br"
    :em "em"
@@ -59,26 +61,26 @@
    :li "li"})
 
 (def tag
-  ""
+  "HTML tag name of the given AST node."
   (let [heading? (comp #{:atxh :stxh} :tag :data)]
     (ufn/to-fix heading? #(->> % :data :level (str "h"))
                          (comp tag-map :tag :data))))
 
 (def inner
-  ""
+  "Inner HTML of the given AST node."
   (comp (ufn/to-fix coll? (comp string/join #(map html %)))
         (some-fn :children
                  (comp escape :content :data))))
 
 (def full
-  ""
+  "Outer HTML of the given AST node."
   (comp string/join
         (juxt (comp open tag)
               inner
               (comp close tag))))
 
 (defn compact
-  ""
+  "Compact HTML tag for the given AST node."
   [n]
   (str "<" (tag n) " />"))
 
@@ -91,13 +93,13 @@
 (defmethod html :sbr [_] "\r\n")
 
 (defmethod html :code-block
-  [n]
-  (str "<pre><code"
-       (when-some [info (:info (:data n))]
-         (str " class=\"language-" info "\""))
-       ">"
-       (:content (:data n))
-       "</code></pre>"))
+  [{:as n {:keys [info]} :data}]
+  (str "<pre>"
+       (apply open (cond-> ["code"]
+                     info (conj "class" (str "language-" info))))
+       (inner n)
+       (close "code")
+       "</pre>"))
 
 (defmethod html :a
   [{:as n {:keys [destination title]} :data}]
@@ -107,7 +109,8 @@
        (close "a")))
 
 (defn tighten
-  ""
+  "Replaces the direct :p children of n with their children. Is expected to be
+   run on the items of a tight list."
   [n]
   (let [unwrap (ufn/to-fix (comp #{:p} :tag :data) :children
                            vector)]
@@ -131,7 +134,7 @@
          (close tag))))
 
 (def from-string
-  "Removes nodes tagged with :adef."
+  "Transforms Commonmark into HTML."
   (comp html ast/from-string))
 
 (from-string "abc\n===\n\n``` clj\none\ntwo\n```\n\n<pre>one\ntwo\nthree</pre>")
