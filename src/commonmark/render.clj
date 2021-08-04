@@ -45,7 +45,9 @@
 
 (defmethod tag :cs [_] "code")
 
-(def children
+(defmethod tag :p [_] "p")
+
+(def inner
   ""
   (comp (ufn/to-fix coll? (comp string/join #(map html %)))
         (some-fn :children
@@ -55,7 +57,7 @@
   ""
   (comp string/join
         (juxt (comp open-tag tag)
-              children
+              inner
               (comp close-tag tag))))
 
 (defn compact
@@ -63,11 +65,13 @@
   [n]
   (str "<" (tag n) " />"))
 
-(defmethod html :doc [n] (children n))
+(defmethod html :doc [n] (inner n))
 
 (defmethod html :default [n] (full n))
 
-(defmethod html :txt [n] (:content (:data n)))
+(defmethod html :txt [n] (inner n))
+
+(defmethod html :html-block [n] (inner n))
 
 (defmethod html :hbr [n] (compact n))
 
@@ -84,9 +88,19 @@
        (:content (:data n))
        "</code></pre>"))
 
+(defmethod html :a
+  [{:as n {:keys [destination title]} :data}]
+  (str "<a href=\"" destination "\""
+       (when title
+         (str " title=\"" title "\""))
+       ">"
+       (inner n)
+       "</a>"))
+
 (def from-string
   "Removes nodes tagged with :adef."
   (comp html ast/from-string))
 
-(from-string "abc\n===\n\n``` clj\none\ntwo\n```")
+(from-string "abc\n===\n\n``` clj\none\ntwo\n```\n\n<pre>one\ntwo\nthree</pre>")
+(from-string "[abc](xyz '123')")
 
