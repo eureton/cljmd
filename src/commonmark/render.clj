@@ -3,20 +3,23 @@
             [flatland.useful.fn :as ufn]
             [commonmark.ast :as ast]))
 
-(defn open-tag
+(defn open
   ""
-  [s]
-  (str "<" s ">"))
+  [s & attrs]
+  (let [attrs-str (->> attrs
+                       (partition 2)
+                       (map (fn [[n v]] (str n "=\"" v "\"")))
+                       (string/join " "))]
+    (str "<" s
+         (ufn/fix attrs-str not-empty #(str " " %))
+         ">")))
 
-(defn close-tag
+(defn close
   ""
   [s]
   (str "</" s ">"))
 
 (def ontology (-> (make-hierarchy)
-                  (derive :atxh :heading)
-                  (derive :stxh :heading)
-
                   (derive :ofcblk :code-block)
                   (derive :icblk  :code-block)
                   atom))
@@ -26,26 +29,22 @@
   (comp :tag :data)
   :hierarchy ontology)
 
-(defmulti tag
+(def tag-map
   ""
-  (comp :tag :data)
-  :hierarchy ontology)
+  {:tbr "hr"
+   :hbr "br"
+   :em "em"
+   :strong "strong"
+   :cs "code"
+   :p "p"
+   :bq "blockquote"
+   :li "li"})
 
-(defmethod tag :heading
-  [n]
-  (str "h" (:level (:data n))))
-
-(defmethod tag :tbr [_] "hr")
-
-(defmethod tag :hbr [_] "br")
-
-(defmethod tag :em [_] "em")
-
-(defmethod tag :strong [_] "strong")
-
-(defmethod tag :cs [_] "code")
-
-(defmethod tag :p [_] "p")
+(def tag
+  ""
+  (let [heading? (comp #{:atxh :stxh} :tag :data)]
+    (ufn/to-fix heading? #(->> % :data :level (str "h"))
+                         (comp tag-map :tag :data))))
 
 (def inner
   ""
@@ -56,9 +55,9 @@
 (def full
   ""
   (comp string/join
-        (juxt (comp open-tag tag)
+        (juxt (comp open tag)
               inner
-              (comp close-tag tag))))
+              (comp close tag))))
 
 (defn compact
   ""
@@ -90,12 +89,32 @@
 
 (defmethod html :a
   [{:as n {:keys [destination title]} :data}]
-  (str "<a href=\"" destination "\""
-       (when title
-         (str " title=\"" title "\""))
-       ">"
+  (str (apply open (cond-> ["a" "href" destination]
+                     title (conj "title" title)))
        (inner n)
-       "</a>"))
+       (close "a")))
+
+(defn tighten
+  ""
+  [n]
+  (let [unwrap (ufn/to-fix (comp #{:p} :tag :data) :children
+                           vector)]
+    (update n :children #(mapcat unwrap %))))
+
+(defmethod html :list
+  [{:as n :keys [data]}]
+  (let [tag (case (:type data)
+              "bullet" "ul"
+              "ordered" "ol")
+        start-validator (ufn/validator (every-pred integer?
+                                                   #(> % 1)))
+        start (start-validator (:start data))
+        tight? (= "true" (:tight data))]
+    (str (apply open (cond-> [tag]
+                       start (conj "start" start)))
+         (inner (cond-> n
+                  tight? (update :children (comp vec #(map tighten %)))))
+         (close tag))))
 
 (def from-string
   "Removes nodes tagged with :adef."
@@ -103,4 +122,9 @@
 
 (from-string "abc\n===\n\n``` clj\none\ntwo\n```\n\n<pre>one\ntwo\nthree</pre>")
 (from-string "[abc](xyz '123')")
+(from-string "> [*abc*](xyz)\n123\none\ntwo\nthree")
+(from-string "[abc](xyz '123')  \nhello")
+(from-string "- one\n- two\n- three")
+(from-string "- one\n  one-and-a-half\n- two\n- three")
+(from-string "- ## one\n  one-and-a-half\n\n\n- two\n- three")
 
