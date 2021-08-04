@@ -1,6 +1,7 @@
 (ns commonmark.render
   (:require [clojure.string :as string]
             [flatland.useful.fn :as ufn]
+            [treeduce.core :as tree]
             [commonmark.ast :as ast]))
 
 (defn escape
@@ -9,22 +10,25 @@
   (let [smap {\& "&amp;"
               \< "&lt;"
               \> "&gt;"
-              \" "&quot;"
-              \' "&apos;"}]
+              \" "&quot;"}]
     (string/join (replace smap s))))
+
+(defn attributes
+  ""
+  [xs]
+  (->> xs
+       (partition 2)
+       (map (fn [[n v]] (str n "=\"" (escape v) "\"")))
+       (string/join " ")))
 
 (defn open
   "String representation of an opening HTML tag. The optional attrs parameter
    is expected to be a flat series of name / value strings to make HTML
    attributes of, e.g. (open \"a\" \"href\" \"/url\")"
   [tag & attrs]
-  (let [attrs-str (->> attrs
-                       (partition 2)
-                       (map (fn [[n v]] (str n "=\"" (escape v) "\"")))
-                       (string/join " "))]
-    (str "<" tag
-         (ufn/fix attrs-str not-empty #(str " " %))
-         ">")))
+  (str "<" tag
+       (ufn/fix (attributes attrs) not-empty #(str " " %))
+       ">"))
 
 (defn close
   "String representation of a closing HTML tag."
@@ -35,12 +39,14 @@
                    (derive :ofcblk :code-block)
                    (derive :icblk  :code-block)
 
-                   (derive :doc        :bare)
-                   (derive :txt        :bare)
-                   (derive :html-block :bare)
+                   (derive :doc :bare)
+                   (derive :txt :bare)
+
+                   (derive :html-block  :verbatim)
+                   (derive :html-inline :verbatim)
 
                    (derive :hbr :compact)
-                   (derive :hbr :compact)
+                   (derive :tbr :compact)
                    atom))
 
 (defmulti html
@@ -58,7 +64,8 @@
    :cs "code"
    :p "p"
    :bq "blockquote"
-   :li "li"})
+   :li "li"
+   :img "img"})
 
 (def tag
   "HTML tag name of the given AST node."
@@ -81,10 +88,14 @@
 
 (defn compact
   "Compact HTML tag for the given AST node."
-  [n]
-  (str "<" (tag n) " />"))
+  [n & attrs]
+  (str "<" (tag n)
+       (ufn/fix (attributes attrs) not-empty #(str " " %))
+       " />"))
 
 (defmethod html :bare [n] (inner n))
+
+(defmethod html :verbatim [n] (:content (:data n)))
 
 (defmethod html :full [n] (full n))
 
@@ -107,6 +118,17 @@
                      title (conj "title" title)))
        (inner n)
        (close "a")))
+
+(defmethod html :img
+  [{:as n {:keys [destination title]} :data}]
+  (let [alt (tree/reduce (fn [acc {:as x :keys [content]}]
+                           (cond-> acc
+                             content (str content)))
+                         ""
+                         n
+                         :depth-first)]
+    (apply compact (cond-> [n "src" destination "alt" alt]
+                     title (conj "title" title)))))
 
 (defn tighten
   "Replaces the direct :p children of n with their children. Is expected to be
@@ -136,14 +158,4 @@
 (def from-string
   "Transforms Commonmark into HTML."
   (comp html ast/from-string))
-
-(from-string "abc\n===\n\n``` clj\none\ntwo\n```\n\n<pre>one\ntwo\nthree</pre>")
-(from-string "[abc](xyz '123')")
-(from-string "> [*abc*](xyz)\n123\none\ntwo\nthree")
-(from-string "[abc](xyz '123')  \nhello")
-(from-string "- one\n- two\n- three")
-(from-string "2. one\n2. two\n2. three")
-(from-string "- one\n  one-and-a-half\n- two\n- three")
-(from-string "- ## one\n  one-and-a-half\n\n\n- two\n- three")
-(from-string "2. ## one\n   one-and-a-half\n\n\n2. two\n2. three")
 
