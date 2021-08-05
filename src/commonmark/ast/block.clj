@@ -51,7 +51,15 @@
                     block/list-item-lead-line
                     :marker)
         raw (from-container-blockrun-entry entry)
-        loose? (->> raw :children (some (comp #{:blank} :tag :data)))]
+        loose? (and (-> raw :children count (>= 3))
+                    (->> raw
+                         :children
+                         (map (comp :tag :data))
+                         (partition 3 1)
+                         (map (ufn/knit (comp nil? #{:blank})
+                                        (comp some? #{:blank})
+                                        (comp nil? #{:blank})))
+                         (some #(every? true? %))))]
     (update raw :data merge {:marker marker
                              :tight? (not loose?)})))
 

@@ -792,7 +792,23 @@
                                                  (node {:tag :atxh :level 1}
                                                        [(node {:tag :txt
                                                                :content "xyz"})])])])])])])
-             2 3 4)))
+             2 3 4))
+
+      (testing "blank line when block-level elements directly within item are less than 3"
+        (is (= (-> "-\n  abc" from-string :children)
+               [(node {:tag :list :type "bullet" :tight "true"}
+                      [(node {:tag :li}
+                             [(node {:tag :p}
+                                    [(node {:tag :txt
+                                            :content "abc"})])])])])))
+
+      (testing "blank line not between block-level elements directly within item"
+        (is (= (-> "- abc\n" from-string :children)
+               [(node {:tag :list :type "bullet" :tight "true"}
+                      [(node {:tag :li}
+                             [(node {:tag :p}
+                                    [(node {:tag :txt
+                                            :content "abc"})])])])]))))
 
     (testing "item indentation"
       (are [s] (= (->> s
