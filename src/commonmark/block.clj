@@ -166,7 +166,10 @@
   [current origin]
   (when-some [{:keys [indent marker space]
                :or {space " "}} (list-item-lead-line origin)]
-    (util/trim-leading-spaces current (count (str indent marker space)))))
+    (util/trim-leading-whitespace current
+                                  (-> (str indent marker space)
+                                      util/expand-tab
+                                      count))))
 
 (defn fenced-code-block-pair?
   "True if lines x and y are matching code block fences, false otherwise."
@@ -214,8 +217,11 @@
   (when-some [{:keys [indent marker space]
                :or {space " "}} (list-item-lead-line origin)]
     (let [prefix (-> (str indent marker space) count (repeat " ") string/join)
-          previous (list-item-content previous origin)]
-      (or (string/starts-with? current prefix)
+          previous (list-item-content previous origin)
+          starts-with? (comp (ufn/ap string/starts-with?)
+                             #(map util/expand-tab %)
+                             vector)]
+      (or (starts-with? current prefix)
           (lazy-continuation-line? current previous)
           (some? (blank-line current))))))
 

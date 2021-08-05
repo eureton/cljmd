@@ -14,6 +14,15 @@
           []
           coll))
 
+(def tabstop
+  "Number of spaces to expand tabs to."
+  4)
+
+(defn expand-tab
+  "Expands tab characters to 4 spaces."
+  [s]
+  (string/replace s "\t" (string/join (repeat tabstop \space))))
+
 (defn coalesce
   "Merges subsequent items x and y in coll for which (pred x y) returns true by
    reducing with rf over the items."
@@ -22,11 +31,15 @@
        (cluster pred)
        (map #(reduce rf %))))
 
-(defn trim-leading-spaces
-  "Remove max n spaces from the beginning of string s."
+(defn trim-leading-whitespace
+  "Removes whitespace from the beginning of string s. In case of spaces, max n
+   are removed. In case of tabs, max (quot n 4) are removed."
   [s n]
-  (cond-> s
-    (>= n 1) (string/replace (re-pattern (str "^ {1," n "}")) "")))
+  (let [max-tabs (quot n 4)
+        max-of #(re-pattern (str "^" %2 "{1," %1 "}"))]
+    (cond-> s
+      (>= max-tabs 1) (string/replace (max-of max-tabs \tab)   "")
+      (>= n        1) (string/replace (max-of n        \space) ""))))
 
 (def re-delimiter-escape-hash
   (->> "()[]{}\""

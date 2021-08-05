@@ -59,7 +59,7 @@
   [[tag lines]]
   (let [munch #(-> %
                    (string/replace #"(?<=^ {0,3})\t" "    ")
-                   (util/trim-leading-spaces 4))]
+                   (util/trim-leading-whitespace 4))]
     (->> lines
          (split-with clojure.string/blank?)
          second
@@ -93,9 +93,10 @@
 (defmethod from-blockrun-entry :ofcblk
   [[tag lines]]
   (let [opener (->> lines first block/opening-code-fence)
-        info (:info opener)]
+        info (:info opener)
+        munch #(util/trim-leading-whitespace % (-> opener :indent count))]
     (->> (subvec lines 1 (-> lines count dec (max 1)))
-         (map #(util/trim-leading-spaces % (-> opener :indent count)))
+         (map munch)
          (string/join "\r\n")
          (hash-map :tag tag :content)
          (merge (cond-> {}
