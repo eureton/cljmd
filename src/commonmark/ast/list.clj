@@ -1,14 +1,8 @@
 (ns commonmark.ast.list
   (:require [flatland.useful.fn :as ufn]
-            [commonmark.ast.common :refer [node add]]))
+            [commonmark.ast.common :refer [node add]]
+            [commonmark.ast.list.item :as item]))
 
-(defn marker-type
-  "Classifies as either :bullet or :ordered."
-  [marker]
-  (when marker
-    (if (some? (re-find #"[-+*]" marker))
-      :bullet
-      :ordered)))
 
 (defn delimiter
   "Classifies as either \"paren\" or \"period\" if ordered, nil otherwise."
@@ -27,25 +21,23 @@
        (re-find #"^(\d{1,9})[.)]$")
        second))
 
-(defn sibling-items?
-  "True if items x and y belong in the same list, false otherwise."
-  [x y]
-  (let [{{x-tag :tag x-marker :marker} :data} x
-        {{y-tag :tag y-marker :marker} :data} y
-        x-type (marker-type x-marker)
-        y-type (marker-type y-marker)]
-    (and (= x-tag :li)
-         (= y-tag :li)
-         (or (= x-marker y-marker)
-             (and (= x-type :ordered)
-                  (= y-type :ordered)
-                  (= (last x-marker)
-                     (last y-marker)))))))
+(defn tight?
+  "True if items comprise a tight list, false otherwise."
+  [items]
+  (and (every? item/tight? items)
+       (->> items
+            (drop 1)
+            (map (comp :tag :data first :children))
+            (not-any? #{:blank}))
+       (->> items
+            (drop-last 1)
+            (map (comp :tag :data last :children))
+            (not-any? #{:blank}))))
 
 (defn empty-for
   "List AST node with no children, configured for marker."
   [marker tight?]
-  (let [list-type (-> marker marker-type name)
+  (let [list-type (-> marker item/marker-type name)
         delimiter (delimiter marker)
         start (start marker)]
     (node (cond-> {:tag :list
@@ -57,8 +49,9 @@
 (defn from-items
   "AST node which represents a list comprising items."
   [items]
-  (let [tight? (every? (comp :tight? :data) items)]
+  (let [marker (-> items first :data :marker)
+        root (empty-for marker (tight? items))]
     (->> items
          (map #(assoc % :data {:tag :li}))
-         (reduce add (-> items first :data :marker (empty-for tight?))))))
+         (reduce add root))))
 

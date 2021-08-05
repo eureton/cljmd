@@ -741,6 +741,26 @@
                              [(node {:tag :p}
                                     [(node {:tag :txt :content "xyz"})])])])])))
 
+      (testing "first item begins with blank line"
+        (is (= (-> "-\n  abc\n- xyz" from-string :children)
+               [(node {:tag :list :type "bullet" :tight "true"}
+                      [(node {:tag :li}
+                             [(node {:tag :p}
+                                    [(node {:tag :txt :content "abc"})])])
+                       (node {:tag :li}
+                             [(node {:tag :p}
+                                    [(node {:tag :txt :content "xyz"})])])])])))
+
+      (testing "last item ends with blank line"
+        (is (= (-> "- abc\n- xyz\n\n" from-string :children)
+               [(node {:tag :list :type "bullet" :tight "true"}
+                      [(node {:tag :li}
+                             [(node {:tag :p}
+                                    [(node {:tag :txt :content "abc"})])])
+                       (node {:tag :li}
+                             [(node {:tag :p}
+                                    [(node {:tag :txt :content "xyz"})])])])])))
+
       (testing "blank lines between items"
         (are [n] (= (-> (str "- abc" (string/join (repeat n "\n")) "- xyz")
                         from-string

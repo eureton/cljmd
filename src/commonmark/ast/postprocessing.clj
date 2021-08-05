@@ -5,6 +5,7 @@
             [treeduce.core :as tree]
             [commonmark.ast.common :refer [block? node update-children]]
             [commonmark.ast.list :as ast.list]
+            [commonmark.ast.list.item :as ast.list.item]
             [commonmark.util :as util]))
 
 (defn block-with-hbr-end?
@@ -135,7 +136,7 @@
   "Groups adjacent matching :li nodes into :list nodes."
   [ast]
   (let [grouper #(->> %
-                      (util/cluster ast.list/sibling-items?)
+                      (util/cluster ast.list.item/siblings?)
                       (mapcat (ufn/to-fix (comp #{:li} :tag :data first)
                                           (comp vector ast.list/from-items))))]
     (tree/map (ufn/to-fix (comp nil? #{:list} :tag :data)
