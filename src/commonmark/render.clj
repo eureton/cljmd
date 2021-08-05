@@ -1,11 +1,34 @@
 (ns commonmark.render
   (:require [clojure.string :as string]
+            [clojure.java.io :as java.io]
+            [cheshire.core :as cheshire]
             [flatland.useful.fn :as ufn]
             [treeduce.core :as tree]
-            [commonmark.ast :as ast]))
+            [commonmark.ast :as ast]
+            [commonmark.ast.common :refer [leaf?]]
+            [commonmark.util :as util]))
 
-(defn escape
-  "Replaces special characters with HTML entities."
+(def entity-map
+  "Authoritative HTML entity map, as sourced from html.spec.whatwg.org"
+  (-> "entities.json" java.io/resource java.io/reader cheshire/parse-stream))
+
+(defn unescape-entities
+  "Replaces HTML entities with the corresponding character."
+  [s]
+  (let [from-decnum (comp str char (ufn/to-fix zero? 0xFFFD))]
+    (-> s
+        (string/replace #"&#(\d{1,7});" #(-> %
+                                             second
+                                             Integer/parseInt
+                                             from-decnum))
+        (string/replace #"&#[xX](\p{XDigit}{1,6});" #(-> %
+                                                         second
+                                                         (Integer/parseInt 16)
+                                                         from-decnum))
+        (string/replace #"&\p{Print}+?;" #(get-in entity-map [% "characters"] %)))))
+
+(defn escape-html
+  "Replaces HTML special characters with HTML entities."
   [s]
   (let [smap {\& "&amp;"
               \< "&lt;"
@@ -13,12 +36,21 @@
               \" "&quot;"}]
     (string/join (replace smap s))))
 
+(defn encode-uri
+  "Percent-encodes non-ASCII characters."
+  [uri]
+  (string/replace uri #"\P{ASCII}+" #(java.net.URLEncoder/encode % "UTF-8")))
+
+(def render-uri
+  "Prepares a URI for rendering as HTML."
+  (comp encode-uri unescape-entities))
+
 (defn attributes
   ""
   [xs]
   (->> xs
        (partition 2)
-       (map (fn [[n v]] (str n "=\"" (escape v) "\"")))
+       (map #(apply format "%s=\"%s\"" %))
        (string/join " ")))
 
 (defn open
@@ -75,9 +107,8 @@
 
 (def inner
   "Inner HTML of the given AST node."
-  (comp (ufn/to-fix coll? (comp string/join #(map html %)))
-        (some-fn :children
-                 (comp escape :content :data))))
+  (ufn/to-fix leaf? (comp escape-html unescape-entities :content :data)
+                    (comp string/join #(map html %) :children)))
 
 (def full
   "Outer HTML of the given AST node."
@@ -103,19 +134,26 @@
 
 (defmethod html :sbr [_] "\r\n")
 
+(defmethod html :cs
+  [{:as n {:keys [info]} :data}]
+  (str (open "code")
+       (-> n :data :content escape-html)
+       (close "code")))
+
 (defmethod html :code-block
   [{:as n {:keys [info]} :data}]
-  (str "<pre>"
-       (apply open (cond-> ["code"]
-                     info (conj "class" (str "language-" info))))
-       (inner n)
-       (close "code")
-       "</pre>"))
+  (let [render (comp unescape-entities #(str "language-" %))]
+    (str "<pre>"
+         (apply open (cond-> ["code"]
+                       info (conj "class" (render info))))
+         (-> n :data :content escape-html)
+         (close "code")
+         "</pre>")))
 
 (defmethod html :a
   [{:as n {:keys [destination title]} :data}]
-  (str (apply open (cond-> ["a" "href" destination]
-                     title (conj "title" title)))
+  (str (apply open (cond-> ["a" "href" (render-uri destination)]
+                     title (conj "title" (unescape-entities title))))
        (inner n)
        (close "a")))
 
@@ -127,8 +165,8 @@
                          ""
                          n
                          :depth-first)]
-    (apply compact (cond-> [n "src" destination "alt" alt]
-                     title (conj "title" title)))))
+    (apply compact (cond-> [n "src" (render-uri destination) "alt" alt]
+                       title (conj "title" (unescape-entities title))))))
 
 (defn tighten
   "Replaces the direct :p children of n with their children. Is expected to be
