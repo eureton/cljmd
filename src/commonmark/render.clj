@@ -53,40 +53,6 @@
        (map #(apply format "%s=\"%s\"" %))
        (string/join " ")))
 
-(defn open
-  "String representation of an opening HTML tag. The optional attrs parameter
-   is expected to be a flat series of name / value strings to make HTML
-   attributes of, e.g. (open \"a\" \"href\" \"/url\")"
-  [tag & attrs]
-  (str "<" tag
-       (ufn/fix (attributes attrs) not-empty #(str " " %))
-       ">"))
-
-(defn close
-  "String representation of a closing HTML tag."
-  [tag]
-  (str "</" tag ">"))
-
-(def hierarchy (-> (make-hierarchy)
-                   (derive :ofcblk :code-block)
-                   (derive :icblk  :code-block)
-
-                   (derive :doc :bare)
-                   (derive :txt :bare)
-
-                   (derive :html-block  :verbatim)
-                   (derive :html-inline :verbatim)
-
-                   (derive :hbr :compact)
-                   (derive :tbr :compact)
-                   atom))
-
-(defmulti html
-  "HTML representation of the AST node as a string."
-  (comp :tag :data)
-  :hierarchy hierarchy
-  :default :full)
-
 (def tag-map
   "Maps AST node tags to HTML tag names."
   {:tbr "hr"
@@ -105,6 +71,87 @@
     (ufn/to-fix heading? #(->> % :data :level (str "h"))
                          (comp tag-map :tag :data))))
 
+(defn open-tag
+  "String representation of an opening HTML tag. The optional attrs parameter
+   is expected to be a flat series of name / value strings to make HTML
+   attributes of, e.g. (open-tag \"a\" \"href\" \"/url\")"
+  [tag & attrs]
+  (str "<" tag
+       (ufn/fix (attributes attrs) not-empty #(str " " %))
+       ">"))
+
+(defn close-tag
+  "String representation of a closing HTML tag."
+  [tag]
+  (str "</" tag ">"))
+
+(def hierarchy (-> (make-hierarchy)
+                   (derive :ofcblk :code)
+                   (derive :icblk  :code)
+                   (derive :cs     :code)
+
+                   (derive :ofcblk :code-block)
+                   (derive :icblk  :code-block)
+
+                   (derive :doc :bare)
+                   (derive :txt :bare)
+
+                   (derive :html-block  :verbatim)
+                   (derive :html-inline :verbatim)
+
+                   (derive :hbr :compact)
+                   (derive :tbr :compact)
+                   atom))
+
+(defmulti open
+  "String representation of the opening HTML tag which corresponds to the node."
+  (comp :tag :data)
+  :hierarchy hierarchy)
+
+(defmethod open :code-block
+  [{:as n {:keys [info]} :data}]
+  (let [render (comp unescape-entities #(str "language-" %))]
+    (str "<pre>"
+         (apply open-tag (cond-> ["code"]
+                           info (conj "class" (render info)))))))
+
+(defmethod open :li
+  [{{:keys [tight?]} :data}]
+  (str "\n"
+       (open-tag "li")
+       (when-not tight? "\n")))
+
+(defmethod open :default
+  [n]
+  (open-tag (tag n)))
+
+(defmulti close
+  "String representation of the closing HTML tag which corresponds to the node."
+  (comp :tag :data)
+  :hierarchy hierarchy)
+
+(defmethod close :code-block
+  [{:as n {:keys [info]} :data}]
+  (let [render (comp unescape-entities #(str "language-" %))]
+    (str (close-tag "code")
+         "</pre>")))
+
+(defmethod close :li
+  [{{:keys [tight?]} :data}]
+  (str (when-not tight? "\n")
+       (close-tag "li")
+       "\n"))
+
+(defmethod close :default
+  [n]
+  (close-tag (tag n)))
+
+(defmulti html
+  "HTML representation of the AST node as a string."
+  (comp :tag :data)
+  :hierarchy hierarchy
+  :default :full)
+
 (def inner
   "Inner HTML of the given AST node."
   (ufn/to-fix leaf? (comp escape-html unescape-entities :content :data)
@@ -113,9 +160,7 @@
 (def full
   "Outer HTML of the given AST node."
   (comp string/join
-        (juxt (comp open tag)
-              inner
-              (comp close tag))))
+        (juxt open inner close)))
 
 (defn compact
   "Compact HTML tag for the given AST node."
@@ -134,28 +179,18 @@
 
 (defmethod html :sbr [_] "\r\n")
 
-(defmethod html :cs
-  [{:as n {:keys [info]} :data}]
-  (str (open "code")
+(defmethod html :code
+  [n]
+  (str (open n)
        (-> n :data :content escape-html)
-       (close "code")))
-
-(defmethod html :code-block
-  [{:as n {:keys [info]} :data}]
-  (let [render (comp unescape-entities #(str "language-" %))]
-    (str "<pre>"
-         (apply open (cond-> ["code"]
-                       info (conj "class" (render info))))
-         (-> n :data :content escape-html)
-         (close "code")
-         "</pre>")))
+       (close n)))
 
 (defmethod html :a
   [{:as n {:keys [destination title]} :data}]
-  (str (apply open (cond-> ["a" "href" (render-uri destination)]
+  (str (apply open-tag (cond-> ["a" "href" (render-uri destination)]
                      title (conj "title" (unescape-entities title))))
        (inner n)
-       (close "a")))
+       (close-tag "a")))
 
 (defmethod html :img
   [{:as n {:keys [destination title]} :data}]
@@ -169,8 +204,7 @@
                        title (conj "title" (unescape-entities title))))))
 
 (defn tighten
-  "Replaces the direct :p children of n with their children. Is expected to be
-   run on the items of a tight list."
+  "Replaces the direct :p children of n with their children."
   [n]
   (let [unwrap (ufn/to-fix (comp #{:p} :tag :data) :children
                            vector)]
@@ -186,12 +220,14 @@
                                                         (Integer/parseInt)
                                                         (> 1))))
         start (start-validator (:start data))
-        tight? (= "true" (:tight data))]
-    (str (apply open (cond-> [tag]
-                       start (conj "start" start)))
+        tight? (= "true" (:tight data))
+        mark #(assoc-in % [:data :tight?] tight?)]
+    (str (apply open-tag (cond-> [tag]
+                           start (conj "start" start)))
          (inner (cond-> n
-                  tight? (update :children (comp vec #(map tighten %)))))
-         (close tag))))
+                  true (update :children #(mapv mark %))
+                  tight? (update :children #(mapv tighten %))))
+         (close-tag tag))))
 
 (def from-string
   "Transforms Commonmark into HTML."
