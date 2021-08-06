@@ -5,7 +5,7 @@
             [commonmark.re.inline :as re.inline]))
 
 (def atx-heading
-  #"^ {0,3}(#{1,6})(?:$|\s+(\p{Print}*?)\s*)(?:\s#+\s*)?$")
+  #"^ {0,3}(#{1,6})(?:$|\s+(\p{Print}*?)\s*(?:(?<=\s)#+)?\s*$)")
 
 (def setext-heading-underline
   #"^ {0,3}(=+|-+)\s*$")

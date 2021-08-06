@@ -176,8 +176,10 @@
 
 (def inner
   "Inner HTML of the given AST node."
-  (ufn/to-fix leaf? (comp escape-html unescape-entities :content :data)
-                    (comp string/join #(map html %) :children)))
+  (let [content (comp :content :data)]
+    (ufn/to-fix (complement leaf?) (comp string/join #(map html %) :children)
+                content (comp escape-html unescape-entities content)
+                nil)))
 
 (def full
   "Outer HTML of the given AST node."
