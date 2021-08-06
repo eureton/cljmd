@@ -5,7 +5,7 @@
             [flatland.useful.fn :as ufn]
             [treeduce.core :as tree]
             [commonmark.ast :as ast]
-            [commonmark.ast.common :refer [leaf? ontology]]
+            [commonmark.ast.common :refer [leaf? ontology block?]]
             [commonmark.util :as util]))
 
 (def entity-map
@@ -157,9 +157,12 @@
        (close-tag "pre")))
 
 (defmethod close :li
-  [{{:keys [tight?]} :data}]
-  (str (when-not tight? "\n")
-       (close-tag "li")))
+  [n]
+  (let [{:keys [children] {:keys [tight?]} :data} n
+        break? (or (not tight?)
+                   (block? (last children)))]
+    (str (when break? "\n")
+         (close-tag "li"))))
 
 (defmethod close :default
   [n]
