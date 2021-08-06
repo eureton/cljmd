@@ -126,6 +126,11 @@
        (open-tag "li")
        (when-not tight? "\n")))
 
+(defmethod open :bq
+  [_]
+  (str "\n"
+       (open-tag "blockquote")))
+
 (defmethod open :img
   [{:as n {:keys [destination title]} :data}]
   (let [alt (tree/reduce (fn [acc {:as x :keys [content]}]
@@ -163,6 +168,11 @@
                    (block? (last children)))]
     (str (when break? "\n")
          (close-tag "li"))))
+
+(defmethod close :bq
+  [_]
+  (str "\n"
+       (close-tag "blockquote")))
 
 (defmethod close :default
   [n]
