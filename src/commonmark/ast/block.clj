@@ -92,8 +92,11 @@
   [[tag lines]]
   (let [opener (->> lines first block/opening-code-fence)
         info (:info opener)
-        munch #(util/trim-leading-whitespace % (-> opener :indent count))]
-    (->> (subvec lines 1 (-> lines count dec (max 1)))
+        munch #(util/trim-leading-whitespace % (-> opener :indent count))
+        closed? (->> lines peek block/closing-code-fence some?)
+        end-index (cond-> (count lines)
+                    closed? dec)]
+    (->> (subvec lines 1 (max end-index 1))
          (map munch)
          (string/join "\r\n")
          (hash-map :tag tag :content)

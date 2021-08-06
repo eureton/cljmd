@@ -511,6 +511,16 @@
       (is (= (-> " ```\n abc\n  xyz\n 123\n ```" from-string :children)
              [(node {:tag :ofcblk :content "abc\r\n xyz\r\n123"})])))
 
+    (testing "unclosed"
+      (testing "top-level"
+        (is (= (-> "```\nabc" from-string :children)
+               [(node {:tag :ofcblk :content "abc"})])))
+
+      (testing "within a block"
+        (is (= (-> "> ```\n> abc" from-string :children)
+               [(node {:tag :bq}
+                      [(node {:tag :ofcblk :content "abc"})])]))))
+
     (testing "preceded by block"
       (are [b n] (= (-> (str b "\n```\nabc\n```") from-string :children)
                     [n
