@@ -3,13 +3,20 @@
             [flatland.useful.fn :as ufn]
             [commonmark.inline :as inline]
             [commonmark.inline.token :as token]
-            [commonmark.ast.common :refer [node ontology]]))
+            [commonmark.ast.common :refer [node]]))
 
 (def degenerate?
   "Returns true if the AST node is degenerate, false otherwise.
    A degenerate node is a non-leaf text node."
   (every-pred (comp some? :children)
               (comp #{:txt} :tag :data)))
+
+(def hierarchy (-> (deref commonmark.ast.common/ontology)
+                   (derive :html-inline :leaf)
+                   (derive :cs          :leaf)
+                   (derive :hbr         :leaf)
+                   (derive :sbr         :leaf)
+                   atom))
 
 (defmulti inflate
   "Recursively replaces inline markdown entities with the AST to which they
@@ -18,7 +25,7 @@
     (cond
       (string? input) :string
       (map? input) (:tag input)))
-  :hierarchy ontology)
+  :hierarchy hierarchy)
 
 (defn unpack
   "Transforms string into a vector of ASTs, each of which corresponds to an
@@ -54,7 +61,7 @@
   [input _]
   (node (select-keys input [:tag :destination :text])))
 
-(defmethod inflate :verbatim
+(defmethod inflate :leaf
   [input _]
   (node (select-keys input [:tag :content])))
 

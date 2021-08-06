@@ -5,7 +5,7 @@
             [flatland.useful.fn :as ufn]
             [treeduce.core :as tree]
             [commonmark.ast :as ast]
-            [commonmark.ast.common :refer [leaf?]]
+            [commonmark.ast.common :refer [leaf? ontology]]
             [commonmark.util :as util]))
 
 (def entity-map
@@ -86,30 +86,7 @@
   [tag]
   (str "</" tag ">"))
 
-(def hierarchy (-> (make-hierarchy)
-                   (derive :a           :inline)
-                   (derive :img         :inline)
-                   (derive :em          :inline)
-                   (derive :strong      :inline)
-                   (derive :cs          :inline)
-                   (derive :hbr         :inline)
-                   (derive :sbr         :inline)
-                   (derive :html-inline :inline)
-
-                   (derive :bq         :block)
-                   (derive :li         :block)
-                   (derive :p          :block)
-                   (derive :blank      :block)
-                   (derive :atxh       :block)
-                   (derive :stxh       :block)
-                   (derive :tbr        :block)
-                   (derive :icblk      :block)
-                   (derive :ofcblk     :block)
-                   (derive :doc        :block)
-                   (derive :list       :block)
-                   (derive :li         :block)
-                   (derive :html-block :block)
-
+(def hierarchy (-> (deref ontology)
                    (derive :ofcblk :code)
                    (derive :icblk  :code)
                    (derive :cs     :code)
