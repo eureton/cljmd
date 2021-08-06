@@ -150,10 +150,15 @@
            ["abc *xyz" "\t\t\t\t123*"   "===="]
            ["abc *xyz" "\t\t\t\t\t123*" "===="]))
 
+    (testing "no text"
+      (is (= (-> "===" from-string :children)
+             [(node {:tag :p}
+                    [(node {:tag :txt :content "==="})])])))
+
     (testing "leading whitespace alignment"
       (are [c u] (= (-> (str c \newline u) from-string :children)
-             [(node {:tag :stxh :level 1}
-                    [(node {:tag :txt :content "abc"})])])
+                    [(node {:tag :stxh :level 1}
+                           [(node {:tag :txt :content "abc"})])])
            "abc"    " ==="
            "abc"    "  ==="
            "abc"    "   ==="

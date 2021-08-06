@@ -51,6 +51,11 @@
   "Hook for changing the tag of an entry after the blockrun has been compiled."
   first)
 
+(defmethod promote :stxh
+  [x]
+  (cond-> x
+    (-> x second count (= 1)) (assoc 0 :p)))
+
 (defmethod promote :html-block-unpaired
   [x]
   (assoc x 0 (if (block/html-block-begin (origin x))
