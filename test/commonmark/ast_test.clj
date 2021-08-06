@@ -27,6 +27,13 @@
            "##### abc"  5
            "###### abc" 6))
 
+    (testing "coalesce"
+      (is (= (-> "# abc\n# xyz" from-string :children)
+             [(node {:tag :atxh :level 1}
+                    [(node {:tag :txt :content "abc"})])
+              (node {:tag :atxh :level 1}
+                    [(node {:tag :txt :content "xyz"})])])))
+
     (testing "nested inline"
       (are [s t] (= (-> s from-string :children)
                     [(node {:tag :atxh :level 1}
@@ -99,6 +106,20 @@
       (is (= (-> "abc\n===" from-string :children)
              [(node {:tag :stxh :level 1}
                     [(node {:tag :txt :content "abc"})])])))
+
+    (testing "level"
+      (are [s l] (= (-> s from-string :children)
+                    [(node {:tag :stxh :level l}
+                           [(node {:tag :txt :content "abc"})])])
+           "abc\n===" 1
+           "abc\n---" 2))
+
+    (testing "coalesce"
+      (is (= (-> "abc\n---\nxyz\n---" from-string :children)
+             [(node {:tag :stxh :level 2}
+                    [(node {:tag :txt :content "abc"})])
+              (node {:tag :stxh :level 2}
+                    [(node {:tag :txt :content "xyz"})])])))
 
     (testing "nested inline"
       (are [s t] (= (-> (str s "\n=====") from-string :children)

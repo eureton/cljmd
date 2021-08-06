@@ -206,6 +206,10 @@
           y-tbr?    (fuse-split (retag x :last :stxh) y 1)
           :else     (concat x y))))
 
+(defmethod add [:atxh :atxh]
+  [x y]
+  (concat x y))
+
 (defmethod add :default
   ([] zero)
   ([x] x)
@@ -238,11 +242,12 @@
 (defn coalesce
   "Merges adjacent entries of the same type."
   [blockrun]
-  (util/coalesce #(let [tag (first %2)]
-                    (and (= (first %1) tag)
-                         (nil? (#{:tbr :adef :li} tag))))
-                 #(update %1 1 (comp vec concat) (second %2))
-                 blockrun))
+  (let [exceptions #{:tbr :adef :li :atxh :stxh}]
+    (util/coalesce #(let [tag (first %2)]
+                      (and (= (first %1) tag)
+                           (not (contains? exceptions tag))))
+                   #(update %1 1 (comp vec concat) (second %2))
+                   blockrun)))
 
 (defn extract-link-reference-definitions
   "Searches blockrun for link reference definitions and extracts them into
