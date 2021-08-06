@@ -63,6 +63,7 @@
    :p "p"
    :bq "blockquote"
    :li "li"
+   :a "a"
    :img "img"})
 
 (def tag
@@ -86,6 +87,29 @@
   (str "</" tag ">"))
 
 (def hierarchy (-> (make-hierarchy)
+                   (derive :a           :inline)
+                   (derive :img         :inline)
+                   (derive :em          :inline)
+                   (derive :strong      :inline)
+                   (derive :cs          :inline)
+                   (derive :hbr         :inline)
+                   (derive :sbr         :inline)
+                   (derive :html-inline :inline)
+
+                   (derive :bq         :block)
+                   (derive :li         :block)
+                   (derive :p          :block)
+                   (derive :blank      :block)
+                   (derive :atxh       :block)
+                   (derive :stxh       :block)
+                   (derive :tbr        :block)
+                   (derive :icblk      :block)
+                   (derive :ofcblk     :block)
+                   (derive :doc        :block)
+                   (derive :list       :block)
+                   (derive :li         :block)
+                   (derive :html-block :block)
+
                    (derive :ofcblk :code)
                    (derive :icblk  :code)
                    (derive :cs     :code)
@@ -101,6 +125,7 @@
 
                    (derive :hbr :compact)
                    (derive :tbr :compact)
+                   (derive :img :compact)
                    atom))
 
 (defmulti open
@@ -108,10 +133,13 @@
   (comp :tag :data)
   :hierarchy hierarchy)
 
+(prefer-method open :code-block :block)
+
 (defmethod open :code-block
   [{:as n {:keys [info]} :data}]
   (let [render (comp unescape-entities #(str "language-" %))]
-    (str "<pre>"
+    (str "\n"
+         (open-tag "pre")
          (apply open-tag (cond-> ["code"]
                            info (conj "class" (render info)))))))
 
@@ -121,7 +149,22 @@
        (open-tag "li")
        (when-not tight? "\n")))
 
-(defmethod open :default
+(defmethod open :img
+  [{:as n {:keys [destination title]} :data}]
+  (let [alt (tree/reduce (fn [acc {:as x :keys [content]}]
+                           (cond-> acc
+                             content (str content)))
+                         ""
+                         n
+                         :depth-first)]
+    (apply open-tag (cond-> ["img" "src" (render-uri destination) "alt" alt]
+                      title (conj "title" (unescape-entities title))))))
+
+(defmethod open :block
+  [n]
+  (str "\n" (open-tag (tag n))))
+
+(defmethod open :inline
   [n]
   (open-tag (tag n)))
 
@@ -131,16 +174,15 @@
   :hierarchy hierarchy)
 
 (defmethod close :code-block
-  [{:as n {:keys [info]} :data}]
-  (let [render (comp unescape-entities #(str "language-" %))]
-    (str (close-tag "code")
-         "</pre>")))
+  [_]
+  (str "\n"
+       (close-tag "code")
+       (close-tag "pre")))
 
 (defmethod close :li
   [{{:keys [tight?]} :data}]
   (str (when-not tight? "\n")
-       (close-tag "li")
-       "\n"))
+       (close-tag "li")))
 
 (defmethod close :default
   [n]
@@ -164,10 +206,8 @@
 
 (defn compact
   "Compact HTML tag for the given AST node."
-  [n & attrs]
-  (str "<" (tag n)
-       (ufn/fix (attributes attrs) not-empty #(str " " %))
-       " />"))
+  [n]
+  (string/replace (open n) #">$" " />"))
 
 (defmethod html :bare [n] (inner n))
 
@@ -192,17 +232,6 @@
        (inner n)
        (close-tag "a")))
 
-(defmethod html :img
-  [{:as n {:keys [destination title]} :data}]
-  (let [alt (tree/reduce (fn [acc {:as x :keys [content]}]
-                           (cond-> acc
-                             content (str content)))
-                         ""
-                         n
-                         :depth-first)]
-    (apply compact (cond-> [n "src" (render-uri destination) "alt" alt]
-                       title (conj "title" (unescape-entities title))))))
-
 (defn tighten
   "Replaces the direct :p children of n with their children."
   [n]
@@ -222,14 +251,17 @@
         start (start-validator (:start data))
         tight? (= "true" (:tight data))
         mark #(assoc-in % [:data :tight?] tight?)]
-    (str (apply open-tag (cond-> [tag]
+    (str "\n"
+         (apply open-tag (cond-> [tag]
                            start (conj "start" start)))
          (inner (cond-> n
                   true (update :children #(mapv mark %))
                   tight? (update :children #(mapv tighten %))))
+         "\n"
          (close-tag tag))))
 
 (def from-string
   "Transforms Commonmark into HTML."
-  (comp html ast/from-string))
+  (let [trim #(string/replace % #"^[\r\n]+" "")]
+    (comp trim html ast/from-string)))
 

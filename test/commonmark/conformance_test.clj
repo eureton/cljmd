@@ -13,8 +13,6 @@
                   cheshire/parse-stream)
         normalize (comp #(cond-> %
                            (not (string/ends-with? % "\n")) (str "\n"))
-                        #(string/replace % "</p>" "</p>\n")
-                        #(string/replace % "</code></pre>" "\n</code></pre>")
                         #(string/replace % "\r\n" "\n")
                         #(string/replace % "<br />" "<br />\n"))
         from-string (comp normalize render/from-string)]
