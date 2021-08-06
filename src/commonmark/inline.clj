@@ -11,7 +11,8 @@
   [[_ backtick-string spaced-content non-spaced-content]]
   {:backtick-string backtick-string
    :content (-> (or spaced-content non-spaced-content)
-                (string/replace #"(?:\r\n|\r|\n)"  " "))
+                (string/replace #"(?:\r\n|\r|\n)" " ")
+                (string/replace #"(?:^ | $)" ""))
    :tag :cs})
 
 (defn emphasis-matcher

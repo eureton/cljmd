@@ -5,7 +5,7 @@
 
 (def code-span
   (let [backtick "((?<!`)`+(?!`))"
-        spaced #"[ \n](.*?[^ ].*?)[ \n]"
+        spaced #"([ \n].*?[^ ].*?[ \n])"
         non-spaced #"(.*?[^`])"
         same-backtick #"\1(?!`)"]
     (re-pattern (str "(?s)" (re.common/unescaped backtick)
