@@ -123,8 +123,7 @@
 (defmethod open :li
   [{{:keys [tight?]} :data}]
   (str "\n"
-       (open-tag "li")
-       (when-not tight? "\n")))
+       (open-tag "li")))
 
 (defmethod open :bq
   [_]
@@ -156,8 +155,8 @@
   :hierarchy hierarchy)
 
 (defmethod close :code-block
-  [_]
-  (str "\n"
+  [n]
+  (str (when-not (empty? (:content (:data n))) "\n")
        (close-tag "code")
        (close-tag "pre")))
 
