@@ -149,3 +149,10 @@
                                 (and fragment (decode fragment)))
                  (catch java.net.URISyntaxException _ (java.net.URI. uri))))))
 
+(defn last-line
+  "The last line of string s, honoring blanks."
+  [s]
+  (when s
+    (or (re-find #"(?m)^.*\z" s)
+        "")))
+

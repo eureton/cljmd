@@ -155,10 +155,10 @@
   :hierarchy hierarchy)
 
 (defmethod close :code-block
-  [n]
-  (str (when-not (empty? (:content (:data n))) "\n")
-       (close-tag "code")
-       (close-tag "pre")))
+  [{:as n {:keys [content] :or {content ""}} :data}]
+  (str (when-not (->> content util/last-line empty?) "\n")
+     (close-tag "code")
+     (close-tag "pre")))
 
 (defmethod close :li
   [n]
