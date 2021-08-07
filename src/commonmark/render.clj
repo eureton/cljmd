@@ -77,14 +77,16 @@
    is expected to be a flat series of name / value strings to make HTML
    attributes of, e.g. (open-tag \"a\" \"href\" \"/url\")"
   [tag & attrs]
-  (str "<" tag
-       (ufn/fix (attributes attrs) not-empty #(str " " %))
-       ">"))
+  (when tag
+    (str "<" tag
+         (ufn/fix (attributes attrs) not-empty #(str " " %))
+         ">")))
 
 (defn close-tag
   "String representation of a closing HTML tag."
   [tag]
-  (str "</" tag ">"))
+  (when tag
+    (str "</" tag ">")))
 
 (def hierarchy (-> (deref ontology)
                    (derive :ofcblk :code)
@@ -185,8 +187,10 @@
 
 (def inner
   "Inner HTML of the given AST node."
-  (let [content (comp :content :data)]
+  (let [content (comp :content :data)
+        verbatim? (comp #(isa? (deref hierarchy) % :verbatim) :tag :data)]
     (ufn/to-fix (complement leaf?) (comp string/join #(map html %) :children)
+                (every-pred content verbatim?) content
                 content (comp escape-html unescape-entities content)
                 nil)))
 
@@ -201,8 +205,6 @@
   (string/replace (open n) #">$" " />"))
 
 (defmethod html :bare [n] (inner n))
-
-(defmethod html :verbatim [n] (:content (:data n)))
 
 (defmethod html :full [n] (full n))
 
