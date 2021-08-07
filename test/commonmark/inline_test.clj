@@ -35,13 +35,15 @@
     (testing "space not on both ends"
       (is (= " foo" (content "` foo`"))))
 
-    (testing "not unicode whitespace"
+    (testing "ASCII whitespace"
       (are [c] (= (count (content (str "`" c "foo" c "`")))
                   5)
            \u0009
-;          \u000A
-           \u000C
-           \u000D
+           \u000C))
+
+    (testing "Unicode whitespace"
+      (are [c] (= (count (content (str "`" c "foo" c "`")))
+                  5)
            \u00A0
            \u1680
            \u2000

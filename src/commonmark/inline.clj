@@ -5,14 +5,14 @@
             [commonmark.re.inline :as re.inline]
             [commonmark.re.html :as re.html]
             [commonmark.re.link :as re.link]
+            [commonmark.re.common :as re.common]
             [commonmark.inline.token :as token]))
 
 (defn code-span
-  [[_ backtick-string spaced-content non-spaced-content]]
-  {:backtick-string backtick-string
-   :content (-> (or spaced-content non-spaced-content)
+  [[_ _ inner]]
+  {:content (-> inner
                 (string/replace #"(?:\r\n|\r|\n)" " ")
-                (string/replace #"(?:^ | $)" ""))
+                (string/replace #"(?:^ (.*[^ ].*) $)" "$1"))
    :tag :cs})
 
 (defn emphasis-matcher

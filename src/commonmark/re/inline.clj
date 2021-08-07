@@ -4,13 +4,11 @@
             [commonmark.re.common :as re.common]))
 
 (def code-span
-  (let [backtick "((?<!`)`+(?!`))"
-        spaced #"([ \n].*?[^ ].*?[ \n])"
-        non-spaced #"(.*?[^`])"
-        same-backtick #"\1(?!`)"]
-    (re-pattern (str "(?s)" (re.common/unescaped backtick)
-                     "(?:" spaced "|" non-spaced ")"
-                     same-backtick))))
+  (let [pre "(?<!`)"
+        post "(?!`)"]
+    (re-pattern (str "(?s)" pre (re.common/unescaped "(`+)") post
+                     "(.*?)"
+                     pre #"\1" post))))
 
 (defn emphasis-delimeter
   [character length]
