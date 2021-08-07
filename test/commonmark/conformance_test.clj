@@ -6,7 +6,7 @@
             [commonmark.render :as render]))
 
 (deftest conformance-test
-  (comment (let [filename "tests.json"
+  (let [filename "tests.json"
         tests (-> filename
                   java.io/resource
                   java.io/reader
@@ -18,5 +18,5 @@
         from-string (comp normalize render/from-string)]
     (doseq [{:strs [markdown html example section]} tests]
       (testing (format "%s: Example %d" section example)
-        (is (= html (from-string markdown))))))))
+        (is (= html (from-string markdown)))))))
 
