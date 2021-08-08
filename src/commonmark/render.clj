@@ -39,7 +39,9 @@
 (defn encode-uri
   "Percent-encodes non-ASCII characters."
   [uri]
-  (string/replace uri #"\P{ASCII}+" #(java.net.URLEncoder/encode % "UTF-8")))
+  (-> uri
+      (string/replace #"\P{ASCII}+" #(java.net.URLEncoder/encode % "UTF-8"))
+      (string/replace #" " "%20")))
 
 (def render-uri
   "Prepares a URI for rendering as HTML."
