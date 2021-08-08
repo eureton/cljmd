@@ -191,7 +191,7 @@
     (ufn/to-fix (complement leaf?) (comp string/join #(map html %) :children)
                 (every-pred content verbatim?) content
                 content (comp render-text content)
-                nil)))
+                "")))
 
 (def full
   "Outer HTML of the given AST node."
@@ -252,8 +252,15 @@
          "\n"
          (close-tag tag))))
 
+(def normalize
+  "HTML-specific adjustments for conformance."
+  (comp (ufn/to-fix (every-pred not-empty
+                                #(not (string/ends-with? % "\n"))) #(str % "\n"))
+        #(string/replace % "\r\n" "\n")
+        #(string/replace % "<br />" "<br />\n")))
+
 (def from-string
   "Transforms Commonmark into HTML."
   (let [trim #(string/replace % #"^[\r\n]+" "")]
-    (comp trim html ast/from-string)))
+    (comp normalize trim html ast/from-string)))
 

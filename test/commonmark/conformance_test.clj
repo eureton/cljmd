@@ -3,19 +3,15 @@
             [clojure.string :as string]
             [clojure.java.io :as java.io]
             [cheshire.core :as cheshire]
-            [commonmark.render :as render]))
+            [flatland.useful.fn :as ufn]
+            [commonmark.render :refer [from-string]]))
 
 (deftest conformance-test
   (let [filename "tests.json"
         tests (-> filename
                   java.io/resource
                   java.io/reader
-                  cheshire/parse-stream)
-        normalize (comp #(cond-> %
-                           (not (string/ends-with? % "\n")) (str "\n"))
-                        #(string/replace % "\r\n" "\n")
-                        #(string/replace % "<br />" "<br />\n"))
-        from-string (comp normalize render/from-string)]
+                  cheshire/parse-stream)]
     (doseq [{:strs [markdown html example section]} tests]
       (testing (format "%s: Example %d" section example)
         (is (= html (from-string markdown)))))))
