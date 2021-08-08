@@ -242,14 +242,17 @@
            (reduce concat)))))
 
 (defn coalesce
-  "Merges adjacent entries of the same type."
-  [blockrun]
-  (let [exceptions #{:tbr :adef :li :atxh :stxh}]
-    (util/coalesce #(let [tag (first %2)]
-                      (and (= (first %1) tag)
-                           (not (contains? exceptions tag))))
-                   #(update %1 1 (comp vec concat) (second %2))
-                   blockrun)))
+  "Tests blockrun entries in pairs and concatenates those for which all of the
+   following apply:
+    1. are adjacent
+    2. bear the same tag
+    3. (pred t) returns logical true, where t is the tag of the entries"
+  [pred blockrun]
+  (util/coalesce #(let [tag (first %2)]
+                    (and (= (first %1) tag)
+                         (pred tag)))
+                 #(update %1 1 (comp vec concat) (second %2))
+                 blockrun))
 
 (defn extract-link-reference-definitions
   "Searches blockrun for link reference definitions and extracts them into
@@ -268,6 +271,7 @@
                    (map vector (repeat :adef) items)
                    (if (not-empty remainder) [[:p remainder]] [])))]
     (->> blockrun
+         (coalesce #{:p})
          (mapcat (ufn/to-fix split? split vector))
          vec)))
 
@@ -277,7 +281,7 @@
   (->> blockrun
        (map entry/promote)
        extract-link-reference-definitions
-       coalesce))
+       (coalesce (comp nil? #{:tbr :adef :li :atxh :stxh}))))
 
 (defn from-string
   "Parses the given input into a list of blockrun entries. Each of these entries
