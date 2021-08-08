@@ -21,7 +21,9 @@
   [ast]
   {:definitions (tree/reduce (fn [acc {:as x :keys [tag label]}]
                                (cond-> acc
-                                 (= :adef tag) (update label #(or %1 %2) x)))
+                                 (= :adef tag) (update (string/lower-case label)
+                                                       #(or %1 %2)
+                                                       x)))
                                {}
                                ast
                                :depth-first)})
