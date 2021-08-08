@@ -59,12 +59,6 @@
                    (string/replace #"(?<=^ {0,3})\t" "    ")
                    (util/trim-leading-whitespace 4))]
     (->> lines
-         (split-with clojure.string/blank?)
-         second
-         reverse
-         (split-with clojure.string/blank?)
-         second
-         reverse
          (map munch)
          (string/join "\r\n")
          (hash-map :tag tag :content)

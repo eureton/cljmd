@@ -218,7 +218,7 @@
              [[:icblk ["    xyz" "    abc"]]])))
 
     (testing "chunks separated by blanks"
-      (are [s ls] (= (from-string s)
+      (are [s ls] (= (postprocess (from-string s))
                      [[:icblk ls]])
            "    1\n\n    2"          ["    1" "" "    2"]
            "    1\n\n\n    2"        ["    1" "" "" "    2"]

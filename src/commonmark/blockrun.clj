@@ -165,14 +165,6 @@
     (fuse-left x y)
     (concat x y)))
 
-(defmethod add [:blank :icblk]
-  [x y]
-  (fuse-right x y))
-
-(defmethod add [:icblk :blank]
-  [x y]
-  (fuse-left x y))
-
 (defmethod add [:html-block-unpaired :html-block-unpaired]
   [x y]
   (if (->> [(last x) (first y)]
@@ -254,6 +246,27 @@
                  #(update %1 1 (comp vec concat) (second %2))
                  blockrun))
 
+(defn merge-indented-chunks
+  ""
+  [blockrun]
+  (let [merge? (comp #(= % [:icblk :blank :icblk])
+                     #(map (comp first second) %))
+        indexed (->> blockrun
+                     (coalesce #{:blank :icblk})
+                     (map-indexed vector))
+        mergee-indices (->> indexed
+                            (partition 3 1)
+                            (filter merge?)
+                            (map #(map first (rest %)))
+                            flatten
+                            set)]
+    (reduce (fn [acc [i x]]
+              (if (contains? mergee-indices i)
+                (apply update acc (dec (count acc)) update 1 conj (second x))
+                (conj acc x)))
+            []
+            indexed)))
+
 (defn extract-link-reference-definitions
   "Searches blockrun for link reference definitions and extracts them into
    separate entries. Each definition is awarded its own entry. The new entries
@@ -282,6 +295,7 @@
   "Hook for performing transformations after the blockrun has been compiled."
   [blockrun]
   (->> blockrun
+       merge-indented-chunks
        (map entry/promote)
        extract-link-reference-definitions
        (coalesce (comp nil? #{:tbr :adef :li :atxh :stxh}))))
