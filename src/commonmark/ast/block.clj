@@ -111,7 +111,7 @@
 (defmethod from-blockrun-entry :adef
   [[_ lines]]
   (->> lines
-       (string/join " ")
+       (string/join "\r\n")
        block/link-reference-definition
        common/node))
 
