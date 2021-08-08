@@ -192,10 +192,12 @@
 (defmethod add [:html-block-unpaired :blank]
   [x y]
   (let [origin-x (->> x last entry/origin)
-        origin-y (->> y first entry/origin)]
-    (if (block/html-block-pair? origin-x origin-y)
-      (concat (retag x :last :html-block) y)
-      (concat x y))))
+        origin-y (->> y first entry/origin)
+        pair? (block/html-block-pair? origin-x origin-y)
+        x-opens? (some? (block/html-block-begin origin-x))]
+    (cond pair?    (concat (retag x :last :html-block) y)
+          x-opens? (fuse-left x y)
+          :else    (concat x y))))
 
 (defmethod add [:html-block-unpaired :_]
   [x y]
