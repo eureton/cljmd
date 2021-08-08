@@ -247,7 +247,7 @@
                  blockrun))
 
 (defn merge-indented-chunks
-  ""
+  "Merges entries of indented code which are separated by blanks."
   [blockrun]
   (let [merge? (comp #(= % [:icblk :blank :icblk])
                      #(map (comp first second) %))
