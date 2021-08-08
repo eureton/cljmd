@@ -260,16 +260,19 @@
    are tagged :adef. The entries which the definitions came from are split and
    each of the parts bears the tag of its originator."
   [blockrun]
-  (let [split? #(= :p (first %))
-        split #(let [batch (entry/link-reference-definition-batch %)
+  (let [split? (comp #{:p :stxh} first)
+        split #(let [[tag lines] %
+                     batch (entry/link-reference-definition-batch %)
                      items (->> batch
                                 (string/join "\r\n")
                                 (re-seq re.link/reference-definition)
                                 (map (comp string/split-lines first)))
-                     remainder (vec (drop (count batch) (second %)))]
+                     remainder (->> lines (drop (count batch)) vec)]
                  (concat
                    (map vector (repeat :adef) items)
-                   (if (not-empty remainder) [[:p remainder]] [])))]
+                   (if (not-empty remainder)
+                     [(entry/promote [tag remainder])]
+                     [])))]
     (->> blockrun
          (coalesce #{:p})
          (mapcat (ufn/to-fix split? split vector))
