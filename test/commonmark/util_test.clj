@@ -51,6 +51,10 @@
          "http://abc.com:1234/xyz?q=p{r}s&w=t{u}v"   "http://abc.com:1234/xyz?q=p%7Br%7Ds&w=t%7Bu%7Dv"
          "http://abc.com:1234/xyz?q=prs&w=tuv#1{2}3" "http://abc.com:1234/xyz?q=prs&w=tuv#1%7B2%7D3"))
 
+  (testing "non-ASCII"
+    (is (= (percent-encode-uri "http://abc.com/xyz?q=Ω")
+           "http://abc.com/xyz?q=%CE%A9")))
+
   (testing "percent-encoded"
     (are [s s] (= s (percent-encode-uri s))
          "http://%3C%20%3E.com"

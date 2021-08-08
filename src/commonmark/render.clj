@@ -36,16 +36,13 @@
               \" "&quot;"}]
     (string/join (replace smap s))))
 
-(defn encode-uri
-  "Percent-encodes non-ASCII characters."
-  [uri]
-  (-> uri
-      (string/replace #"\P{ASCII}+" #(java.net.URLEncoder/encode % "UTF-8"))
-      (string/replace #" " "%20")))
-
 (def render-uri
   "Prepares a URI for rendering as HTML."
-  (comp encode-uri unescape-entities))
+  (comp util/percent-encode-uri unescape-entities))
+
+(def render-text
+  "Prepares HTML text for rendering."
+  (comp escape-html unescape-entities))
 
 (defn attributes
   ""
@@ -143,7 +140,7 @@
                          n
                          :depth-first)]
     (apply open-tag (cond-> ["img" "src" (render-uri destination) "alt" alt]
-                      title (conj "title" (unescape-entities title))))))
+                      title (conj "title" (render-text title))))))
 
 (defmethod open :block
   [n]
@@ -193,7 +190,7 @@
         verbatim? (comp #(isa? (deref hierarchy) % :verbatim) :tag :data)]
     (ufn/to-fix (complement leaf?) (comp string/join #(map html %) :children)
                 (every-pred content verbatim?) content
-                content (comp escape-html unescape-entities content)
+                content (comp render-text content)
                 nil)))
 
 (def full
@@ -223,7 +220,7 @@
 (defmethod html :a
   [{:as n {:keys [destination title]} :data}]
   (str (apply open-tag (cond-> ["a" "href" (render-uri destination)]
-                     title (conj "title" (unescape-entities title))))
+                     title (conj "title" (render-text title))))
        (inner n)
        (close-tag "a")))
 

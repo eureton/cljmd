@@ -141,13 +141,14 @@
   (let [decode #(java.net.URLDecoder/decode % "UTF-8")
         uri-re #"^(([^:/?#]+):)?(//([^/?#]*))?([^?#]*)(\?([^#]*))?(#(.*))?"
         [_ _ scheme _ authority path _ query _ fragment] (re-find uri-re uri)]
-    (.toString (try 
-                 (java.net.URI. scheme
-                                (and authority (decode authority))
-                                (and path (decode path))
-                                (and query (decode query))
-                                (and fragment (decode fragment)))
-                 (catch java.net.URISyntaxException _ (java.net.URI. uri))))))
+    (-> (try (java.net.URI. scheme
+                            (and authority (decode authority))
+                            (and path (decode path))
+                            (and query (decode query))
+                            (and fragment (decode fragment)))
+             (catch java.net.URISyntaxException _ (java.net.URI. uri)))
+        .toString
+        (string/replace #"\P{ASCII}+" #(java.net.URLEncoder/encode % "UTF-8")))))
 
 (defn last-line
   "The last line of string s, honoring blanks."
