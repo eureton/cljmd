@@ -26,12 +26,9 @@
   [items]
   (and (every? item/tight? items)
        (->> items
-            (drop 1)
-            (map (comp :tag :data first :children))
-            (not-any? #{:blank}))
-       (->> items
             (drop-last 1)
-            (map (comp :tag :data last :children))
+            (filter (comp #(> % 1) count :children))
+            (map (comp :tag :data peek :children))
             (not-any? #{:blank}))))
 
 (defn empty-for
