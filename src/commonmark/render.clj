@@ -239,8 +239,8 @@
         start-validator (ufn/validator (every-pred some?
                                                    #(-> %
                                                         (Integer/parseInt)
-                                                        (> 1))))
-        start (start-validator (:start data))
+                                                        (not= 1))))
+        start (some-> data :start start-validator Integer/parseInt)
         tight? (= "true" (:tight data))
         mark #(assoc-in % [:data :tight?] tight?)]
     (str "\n"
