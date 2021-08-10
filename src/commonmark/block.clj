@@ -183,14 +183,13 @@
               (apply string/includes?)))))
 
 (defn lazy-continuation-line?
-  "Returns non-nil if current is a lazy continuation line of previous."
+  "True if current is a lazy continuation line of previous, false otherwise."
   [current previous]
-  (let [{:keys [tag content]
-         :or {content ""}} (tagger previous)]
-    (and (= :p (:tag (tagger current)))
-         (or (= :p tag)
-             (and (= :li tag)
-                  (= :p (:tag (tagger content))))))))
+  (let [{previous-tag :tag previous-content :content} (tagger previous)]
+    (and (= :p (:tag (tagger (string/trim current))))
+         (or (= :p previous-tag)
+             (and (= :li previous-tag)
+                  (lazy-continuation-line? current previous-content))))))
 
 (defn paragraph-continuation-text?
   [current previous]

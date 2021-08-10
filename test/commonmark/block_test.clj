@@ -305,7 +305,14 @@
          "# !" "- foo"
          "# !" "# foo"
          "# !" "-"
-         "# !" "")))
+         "# !" ""))
+
+  (testing "deep nesting"
+    (testing "list item"
+      (are [p] (lazy-continuation-line? "xyz" p)
+           "- abc"
+           "- - abc"
+           "- - - abc"))))
 
 (deftest belongs-to-list-item?-test
   (testing "adequate leading whitespace"
