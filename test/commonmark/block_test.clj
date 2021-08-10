@@ -309,33 +309,48 @@
 
 (deftest belongs-to-list-item?-test
   (testing "adequate leading whitespace"
-    (are [l p] (belongs-to-list-item? l p " 1. abc")
-         "    xyz" " 1. abc"
-         "    xyz" "    opqr"
-         "    xyz" "    # opqr"
-         "    xyz" ""))
+    (are [l p] (belongs-to-list-item? l p)
+         "    xyz" [" 1. abc"]
+         "    xyz" [" 1. abc" "    opqr"]
+         "    xyz" [" 1. abc" "    # opqr"]
+         "    xyz" [" 1. abc" ""]))
 
-  (testing "origin not a line item => nil"
-    (are [l p] (nil? (belongs-to-list-item? l p "abc"))
-         "  xyz" "- abc"
-         "  xyz" "  abc"
-         "  xyz" "  # abc"
-         "  xyz" ""))
+  (testing "previous is nil"
+    (is (nil? (belongs-to-list-item? "abc" nil))))
+
+  (testing "previous is empty"
+    (is (nil? (belongs-to-list-item? "abc" []))))
+
+  (testing "origin not a line item"
+    (are [l p] (nil? (belongs-to-list-item? l p))
+         "  xyz" ["abc" "- abc"]
+         "  xyz" ["abc" "  abc"]
+         "  xyz" ["abc" "  # abc"]
+         "  xyz" ["abc" ""]))
 
   (testing "inadequate leading whitespace"
-    (are [l p r] (= r (belongs-to-list-item? l p " 1. abc"))
-         " xyz" "pqr"       true
-         " xyz" "    pqr"   true
-         " xyz" "    # pqr" false
-         ""     "    pqr"   true
-         "xyz"  "        !" false
-         " xyz" ""          false))
+    (testing "positive"
+      (are [l p] (belongs-to-list-item? l p)
+           " xyz" [" 1. abc" "pqr"]
+           " xyz" [" 1. abc" "    pqr"]
+           ""     [" 1. abc" "    pqr"]))
+
+    (testing "negative"
+      (are [l p] (not (belongs-to-list-item? l p))
+           " xyz" [" 1. abc" "    # pqr"]
+           "xyz"  [" 1. abc" "        !"]
+           " xyz" [" 1. abc" ""])))
 
   (testing "lazy continuation line after blank origin"
-    (are [l r] (= r (belongs-to-list-item? l "-" "-"))
-         "  xyz" true
-         " xyz"  false
-         "xyz"   false)))
+    (testing "sufficiently indented"
+      (are [l p] (belongs-to-list-item? l p)
+           "  xyz"  ["-"]
+           "   xyz" ["-"]))
+
+    (testing "insufficiently indented"
+      (are [l p] (not (belongs-to-list-item? l p))
+           " xyz" ["-"]
+           "xyz"  ["-"]))))
 
 (deftest paragraph-continuation-text?-test
   (testing "degenerate case => false"

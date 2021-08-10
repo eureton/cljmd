@@ -210,20 +210,22 @@
 (defn belongs-to-list-item?
   "True if current belongs to LI, assuming:
      1. current is the line in question
-     2. previous is the line preceding current
-     3. LI is a list item, whose first line is origin
+     2. previous is a vector of lines already belonging to LI
    False otherwise."
-  [current previous origin]
-  (when-some [{:keys [indent marker space]
-               :or {space " "}} (list-item-lead-line origin)]
-    (let [prefix (-> (str indent marker space) count (repeat " ") string/join)
-          previous (list-item-content previous origin)
-          starts-with? (comp (ufn/ap string/starts-with?)
-                             #(map util/expand-tab %)
-                             vector)]
-      (or (starts-with? current prefix)
-          (lazy-continuation-line? current previous)
-          (some? (blank-line current))))))
+  [current previous]
+  (when-some [origin (first previous)]
+    (when-some [{:keys [indent marker space content]
+                 :or {space " "}} (list-item-lead-line origin)]
+      (let [prefix (-> (str indent marker space) count (repeat " ") string/join)
+            latest (list-item-content (last previous) origin)
+            starts-with? (comp (ufn/ap string/starts-with?)
+                               #(map util/expand-tab %)
+                               vector)
+            blank? (blank-line current)]
+        (or (starts-with? current prefix)
+            (lazy-continuation-line? current latest)
+            (and blank? (or (some? content)
+                            (> (count previous) 1))))))))
 
 (defn belongs-to-blockquote?
   [current previous]

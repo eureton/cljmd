@@ -106,14 +106,17 @@
 
 (defmethod add [:li :_]
   [x y]
-  (let [list-item-lines (->> x last second)
-        origin (first list-item-lines)
-        lines (->> y first second)
-        previous-lines (concat [(last list-item-lines)] lines)
-        n (->> (map vector lines previous-lines)
-               (take-while #(apply block/belongs-to-list-item? (conj % origin)))
+  (let [x-lines (->> x last second)
+        y-lines (mapcat second y)
+        belongs? (fn [[index current]]
+                   (block/belongs-to-list-item? current
+                                                (->> y-lines
+                                                     (take index)
+                                                     (concat x-lines))))
+        n (->> (map-indexed vector y-lines)
+               (take-while belongs?)
                count)]
-    (fuse-split x y n)))
+    (fuse-split x [[:_ y-lines]] n)))
 
 (defmethod add [:bq :_]
   [x y]
@@ -134,18 +137,17 @@
 
 (defmethod add [:p :li]
   [x y]
-  (let [lead-line (->> y first entry/origin)
-        blank-lead? (->> lead-line
-                         (re-find re.block/list-item-blank-lead-line)
-                         some?)
-        ordered-from-not-one? (->> lead-line
-                                   block/list-item-lead-line
-                                   :marker
-                                   ast.list/start
-                                   ((every-pred some? #(not= % "1"))))]
-    (cond blank-lead?           (fuse-split (retag x :last :stxh) y 1)
-          ordered-from-not-one? (fuse-split x y 1)
-          :else                 (concat x y))))
+  (let [{:keys [marker content]} (->> y first entry/origin block/list-item-lead-line)
+        stxh? (and (nil? content)
+                   (= marker "-"))
+        p? (or (and (nil? content)
+                    (not= marker "-"))
+               (->> marker
+                    ast.list/start
+                    ((every-pred some? #(not= % "1")))))]
+    (cond stxh? (fuse-split (retag x :last :stxh) y 1)
+          p?    (fuse-split x y 1)
+          :else (concat x y))))
 
 (defmethod add [:p :stxh]
   [x y]
