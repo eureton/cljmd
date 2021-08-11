@@ -155,11 +155,14 @@
   (comp :tag :data)
   :hierarchy hierarchy)
 
+(prefer-method close :code-block :block)
+
 (defmethod close :code-block
   [{:as n {:keys [content] :or {content ""}} :data}]
   (str (when-not (->> content util/last-line empty?) "\n")
-     (close-tag "code")
-     (close-tag "pre")))
+       (close-tag "code")
+       (close-tag "pre")
+       "\n"))
 
 (defmethod close :li
   [n]
@@ -173,6 +176,10 @@
   [_]
   (str "\n"
        (close-tag "blockquote")))
+
+(defmethod close :block
+  [n]
+  (str (close-tag (tag n)) "\n"))
 
 (defmethod close :default
   [n]
@@ -253,7 +260,7 @@
          (close-tag tag))))
 
 (def normalize
-  "HTML-specific adjustments for conformance."
+  "Conformance-related adjustments specific to the HTML output step."
   (comp (ufn/to-fix (every-pred not-empty
                                 #(not (string/ends-with? % "\n"))) #(str % "\n"))
         #(string/replace % "\r\n" "\n")
@@ -261,6 +268,8 @@
 
 (def from-string
   "Transforms Commonmark into HTML."
-  (let [trim #(string/replace % #"^[\r\n]+" "")]
+  (let [trim #(-> %
+                  (string/replace #"^[\r\n]+" "")
+                  (string/replace #"[\n]+" "\n"))]
     (comp normalize trim html ast/from-string)))
 
