@@ -182,29 +182,33 @@
               (map :fence)
               (apply string/includes?)))))
 
-(defn lazy-continuation-line?
-  "True if current is a lazy continuation line of previous, false otherwise."
-  [current previous]
-  (let [{previous-tag :tag previous-content :content} (tagger previous)]
-    (and (= :p (:tag (tagger (string/trim current))))
-         (or (= :p previous-tag)
-             (and (= :li previous-tag)
-                  (lazy-continuation-line? current previous-content))))))
+(defn strip-containers
+  "Recursively extracts content from list item and blockquote lines until only
+   leaf content remains."
+  [line]
+  (loop [x line]
+    (if-some [{:keys [content]} ((some-fn blockquote-line list-item-lead-line) x)]
+      (recur content)
+      x)))
 
 (defn paragraph-continuation-text?
+  "True if all of the following apply:
+     1. current is paragraph continuation text
+     2. previous is a collection of lines preceding current
+     3. previous comprise a paragraph
+   False otherwise.
+   The paragraph may be nested in an arbitrarily deep series of containers."
   [current previous]
-  (let [current-tag (->> current tagger :tag)
-        head (first previous)
-        tail (rest previous)
-        {previous-tag :tag :keys [content]} (tagger head)]
-    (boolean
-      (and (#{:p :icblk} current-tag)
-           (or (= :p previous-tag)
-               (and (= :icblk previous-tag)
-                    (paragraph-continuation-text? head tail))
-               (and (#{:li :bq} previous-tag)
-                    (paragraph-continuation-text? current
-                                                  (concat [content] tail))))))))
+  (let [current-ok? (->> current tagger :tag (contains? #{:p :icblk}))
+        head (strip-containers (last previous))
+        previous-tag (:tag (tagger head))
+        previous-ok? (= :p previous-tag)]
+    (case (count previous)
+      0 false
+      1 (and current-ok? previous-ok?)
+      (and current-ok?
+           (or previous-ok?
+               (paragraph-continuation-text? head (butlast previous)))))))
 
 (defn belongs-to-list-item?
   "True if current belongs to LI, assuming:
@@ -216,13 +220,12 @@
     (when-some [{:keys [indent marker space content]
                  :or {space " "}} (list-item-lead-line origin)]
       (let [prefix (-> (str indent marker space) count (repeat " ") string/join)
-            latest (list-item-content (last previous) origin)
             starts-with? (comp (ufn/ap string/starts-with?)
                                #(map util/expand-tab %)
                                vector)
             blank? (blank-line current)]
         (or (starts-with? current prefix)
-            (lazy-continuation-line? current latest)
+            (paragraph-continuation-text? current previous)
             (and blank? (or (some? content)
                             (> (count previous) 1))))))))
 
