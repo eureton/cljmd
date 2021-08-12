@@ -160,17 +160,6 @@
               html-block
               paragraph-line) line)))
 
-(defn list-item-content
-  "Returns the current line with as much leading whitespace trimmed, as
-   corresponds to the indentation, marker and spacing of the origin line."
-  [current origin]
-  (when-some [{:keys [indent marker space]
-               :or {space " "}} (list-item-lead-line origin)]
-    (util/trim-leading-whitespace current
-                                  (-> (str indent marker space)
-                                      util/expand-tab
-                                      count))))
-
 (defn fenced-code-block-pair?
   "True if lines x and y are matching code block fences, false otherwise."
   [x y]
@@ -217,6 +206,33 @@
            (or (tail-tag? previous-tag)
                (paragraph-continuation-text? head (butlast previous)))))))
 
+(defn list-item-pad
+  "A string consisting of as many spaces as the sum of the number of characters
+   included in the:
+      * indentation
+      * marker
+      * spacing between marker and content
+   of origin, assuming origin is the first line of a line item. Expands tabs.
+   Nil if the assumption doesn't hold."
+  [origin]
+  (let [{:keys [indent marker space]
+         :or {space " "}} (list-item-lead-line origin)]
+    (-> (str indent marker space)
+        util/expand-tab
+        count
+        (repeat " ")
+        string/join)))
+
+(defn indented-for-list-item?
+  "Assuming origin is the first line a list item:
+   True if line belongs to the list item, false otherwise.
+   Nil if the assumption doesn't hold."
+  [line origin]
+  (let [starts-with? (comp (ufn/ap string/starts-with?)
+                           #(map util/expand-tab %)
+                           vector)]
+    (starts-with? line (list-item-pad origin))))
+
 (defn belongs-to-list-item?
   "True if current belongs to LI, assuming:
      1. current is the line in question
@@ -224,14 +240,9 @@
    False otherwise."
   [current previous]
   (when-some [origin (first previous)]
-    (when-some [{:keys [indent marker space content]
-                 :or {space " "}} (list-item-lead-line origin)]
-      (let [prefix (-> (str indent marker space) count (repeat " ") string/join)
-            starts-with? (comp (ufn/ap string/starts-with?)
-                               #(map util/expand-tab %)
-                               vector)
-            blank? (blank-line current)]
-        (or (starts-with? current prefix)
+    (when-some [{:keys [content]} (list-item-lead-line origin)]
+      (let [blank? (blank-line current)]
+        (or (indented-for-list-item? current origin)
             (paragraph-continuation-text? current previous)
             (and blank? (or (some? content)
                             (> (count previous) 1))))))))

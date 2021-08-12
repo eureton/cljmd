@@ -1,7 +1,9 @@
 (ns commonmark.blockrun.entry
   (:require [clojure.string :as string]
+            [flatland.useful.fn :as ufn]
             [commonmark.block :as block]
-            [commonmark.re.link :as re.link]))
+            [commonmark.re.link :as re.link]
+            [commonmark.util :as util]))
 
 (def origin
   "Returns the first line."
@@ -16,10 +18,13 @@
 
 (defmethod content :li
   [[_ lines]]
-  (let [origin (first lines)]
+  (let [origin (first lines)
+        pad (block/list-item-pad origin)
+        indented? #(block/indented-for-list-item? % origin)
+        unindent #(util/trim-leading-whitespace % (count pad))]
     (->> lines
          rest
-         (map #(block/list-item-content % origin))
+         (map (ufn/to-fix indented? unindent))
          (concat [(:content (block/list-item-lead-line origin))])
          (string/join "\r\n"))))
 
