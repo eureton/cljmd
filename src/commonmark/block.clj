@@ -187,9 +187,15 @@
    leaf content remains."
   [line]
   (loop [x line]
-    (if-some [{:keys [content]} ((some-fn blockquote-line list-item-lead-line) x)]
+    (if-some [{:keys [content]} ((some-fn blockquote-line list-item-lead-line)
+                                 x)]
       (recur content)
       x)))
+
+(defn level-1-setext-underline?
+  "True if line is a setext underline producing a <h1>, false otherwise."
+  [line]
+  (= 1 (:level (setext-heading line))))
 
 (defn paragraph-continuation-text?
   "True if all of the following apply:
@@ -199,15 +205,16 @@
    False otherwise.
    The paragraph may be nested in an arbitrarily deep series of containers."
   [current previous]
-  (let [current-ok? (->> current tagger :tag (contains? #{:p :icblk}))
-        head (strip-containers (last previous))
-        previous-tag (:tag (tagger head))
-        previous-ok? (= :p previous-tag)]
+  (let [tail-tag? #(contains? #{:p :icblk} %)
+        current-ok? (or (level-1-setext-underline? current)
+                        (-> current tagger :tag tail-tag?))
+        head (last previous)
+        previous-tag (-> head strip-containers tagger :tag)]
     (case (count previous)
       0 false
-      1 (and current-ok? previous-ok?)
+      1 (and current-ok? (= :p previous-tag))
       (and current-ok?
-           (or previous-ok?
+           (or (tail-tag? previous-tag)
                (paragraph-continuation-text? head (butlast previous)))))))
 
 (defn belongs-to-list-item?

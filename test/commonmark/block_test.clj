@@ -318,64 +318,30 @@
   (testing "degenerate"
     (is (false? (paragraph-continuation-text? "abc" []))))
 
-  (testing "previous is indented code block"
-    (testing "from paragraph"
-      (are [c p] (paragraph-continuation-text? c p)
-           "abc" ["xyz"]
-           "abc" ["qpr" "    xyz"]
-           "abc" ["123" "    qpr" "    xyz"]))
+  (testing ":p -> :p"
+    (is (paragraph-continuation-text? "xyz" ["> abc"])))
 
-    (testing "from indented code block"
-      (are [c p] (paragraph-continuation-text? c p)
-           "    abc" ["xyz"]
-           "    abc" ["qpr" "    xyz"]
-           "    abc" ["123" "    qpr" "    xyz"])))
+  (testing ":icblk -> :p"
+    (is (paragraph-continuation-text? "    xyz" ["> abc"])))
 
-  (testing "previous is block-quoted indented code block"
-    (testing "from paragraph"
-      (are [c p] (paragraph-continuation-text? c p)
-           "abc" ["xyz"]
-           "abc" ["qpr" ">     xyz"]
-           "abc" ["123" ">     qpr" ">     xyz"]))
+  (testing ":p -> :p -> :p"
+    (is (paragraph-continuation-text? "123" ["> abc" "> xyz"])))
 
-    (testing "from indented code block"
-      (are [c p] (paragraph-continuation-text? c p)
-           "    abc" ["xyz"]
-           "    abc" ["qpr" ">     xyz"]
-           "    abc" ["123" ">     qpr" ">     xyz"])))
+  (testing ":p -> :icblk -> :p"
+    (is (paragraph-continuation-text? "123" ["> abc" ">     xyz"])))
 
-  (testing "both quoted and non-quoted indented code blocks"
-    (is (paragraph-continuation-text? "abc" ["top" "    123" ">     xyz" "    qpr"])))
+  (testing ":icblk -> :p -> :p"
+    (is (paragraph-continuation-text? "    123" ["> abc" "> xyz"])))
 
-  (testing "no previous line contains paragraph => false"
-    (testing "previous is indented code block"
-      (testing "from paragraph"
-        (are [c p] (false? (paragraph-continuation-text? c p))
-             "abc" ["    xyz"]
-             "abc" ["    xyz" "    qpr"]
-             "abc" ["    xyz" "    qpr" "    123"]))
+  (testing ":icblk -> :icblk -> :p"
+    (is (paragraph-continuation-text? "    123" ["> abc" ">     xyz"])))
 
-      (testing "from indented code block"
-        (are [c p] (false? (paragraph-continuation-text? c p))
-             "    abc" ["    xyz"]
-             "    abc" ["    xyz" "    qpr"]
-             "    abc" ["    xyz" "    qpr" "    123"])))
+  (testing "setext in blockquote"
+    (testing "underline inside"
+      (is (paragraph-continuation-text? "xyz" ["> abc" "==="]))))
 
-    (testing "previous is block-quoted indented code block"
-      (testing "from paragraph"
-        (are [c p] (false? (paragraph-continuation-text? c p))
-             "abc" ["    xyz"]
-             "abc" ["    qpr" ">     xyz"]
-             "abc" ["    123" ">     qpr" ">     xyz"]))
-
-      (testing "from indented code block"
-        (are [c p] (false? (paragraph-continuation-text? c p))
-             "    abc" ["    xyz"]
-             "    abc" ["    qpr" ">     xyz"]
-             "    abc" ["    123" ">     qpr" ">     xyz"])))
-
-    (testing "both quoted and non-quoted indented code blocks"
-      (is (false? (paragraph-continuation-text? "abc" ["    qpr" ">     xyz" "    123" ">     top"]))))))
+    (testing "underline outside"
+      (is (false? (paragraph-continuation-text? "xyz" ["> abc" "> ==="])))))
 
 (deftest html-block-begin-test
   (testing "pun nil"

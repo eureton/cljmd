@@ -6,6 +6,7 @@
             [commonmark.inline :as inline]
             [commonmark.blockrun :as blockrun]
             [commonmark.blockrun.entry :as blockrun.entry]
+            [commonmark.blockrun.setext :as blockrun.setext]
             [commonmark.util :as util]))
 
 (defmulti from-blockrun-entry
@@ -22,12 +23,15 @@
 
 (defn from-container-blockrun-entry
   [entry]
-  (->> entry
-       blockrun.entry/content
-       blockrun/from-string
-       blockrun/postprocess
-       (mapv from-blockrun-entry)
-       (common/node {:tag (first entry)})))
+  (let [index-map (blockrun.setext/make-map entry)]
+    (->> entry
+         (blockrun.setext/redact index-map)
+         blockrun.entry/content
+         blockrun/from-string
+         (blockrun.setext/insert index-map)
+         blockrun/postprocess
+         (mapv from-blockrun-entry)
+         (common/node {:tag (first entry)}))))
 
 (defmethod from-blockrun-entry :leaf
   [[tag lines]]

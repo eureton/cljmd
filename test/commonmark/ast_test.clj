@@ -217,28 +217,121 @@
 
     (testing "as lazy continuation line"
       (testing "in blockquote"
-        (is (= (-> "> abc\n---" from-string :children)
-               [(node {:tag :bq}
-                      [(node {:tag :p}
-                             [(node {:tag :txt :content "abc"})])])
-                (node {:tag :tbr :content "---"})])))
+        (testing "level 1"
+          (is (= (-> "> abc\n===" from-string :children)
+                 [(node {:tag :bq}
+                        [(node {:tag :p}
+                               [(node {:tag :txt :content "abc"})
+                                (node {:tag :sbr :content "\r\n"})
+                                (node {:tag :txt :content "==="})])])])))
+
+        (testing "level 2"
+          (is (= (-> "> abc\n---" from-string :children)
+                 [(node {:tag :bq}
+                        [(node {:tag :p}
+                               [(node {:tag :txt :content "abc"})])])
+                  (node {:tag :tbr :content "---"})]))))
 
       (testing "in multiline lazy blockquote"
-        (is (= (-> "> abc\nxyz\n---" from-string :children)
-               [(node {:tag :bq}
-                      [(node {:tag :p}
-                             [(node {:tag :txt :content "abc"})
-                              (node {:tag :sbr :content "\r\n"})
-                              (node {:tag :txt :content "xyz"})])])
-                (node {:tag :tbr :content "---"})])))
+        (testing "occurring once"
+          (testing "level 1"
+            (is (= (-> "> abc\nxyz\n===" from-string :children)
+                   [(node {:tag :bq}
+                          [(node {:tag :p}
+                                 [(node {:tag :txt :content "abc"})
+                                  (node {:tag :sbr :content "\r\n"})
+                                  (node {:tag :txt :content "xyz"})
+                                  (node {:tag :sbr :content "\r\n"})
+                                  (node {:tag :txt :content "==="})])])])))
+
+          (testing "level 2"
+            (is (= (-> "> abc\nxyz\n---" from-string :children)
+                   [(node {:tag :bq}
+                          [(node {:tag :p}
+                                 [(node {:tag :txt :content "abc"})
+                                  (node {:tag :sbr :content "\r\n"})
+                                  (node {:tag :txt :content "xyz"})])])
+                    (node {:tag :tbr :content "---"})]))))
+
+        (testing "occurring twice"
+          (testing "both unmarked"
+            (testing "level 1"
+              (is (= (-> "> abc\n===\nxyz\n===" from-string :children)
+                     [(node {:tag :bq}
+                            [(node {:tag :p}
+                                   [(node {:tag :txt :content "abc"})
+                                    (node {:tag :sbr :content "\r\n"})
+                                    (node {:tag :txt :content "==="})
+                                    (node {:tag :sbr :content "\r\n"})
+                                    (node {:tag :txt :content "xyz"})
+                                    (node {:tag :sbr :content "\r\n"})
+                                    (node {:tag :txt :content "==="})])])])))
+
+            (testing "level 2"
+              (is (= (-> "> abc\n---\nxyz\n---" from-string :children)
+                     [(node {:tag :bq}
+                            [(node {:tag :p}
+                                   [(node {:tag :txt :content "abc"})])])
+                      (node {:tag :tbr :content "---"})
+                      (node {:tag :stxh :level 2}
+                            [(node {:tag :txt :content "xyz"})])]))))
+
+          (testing "first marked, second unmarked"
+            (testing "level 1"
+              (is (= (-> "> abc\n> ===\nxyz\n===" from-string :children)
+                     [(node {:tag :bq}
+                            [(node {:tag :stxh :level 1}
+                                   [(node {:tag :txt :content "abc"})])])
+                      (node {:tag :stxh :level 1}
+                            [(node {:tag :txt :content "xyz"})])])))
+
+            (testing "level 2"
+              (is (= (-> "> abc\n> ---\nxyz\n---" from-string :children)
+                     [(node {:tag :bq}
+                            [(node {:tag :stxh :level 2}
+                                   [(node {:tag :txt :content "abc"})])])
+                      (node {:tag :stxh :level 2}
+                            [(node {:tag :txt :content "xyz"})])]))))
+
+          (testing "first unmarked, second marked"
+            (testing "level 1"
+              (is (= (-> "> abc\n===\nxyz\n> ===" from-string :children)
+                     [(node {:tag :bq}
+                            [(node {:tag :stxh :level 1}
+                                   [(node {:tag :txt :content "abc"})
+                                    (node {:tag :sbr :content "\r\n"})
+                                    (node {:tag :txt :content "==="})
+                                    (node {:tag :sbr :content "\r\n"})
+                                    (node {:tag :txt :content "xyz"})])])])))
+
+            (testing "level 2"
+              (is (= (-> "> abc\n---\nxyz\n> ---" from-string :children)
+                     [(node {:tag :bq}
+                            [(node {:tag :p}
+                                   [(node {:tag :txt :content "abc"})])])
+                      (node {:tag :tbr :content "---"})
+                      (node {:tag :p}
+                            [(node {:tag :txt :content "xyz"})])
+                      (node {:tag :bq}
+                            [(node {:tag :tbr :content "---"})])]))))))
 
       (testing "in list item"
-        (is (= (-> "- abc\n---" from-string :children)
-               [(node {:tag :list :type "bullet" :tight "true"}
-                      [(node {:tag :li}
-                             [(node {:tag :p}
-                                    [(node {:tag :txt :content "abc"})])])])
-                (node {:tag :tbr :content "---"})]))))
+        (testing "level 1"
+          (is (= (-> "- abc\n===" from-string :children)
+                 [(node {:tag :list :type "bullet" :tight "true"}
+                        [(node {:tag :li}
+                               [(node {:tag :p}
+                                      [(node {:tag :txt :content "abc"})
+                                       (node {:tag :sbr :content "\r\n"})
+                                       (node {:tag :txt :content "==="})])])])])))
+
+        (testing "level 2"
+          (is (= (-> "- abc\n---" from-string :children)
+                 [(node {:tag :list :type "bullet" :tight "true"}
+                        [(node {:tag :li}
+                               [(node {:tag :p}
+                                      [(node {:tag :txt :content "abc"})])])])
+                  (node {:tag :tbr :content "---"})])))))
 
     (testing "preceded by block"
       (are [b n] (= (-> (str b "\nabc\n---") from-string :children)
