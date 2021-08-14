@@ -1,5 +1,6 @@
 (ns commonmark.ast.list.item
-  (:require [flatland.useful.fn :as ufn]))
+  (:require [flatland.useful.fn :as ufn]
+            [commonmark.util :as util]))
 
 (defn marker-type
   "Classifies as either :bullet or :ordered."
@@ -31,6 +32,9 @@
       (->> item
            :children
            (map (comp :tag :data))
+           (util/coalesce #(and (= :blank %1)
+                                (= :blank %2))
+                          (fn [_ x] x))
            (partition 3 1)
            (map (ufn/knit (comp nil? #{:blank})
                           (comp some? #{:blank})

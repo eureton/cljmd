@@ -347,24 +347,22 @@
              "-\nabc"
              "-\n abc"))
 
-      (testing "blanks"
-        (testing "leading"
-          (are [s n] (= (from-string s)
-                        [[:li ["-"]]
-                         [:blank (repeat n "")]
-                         [:p ["  abc"]]])
-               "-\n\n  abc"       1
-               "-\n\n\n  abc"     2
-               "-\n\n\n\n  abc"   3
-               "-\n\n\n\n\n  abc" 4))
+      (testing "all blanks"
+        (are [s n] (= (from-string s)
+                      [[:li (concat ["-"] (repeat n ""))]])
+             "-\n\n"       2
+             "-\n\n\n"     3
+             "-\n\n\n\n"   4
+             "-\n\n\n\n\n" 5))
 
-        (testing "not leading"
-          (are [s n] (= (from-string s)
-                        [[:li (concat ["-" "  abc"] (repeat n "") ["  xyz"])]])
-               "-\n  abc\n\n  xyz"       1
-               "-\n  abc\n\n\n  xyz"     2
-               "-\n  abc\n\n\n\n  xyz"   3
-               "-\n  abc\n\n\n\n\n  xyz" 4)))
+      (testing "intermediate blanks"
+        (are [s n] (= (from-string s)
+                      [[:li (concat ["-"] (repeat n ""))]
+                       [:p ["  abc"]]])
+             "-\n\n  abc"       1
+             "-\n\n\n  abc"     2
+             "-\n\n\n\n  abc"   3
+             "-\n\n\n\n\n  abc" 4))
 
       (testing "indentation"
         (are [s] (= (from-string s)

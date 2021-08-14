@@ -103,8 +103,9 @@
          common/node)))
 
 (defmethod from-blockrun-entry :blank
-  [[_ _]]
-  (common/node {:tag :blank}))
+  [[_ lines]]
+  (common/node {:tag :blank
+                :count (count lines)}))
 
 (defmethod from-blockrun-entry :adef
   [[_ lines]]

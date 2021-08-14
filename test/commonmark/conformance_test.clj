@@ -1,9 +1,7 @@
 (ns commonmark.conformance-test
   (:require [clojure.test :refer :all]
-            [clojure.string :as string]
             [clojure.java.io :as java.io]
             [cheshire.core :as cheshire]
-            [flatland.useful.fn :as ufn]
             [commonmark.render :refer [from-string]]))
 
 (deftest conformance-test

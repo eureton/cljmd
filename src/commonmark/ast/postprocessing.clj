@@ -120,6 +120,17 @@
     (tree/map (ufn/to-fix autolink? unfold)
               ast)))
 
+(defn expands-blanks
+  "Replaces multiline :blank nodes with as many sibling :blank nodes as the
+   number of blank lines in the document."
+  [ast]
+  (let [blank? (comp #{:blank} :tag :data)
+        expand #(repeat (:count (:data %)) (node {:tag :blank}))
+        cond-expand (ufn/to-fix blank? expand vector)]
+    (tree/map (fn [node]
+                (update node :children (comp vec #(mapcat cond-expand %))))
+              ast)))
+
 (defn coalesce-txt
   "Merges adjacent :txt nodes."
   [ast]
@@ -151,6 +162,7 @@
    backslash-fix
    autolink-fix
    coalesce-txt
+   expands-blanks
    group-list-items
    blank-fix])
 

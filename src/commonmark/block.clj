@@ -241,11 +241,16 @@
   [current previous]
   (when-some [origin (first previous)]
     (when-some [{:keys [content]} (list-item-lead-line origin)]
-      (let [blank? (blank-line current)]
-        (or (indented-for-list-item? current origin)
-            (paragraph-continuation-text? current previous)
-            (and blank? (or (some? content)
-                            (> (count previous) 1))))))))
+      (let [blank? (blank-line current)
+            intermediate (rest previous)]
+        (if blank?
+          (or (some? content)
+              (every? blank-line intermediate))
+          (and (or (indented-for-list-item? current origin)
+                   (paragraph-continuation-text? current previous))
+               (or (some? content)
+                   (empty? intermediate)
+                   (not-every? blank-line intermediate))))))))
 
 (defn belongs-to-blockquote?
   [current previous]
