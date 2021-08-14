@@ -167,8 +167,9 @@
 (defmethod close :li
   [n]
   (let [{:keys [children] {:keys [tight?]} :data} n
-        break? (or (not tight?)
-                   (block? (last children)))]
+        break? (and children
+                    (or (not tight?)
+                        (block? (last children))))]
     (str (when break? "\n")
          (close-tag "li"))))
 
