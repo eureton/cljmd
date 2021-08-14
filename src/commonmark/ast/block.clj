@@ -61,10 +61,13 @@
   [[tag lines]]
   (let [munch #(-> %
                    (string/replace #"(?<=^ {0,3})\t" "    ")
-                   (util/trim-leading-whitespace 4))]
+                   (util/trim-leading-whitespace 4))
+        join (ufn/to-fix not-empty (comp #(str % "\r\n")
+                                         #(string/join "\r\n" %))
+                                   "")]
     (->> lines
          (map munch)
-         (string/join "\r\n")
+         join
          (hash-map :tag tag :content)
          common/node)))
 
@@ -91,12 +94,15 @@
   (let [opener (->> lines first block/opening-code-fence)
         info (:info opener)
         munch #(util/trim-leading-whitespace % (-> opener :indent count))
+        join (ufn/to-fix not-empty (comp #(str % "\r\n")
+                                         #(string/join "\r\n" %))
+                                   "")
         closed? (->> lines peek block/closing-code-fence some?)
         end-index (cond-> (count lines)
                     closed? dec)]
     (->> (subvec lines 1 (max end-index 1))
          (map munch)
-         (string/join "\r\n")
+         join
          (hash-map :tag tag :content)
          (merge (cond-> {}
                   (not (string/blank? info)) (assoc :info info)))

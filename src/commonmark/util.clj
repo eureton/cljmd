@@ -150,10 +150,3 @@
         .toString
         (string/replace #"\P{ASCII}+" #(java.net.URLEncoder/encode % "UTF-8")))))
 
-(defn last-line
-  "The last line of string s, honoring blanks."
-  [s]
-  (when s
-    (or (re-find #"(?m)^.*\z" s)
-        "")))
-

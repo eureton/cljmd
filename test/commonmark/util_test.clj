@@ -64,22 +64,3 @@
          "http://abc.com:1234/xyz?q=prs&w=%3C%20%3E"
          "http://abc.com:1234/xyz?q=prs&w=tuv#%3C%20%3E")))
 
-(deftest last-line-test
-  (testing "nil"
-    (is (nil? (last-line nil))))
-
-  (testing "empty"
-    (are [s] (= "" (last-line s))
-         ""
-         "abc\n"))
-
-  (testing "blank"
-    (are [s] (= " \t" (last-line s))
-         " \t"
-         "abc\n \t"))
-
-  (testing "not blank"
-    (are [s] (= "xyz" (last-line s))
-         "xyz"
-         "abc\nxyz")))
-

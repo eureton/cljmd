@@ -7,7 +7,8 @@
             [commonmark.ast.common :refer [update-children]]
             [commonmark.ast.node :as node]
             [commonmark.ast.block :as block]
-            [commonmark.ast.postprocessing :as postp]))
+            [commonmark.ast.postprocessing :as postp]
+            [commonmark.re.common :as re.common]))
 
 (defn remove-link-reference-definitions
   "Removes nodes tagged with :adef."
@@ -37,11 +38,19 @@
     (tree/map (ufn/to-fix node/has-inline? contextful-expand)
               ast)))
 
+(defn normalize
+  "Bring untrusted input to a standard format."
+  [string]
+  (string/replace string
+                  (re-pattern (str re.common/line-ending #"\z"))
+                  ""))
+
 (defn from-string
   "Parses markdown AST from string."
   [string]
   (reduce #(%2 %1)
           (->> string
+               normalize
                blockrun/from-string
                blockrun/postprocess
                block/from-blockrun

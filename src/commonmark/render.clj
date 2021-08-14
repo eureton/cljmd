@@ -158,9 +158,8 @@
 (prefer-method close :code-block :block)
 
 (defmethod close :code-block
-  [{:as n {:keys [content] :or {content ""}} :data}]
-  (str (when-not (->> content util/last-line empty?) "\n")
-       (close-tag "code")
+  [_]
+  (str (close-tag "code")
        (close-tag "pre")
        "\n"))
 
