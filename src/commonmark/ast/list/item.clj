@@ -41,4 +41,3 @@
                           (comp nil? #{:blank})))
            (not-any? #(every? true? %)))))
 
-

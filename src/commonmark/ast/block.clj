@@ -35,13 +35,19 @@
 
 (defmethod from-blockrun-entry :leaf
   [[tag lines]]
-  (let [parsers {:p block/paragraph-line}
-        parsed (parsers tag #(hash-map :content %))]
-    (->> lines
-         (map (comp :content parsed))
-         (string/join "\r\n")
-         (hash-map :tag tag :content)
-         common/node)))
+  (->> lines
+       (string/join "\r\n")
+       (hash-map :tag tag :content)
+       common/node))
+
+(defmethod from-blockrun-entry :p
+  [[_ lines]]
+  (->> lines
+       (map string/triml)
+       (string/join "\r\n")
+       string/trim
+       (hash-map :tag :p :content)
+       common/node))
 
 (defmethod from-blockrun-entry :bq
   [entry]

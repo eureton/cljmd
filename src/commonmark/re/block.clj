@@ -1,8 +1,7 @@
 (ns commonmark.re.block
   (:require [clojure.string :as string]
             [commonmark.re.html :as re.html]
-            [commonmark.re.common :as re.common]
-            [commonmark.re.inline :as re.inline]))
+            [commonmark.re.common :as re.common]))
 
 (def atx-heading
   #"^ {0,3}(#{1,6})(?:$|\s+(\p{Print}*?)\s*(?:(?<=\s)#+)?\s*$)")
@@ -23,9 +22,7 @@
   #"^( {0,3})(`{3,}|~{3,}) *$")
 
 (def paragraph-line
-  (re-pattern (str #"^\s*(.*?)\s*?"
-                   "(" re.inline/hard-line-break ")?"
-                   "$")))
+  #"^ {0,3}\S.*$")
 
 (def list-item-marker
   #"( {0,3})([-+*]|\d{1,9}[.)])")

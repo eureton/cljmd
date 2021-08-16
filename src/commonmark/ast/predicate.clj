@@ -12,6 +12,10 @@
 
 (def li? (comp #{:li} tag))
 
+(def hbr? (comp #{:hbr} tag))
+
+(def sbr? (comp #{:sbr} tag))
+
 (def blank? (comp #{:blank} tag))
 
 (def adef? (comp #{:adef} tag))

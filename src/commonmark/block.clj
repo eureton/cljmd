@@ -50,9 +50,9 @@
 
 (defn paragraph-line
   [line]
-  (when-some [[_ content break] (re-find re.block/paragraph-line line)]
+  (when-some [content (re-find re.block/paragraph-line line)]
     {:tag :p
-     :content (str content break)}))
+     :content content}))
 
 (defn blank-line
   [line]

@@ -154,6 +154,25 @@
               (update-children node #(remove pred/adef? %)))
             ast))
 
+(defn trim-txt
+  "Strips both tabs and spaces from the end of the content of :txt nodes if:
+     * it precedes a hard line break
+     * it precedes a soft line break
+     * it is the last node (i.e. no sibling follows it)"
+  [ast]
+  (let [trim? (fn [[x y]]
+                (and (pred/txt? x)
+                     ((some-fn nil? pred/hbr? pred/sbr?) y)))
+        trim (fn [[x _]]
+               (update-in x [:data :content] string/trimr))]
+    (tree/map (fn [node]
+                (->> node
+                     :children
+                     (partition-all 2 1)
+                     (map (ufn/to-fix trim? trim first))
+                     (assoc node :children)))
+              ast)))
+
 (def queue
   "A collection of post-processing fixes to apply to the AST."
   [hbr-fix
@@ -164,5 +183,6 @@
    coalesce-txt
    group-list-items
    remove-link-reference-definitions
-   blank-fix])
+   blank-fix
+   trim-txt])
 
