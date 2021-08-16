@@ -3,13 +3,14 @@
             [flatland.useful.fn :as ufn]
             [commonmark.inline :as inline]
             [commonmark.inline.token :as token]
-            [commonmark.ast.common :refer [node]]))
+            [commonmark.ast.common :refer [node]]
+            [commonmark.ast.predicate :as pred]))
 
 (def degenerate?
   "Returns true if the AST node is degenerate, false otherwise.
    A degenerate node is a non-leaf text node."
   (every-pred (comp some? :children)
-              (comp #{:txt} :tag :data)))
+              pred/txt?))
 
 (def hierarchy (-> (deref commonmark.ast.common/ontology)
                    (derive :html-inline :leaf)

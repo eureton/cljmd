@@ -10,11 +10,6 @@
   ([data]
    (node data nil)))
 
-(defn leaf?
-  "Returns true if node has no children, false otherwise."
-  [node]
-  (not (contains? node :children)))
-
 (defn add
   "Makes y the last child of x. If x has no children, y becomes the first child
    of x."
@@ -67,11 +62,6 @@
                   (derive :html-block :block)
 
                   atom))
-
-(defn block?
-  "Returns true if node represents a block entity, false otherwise."
-  [node]
-  (isa? (deref ontology) (:tag (:data node)) :block))
 
 (defn pprint-content
   "Shorthand for printing the :content value of entities to *out*."

@@ -5,8 +5,9 @@
             [flatland.useful.fn :as ufn]
             [treeduce.core :as tree]
             [commonmark.ast :as ast]
-            [commonmark.ast.common :refer [leaf? ontology block?]]
-            [commonmark.util :as util]))
+            [commonmark.ast.common :refer [ontology]]
+            [commonmark.util :as util]
+            [commonmark.ast.predicate :as pred]))
 
 (def entity-map
   "Authoritative HTML entity map, as sourced from html.spec.whatwg.org"
@@ -67,9 +68,8 @@
 
 (def tag
   "HTML tag name of the given AST node."
-  (let [heading? (comp #{:atxh :stxh} :tag :data)]
-    (ufn/to-fix heading? #(->> % :data :level (str "h"))
-                         (comp tag-map :tag :data))))
+  (ufn/to-fix pred/heading? #(->> % :data :level (str "h"))
+                            (comp tag-map :tag :data)))
 
 (defn open-tag
   "String representation of an opening HTML tag. The optional attrs parameter
@@ -168,7 +168,7 @@
   (let [{:keys [children] {:keys [tight?]} :data} n
         break? (and children
                     (or (not tight?)
-                        (block? (last children))))]
+                        (pred/block? (last children))))]
     (str (when break? "\n")
          (close-tag "li"))))
 
@@ -195,7 +195,7 @@
   "Inner HTML of the given AST node."
   (let [content (comp :content :data)
         verbatim? (comp #(isa? (deref hierarchy) % :verbatim) :tag :data)]
-    (ufn/to-fix (complement leaf?) (comp string/join #(map html %) :children)
+    (ufn/to-fix (complement pred/leaf?) (comp string/join #(map html %) :children)
                 (every-pred content verbatim?) content
                 content (comp render-text content)
                 "")))
@@ -234,8 +234,8 @@
 (defn tighten
   "Replaces the direct :p children of n with their children."
   [n]
-  (let [unwrap (ufn/to-fix (comp #{:p} :tag :data) :children
-                           vector)]
+  (let [unwrap (ufn/to-fix pred/p? :children
+                                   vector)]
     (update n :children #(mapcat unwrap %))))
 
 (defmethod html :list

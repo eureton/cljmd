@@ -7,7 +7,8 @@
             [commonmark.ast.node :as node]
             [commonmark.ast.block :as block]
             [commonmark.ast.postprocessing :as postp]
-            [commonmark.re.common :as re.common]))
+            [commonmark.re.common :as re.common]
+            [commonmark.ast.predicate :as pred]))
 
 (defn blockphase-context
   "Returns the context of the block phase of the parsing process."
@@ -27,7 +28,7 @@
    nodes with the source text as content."
   [ast]
   (let [contextful-expand #(node/expand-inline % (blockphase-context ast))]
-    (tree/map (ufn/to-fix node/has-inline? contextful-expand)
+    (tree/map (ufn/to-fix pred/has-inline? contextful-expand)
               ast)))
 
 (defn normalize

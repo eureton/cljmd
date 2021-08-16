@@ -3,7 +3,7 @@
             [clojure.core.incubator :refer [dissoc-in]]
             [flatland.useful.fn :as ufn]
             [treeduce.core :as tree]
-            [commonmark.ast.common :refer [block? node update-children]]
+            [commonmark.ast.common :refer [node update-children]]
             [commonmark.ast.predicate :as pred]
             [commonmark.ast.list :as ast.list]
             [commonmark.ast.list.item :as ast.list.item]
@@ -13,7 +13,7 @@
   "True if the node is a block and its last child is an :hbr whose content
    satisfies pred, false otherwise."
   [pred]
-  (every-pred block?
+  (every-pred pred/block?
               (comp (every-pred (comp #{:hbr} :tag)
                                 (comp pred :content))
                     :data
@@ -43,7 +43,7 @@
 
 (def empty-text?
   "True if the parameter is a text node whose :content is either nil or \"\"."
-  (every-pred (comp #{:txt} :tag :data)
+  (every-pred pred/txt?
               (comp empty? :content :data)))
 
 (def empty-children?
@@ -57,7 +57,7 @@
      * is a paragraph
      * either has no children or all its children are empty text nodes
    Returns false otherwise."
-  (every-pred (comp #{:p} :tag :data)
+  (every-pred pred/p?
               empty-children?))
 
 (defn empty-p-fix
@@ -71,7 +71,7 @@
      * is a block
      * either has no children or all its children are empty text nodes
    Returns false otherwise."
-  (every-pred block? empty-children?))
+  (every-pred pred/block? empty-children?))
 
 (defn empty-block-fix
   "Removes empty :p entities from the AST."
@@ -83,9 +83,7 @@
   "Removes :blank entities from the AST."
   [ast]
   (tree/map #(update-children % (comp vec
-                                      (partial remove (comp #{:blank}
-                                                            :tag
-                                                            :data))))
+                                      (partial remove pred/blank?)))
             ast))
 
 (defn unescape
@@ -101,24 +99,21 @@
                          ((:data %1) %2) (update-in [:data %2] unescape))
                       node
                       fields))
-        txt? (comp #{:txt} :tag :data)
-        link? (comp #{:a :img} :tag :data)
-        fcblk? (comp #{:ofcblk} :tag :data)]
-    (tree/map (ufn/to-fix txt? #(fix % :content)
+        link? (comp #{:a :img} :tag :data)]
+    (tree/map (ufn/to-fix pred/txt? #(fix % :content)
                           link? #(fix % :destination :title)
-                          fcblk? #(fix % :info))
+                          pred/fcblk? #(fix % :info))
               ast)))
 
 (defn autolink-fix
   "Unfold :autolink into :a with a :txt child."
   [ast]
-  (let [autolink? (comp #{:autolink} :tag :data)
-        unfold #(-> %
+  (let [unfold #(-> %
                     (assoc-in [:data :tag] :a)
                     (assoc :children [(node {:tag :txt
                                              :content (-> % :data :text)})])
                     (dissoc-in [:data :text]))]
-    (tree/map (ufn/to-fix autolink? unfold)
+    (tree/map (ufn/to-fix pred/autolink? unfold)
               ast)))
 
 (defn coalesce-txt
@@ -148,7 +143,7 @@
         grouper #(->> %
                       (util/cluster to-cluster?)
                       (mapcat (ufn/to-fix is-cluster? to-list)))]
-    (tree/map (ufn/to-fix (comp nil? #{:list} :tag :data)
+    (tree/map (ufn/to-fix (complement pred/list?)
                           #(update % :children grouper))
               ast)))
 
