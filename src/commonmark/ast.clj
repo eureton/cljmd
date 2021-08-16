@@ -4,18 +4,10 @@
             [flatland.useful.fn :as ufn]
             [treeduce.core :as tree]
             [commonmark.blockrun :as blockrun]
-            [commonmark.ast.common :refer [update-children]]
             [commonmark.ast.node :as node]
             [commonmark.ast.block :as block]
             [commonmark.ast.postprocessing :as postp]
             [commonmark.re.common :as re.common]))
-
-(defn remove-link-reference-definitions
-  "Removes nodes tagged with :adef."
-  [ast]
-  (tree/map (fn [node]
-              (update-children node #(remove (comp #{:adef} :tag :data) %)))
-            ast))
 
 (defn blockphase-context
   "Returns the context of the block phase of the parsing process."
@@ -54,7 +46,6 @@
                blockrun/from-string
                blockrun/postprocess
                block/from-blockrun
-               expand-inline
-               remove-link-reference-definitions)
+               expand-inline)
           postp/queue))
 

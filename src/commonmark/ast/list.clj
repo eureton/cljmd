@@ -1,6 +1,7 @@
 (ns commonmark.ast.list
   (:require [flatland.useful.fn :as ufn]
             [commonmark.ast.common :refer [node add]]
+            [commonmark.ast.predicate :as pred]
             [commonmark.ast.list.item :as item]))
 
 
@@ -24,12 +25,8 @@
 (defn tight?
   "True if items comprise a tight list, false otherwise."
   [items]
-  (and (every? item/tight? items)
-       (->> items
-            (drop-last 1)
-            (filter (comp #(> % 1) count :children))
-            (map (comp :tag :data peek :children))
-            (not-any? #{:blank}))))
+  (and (->> items butlast (not-any? pred/blank?))
+       (every? item/tight? items)))
 
 (defn empty-for
   "List AST node with no children, configured for marker."
@@ -49,6 +46,7 @@
   (let [marker (-> items first :data :marker)
         root (empty-for marker (tight? items))]
     (->> items
+         (remove pred/blank?)
          (map #(assoc % :data {:tag :li}))
          (reduce add root))))
 

@@ -243,7 +243,7 @@
     3. (pred t) returns logical true, where t is the tag of the entries"
   [pred blockrun]
   (util/coalesce #(let [tag (first %2)]
-                    (and (= (first %1) tag)
+                    (and (= tag (-> %1 peek peek first))
                          (pred tag)))
                  #(update %1 1 (comp vec concat) (second %2))
                  blockrun))
@@ -268,6 +268,19 @@
                 (conj acc x)))
             []
             indexed)))
+
+(defn extract-trailing-blanks
+  "Breaks blank lines off from the tail end of :li entries into a separate
+   :blank entity."
+  [blockrun]
+  (let [split (fn [[_ lines]]
+                (let [blanks (->> lines reverse (take-while block/blank-line))]
+                  (cond-> [[:li (vec (drop-last (count blanks) lines))]]
+                    (not-empty blanks) (conj [:blank (vec blanks)]))))]
+    (->> blockrun
+         (mapcat (ufn/to-fix (comp #{:li} first) split
+                                                 vector))
+         vec)))
 
 (defn extract-link-reference-definitions
   "Searches blockrun for link reference definitions and extracts them into
@@ -300,6 +313,7 @@
        merge-indented-chunks
        (map entry/promote)
        extract-link-reference-definitions
+       extract-trailing-blanks
        (coalesce (comp nil? #{:tbr :adef :li :atxh :stxh}))))
 
 (defn from-string

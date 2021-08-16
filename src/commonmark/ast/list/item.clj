@@ -32,7 +32,7 @@
       (->> item
            :children
            (map (comp :tag :data))
-           (util/coalesce #(and (= :blank %1)
+           (util/coalesce #(and (= :blank (-> %1 peek peek))
                                 (= :blank %2))
                           (fn [_ x] x))
            (partition 3 1)

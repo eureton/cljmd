@@ -4,6 +4,7 @@
             [flatland.useful.fn :as ufn]
             [treeduce.core :as tree]
             [commonmark.ast.common :refer [block? node update-children]]
+            [commonmark.ast.predicate :as pred]
             [commonmark.ast.list :as ast.list]
             [commonmark.ast.list.item :as ast.list.item]
             [commonmark.util :as util]))
@@ -120,23 +121,12 @@
     (tree/map (ufn/to-fix autolink? unfold)
               ast)))
 
-(defn expands-blanks
-  "Replaces multiline :blank nodes with as many sibling :blank nodes as the
-   number of blank lines in the document."
-  [ast]
-  (let [blank? (comp #{:blank} :tag :data)
-        expand #(repeat (:count (:data %)) (node {:tag :blank}))
-        cond-expand (ufn/to-fix blank? expand vector)]
-    (tree/map (fn [node]
-                (update node :children (comp vec #(mapcat cond-expand %))))
-              ast)))
-
 (defn coalesce-txt
   "Merges adjacent :txt nodes."
   [ast]
-  (let [merge? (comp #(every? #{:txt} %)
-                     #(map (comp :tag :data) %)
-                     vector)
+  (let [merge? (fn [acc x]
+                 (and (-> acc peek peek :data :tag (= :txt))
+                      (-> x :data :tag (= :txt))))
         merger #(update-in %1 [:data :content] str (-> %2 :data :content))]
     (tree/map (fn [node]
                 (update node :children (comp vec
@@ -146,13 +136,28 @@
 (defn group-list-items
   "Groups adjacent matching :li nodes into :list nodes."
   [ast]
-  (let [grouper #(->> %
-                      (util/cluster ast.list.item/siblings?)
-                      (mapcat (ufn/to-fix (comp #{:li} :tag :data first)
-                                          (comp vector ast.list/from-items))))]
+  (let [to-cluster? (fn [acc x]
+                      (let [x-tag (-> x :data :tag)
+                            last-li (->> acc peek (filter pred/li?) first)]
+                        (or (= :blank x-tag)
+                            (and (= :li x-tag)
+                                 (some? last-li)
+                                 (ast.list.item/siblings? last-li x)))))
+        is-cluster? #(some pred/li? %)
+        to-list (comp vector ast.list/from-items)
+        grouper #(->> %
+                      (util/cluster to-cluster?)
+                      (mapcat (ufn/to-fix is-cluster? to-list)))]
     (tree/map (ufn/to-fix (comp nil? #{:list} :tag :data)
                           #(update % :children grouper))
               ast)))
+
+(defn remove-link-reference-definitions
+  "Removes nodes tagged with :adef."
+  [ast]
+  (tree/map (fn [node]
+              (update-children node #(remove pred/adef? %)))
+            ast))
 
 (def queue
   "A collection of post-processing fixes to apply to the AST."
@@ -162,7 +167,7 @@
    backslash-fix
    autolink-fix
    coalesce-txt
-   expands-blanks
    group-list-items
+   remove-link-reference-definitions
    blank-fix])
 

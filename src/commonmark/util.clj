@@ -3,14 +3,16 @@
             [flatland.useful.fn :as ufn]))
 
 (defn cluster
-  "Groups subsequent items x and y in coll for which (pred x y) returns true.
+  "Groups items in coll for which (pred acc x) returns true, where acc is the
+   accumulated collection of clusters and x is the current item.
    Returns a vector of vectors."
   [pred coll]
   (reduce (fn [acc x]
-            (let [tail (peek acc)]
-              (if (pred (peek tail) x)
-                (-> acc pop (conj (conj tail x)))
-                (conj acc [x]))))
+            (if (pred acc x)
+              (-> acc
+                  (ufn/fix not-empty pop)
+                  (conj (conj (peek acc) x)))
+              (conj acc [x])))
           []
           coll))
 
@@ -24,8 +26,7 @@
   (string/replace s "\t" (string/join (repeat tabstop \space))))
 
 (defn coalesce
-  "Merges subsequent items x and y in coll for which (pred x y) returns true by
-   reducing with rf over the items."
+  "Clusters items in coll with pred, then reduces over them with rf."
   [pred rf coll]
   (->> coll
        (cluster pred)
