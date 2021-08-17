@@ -136,18 +136,28 @@
        (apply juxt)
        (comp #(remove nil? %) flatten)))
 
-(defn priority
+(def priority
   "Integer representing the priorty of the tag. Greater is higher."
-  [tag]
-  (let [tags [:sbr :hbr :strong :em :img :a :autolink :html-inline :cs]]
-    (.indexOf tags tag)))
+  {:sbr 0
+   :hbr 1
+   :strong 2
+   :em 3
+   :img 4
+   :a 5
+   :autolink 6
+   :html-inline 6
+   :cs 6})
 
 (defn superceded?
-  "True if x is lower priority than y, false otherwise."
+  "True if y has higher precedence than x, false otherwise."
   [x y]
-  (and (not= x y)
-       (token/cross? x y)
-       (< (priority (:tag x)) (priority (:tag y)))))
+  (let [priority-x (priority (:tag x))
+        priority-y (priority (:tag y))]
+    (and (not= x y)
+         (token/cross? x y)
+         (or (< priority-x priority-y)
+             (and (= priority-x priority-y)
+                  (> (:re/start x) (:re/start y)))))))
 
 (defn enforce-precedence
   "Removes tokens which conflict with tokens of higher priority."
