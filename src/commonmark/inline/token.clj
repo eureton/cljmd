@@ -56,22 +56,17 @@
       (update :re/start + offset)
       (update :re/end + offset)))
 
-(defn stradle-end?
-  "True if the following hold, false otherwise:
-    * x begins inside y
-    * x ends outside y"
-  [x y]
-  (let [{x-start :re/start x-end :re/end} x
-        {y-start :re/start y-end :re/end} y]
-    (and (>= x-start y-start)
-         (< x-start y-end)
-         (> x-end y-end))))
-
 (defn cross?
   "True if either of the following holds, false otherwise:
     * x begins after y and x ends after y
     * y begins after x and y ends after x"
   [x y]
-  (or (stradle-end? x y)
-      (stradle-end? y x)))
+  (let [start-x (:re/start x)
+        start-y (:re/start y)
+        end-x (:re/end x)
+        end-y (:re/end y)]
+    (not (or (<= end-x start-y)
+             (<= end-y start-x)
+             (within? x y)
+             (within? y x)))))
 
