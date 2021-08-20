@@ -1,5 +1,6 @@
 (ns commonmark.re.inline
   (:require [clojure.string :as string]
+            [clojure.set]
             [commonmark.util :as util]
             [commonmark.re.common :as re.common]))
 
@@ -10,11 +11,11 @@
                      "(.*?)"
                      pre #"\1" post))))
 
-(defn emphasis-delimeter
-  [character length]
+(defn delimiter-run
+  [character]
   (let [escaped (string/escape (str character) {\* "\\*"})]
     (re-pattern (str "(?<!" escaped ")"
-                     (re.common/unescaped escaped) "{" length "}"
+                     (re.common/unescaped escaped) "+"
                      "(?!" escaped ")"))))
 
 (defn lfdr-nopunc
@@ -55,11 +56,9 @@
                      (rfdr-nopunc delimeter) "|" (rfdr-punc delimeter)
                    ")")))
 
-(defn star-emphasis
-  [delimeter]
-  (let [open (lfdr delimeter)
-        close (rfdr delimeter)]
-    (util/balanced-re open close)))
+(def star-emphasis
+  (let [delimiter (delimiter-run \*)]
+    (re.common/between (lfdr delimiter) (rfdr delimiter))))
 
 (defn lobar-open-emphasis
   [delimeter]
@@ -83,18 +82,63 @@
                        "(?=" right ")" "(?=" punctuated-left ")"
                      ")" right))))
 
-(defn lobar-emphasis
-  [delimeter]
-  (let [open (lobar-open-emphasis delimeter)
-        close (lobar-close-emphasis delimeter)]
-    (util/balanced-re open close)))
+(def lobar-emphasis
+  (let [delimiter (delimiter-run \_)]
+    (re.common/between (lobar-open-emphasis delimiter)
+                       (lobar-close-emphasis delimiter))))
 
-(defn emphasis
-  [length]
-  (re-pattern (str "(?s)(?:"
-                     (star-emphasis (emphasis-delimeter \* length)) "|"
-                     (lobar-emphasis (emphasis-delimeter \_ length))
-                   ")")))
+(def emphasis
+  (re-pattern (str "(?s)(?:" star-emphasis "|" lobar-emphasis ")")))
+
+(defn innermost-emphasis-tokens
+  [string]
+  (->> string
+       (re-seq emphasis)
+       (map (fn [[whole left-star _ right-star left-lobar _ right-lobar]]
+              (let [left-size (count (or left-star left-lobar))
+                    right-size (count (or right-star right-lobar))
+                    min-size (min left-size right-size)]
+                (subs whole
+                      (- left-size min-size)
+                      (- (count whole) (- right-size min-size))))))))
+
+(defn emphasis-tokens
+  ([tokens string]
+  (let [inner (innermost-emphasis-tokens string)
+        with-inner (apply conj tokens inner)]
+    (if (or (empty? inner)
+            (every? tokens inner)
+            (and (= 1 (count inner))
+                 (= string (first inner))))
+      with-inner
+      (->> inner
+           (remove tokens)
+           ; TODO use the match info instead of string/replace
+           (map #(let [digest (str (hash %))]
+                   (->> (string/replace string % digest)
+                        (emphasis-tokens with-inner)
+                        (map (fn [x] (string/replace x digest %)))
+                        set)))
+           (apply clojure.set/union)))))
+  ([string]
+   (emphasis-tokens #{} string)))
+
+(defn outermost-emphasis-tokens
+  [string]
+  (let [tokens (emphasis-tokens string)
+        includes? #(and (not= %1 %2)
+                        (string/includes? %1 %2))]
+    (->> tokens
+         (reduce (fn [acc x]
+                   (cond-> acc
+                     (some #(includes? % x) acc) (disj x)))
+                 tokens)
+         (map (fn [token]
+                (let [start (string/index-of string token)]
+                  {:re/match token
+                   :re/start start
+                   :re/end (+ start (count token))})))
+         (sort-by :re/start))))
 
 (def autolink
   (re-pattern (str (re.common/unescaped \<)

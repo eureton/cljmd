@@ -11,7 +11,7 @@
     (re-find re.inline/code-span s))
 
   (defn content [s]
-    (some->> (match s) code-span :content))
+    (some->> (match s) (hash-map :re/match) code-span :content))
 
   (testing "minimal"
     (is (= "foo" (content "`foo`"))))
@@ -96,54 +96,48 @@
          "`abc\r\rxyz`"     "abc  xyz")))
 
 (deftest delimeter-run-test
-  (let [e* (re.inline/emphasis-delimeter \* 1)
-        e_ (re.inline/emphasis-delimeter \_ 1)
-        s* (re.inline/emphasis-delimeter \* 2)
-        s_ (re.inline/emphasis-delimeter \_ 2)
-        le* (re.inline/lfdr e*)
-        le_ (re.inline/lfdr e_)
-        ls* (re.inline/lfdr s*)
-        ls_ (re.inline/lfdr s_)
-        re* (re.inline/rfdr e*)
-        re_ (re.inline/rfdr e_)
-        rs* (re.inline/rfdr s*)
-        rs_ (re.inline/rfdr s_)
+  (let [star (re.inline/delimiter-run \*)
+        lobar (re.inline/delimiter-run \_)
+        l-star (re.inline/lfdr star)
+        l-lobar (re.inline/lfdr lobar)
+        r-star (re.inline/rfdr star)
+        r-lobar (re.inline/rfdr lobar)
         match? (fn [s re] (->> s (re-find re) some?))]
     (testing "left-flanking"
-      (are [s le*? le_? ls*? ls_? re*? re_? rs*? rs_?]
-           (and (= (match? s le*) le*?)
-                (= (match? s le_) le_?)
-                (= (match? s ls*) ls*?)
-                (= (match? s ls_) ls_?)
-                (= (match? s re*) re*?)
-                (= (match? s re_) re_?)
-                (= (match? s rs*) rs*?)
-                (= (match? s rs_) rs_?))
+      (are [s left? right?]
+           (and (= left?  (or (match? s l-star)
+                              (match? s l-lobar)))
+                (= right? (or (match? s r-star)
+                              (match? s r-lobar))))
            ; left yes, right no
-;          "***abc"             true false  true false false false false false
-           "*abc"               true false false false false false false false
-           "**\"abc \""        false false  true false false false false false
-           "*\"abc \""          true false false false false false false false
-           "_\"abc \""         false  true false false false false false false
-           "_abc"              false  true false false false false false false
+           "***abc"             true false
+           "*abc"               true false
+           "**\"abc \""         true false
+           "*\"abc \""          true false
+           "_\"abc \""          true false
+           "_abc"               true false
            ; left no, right yes
-;          "abc***"            false false false false  true false false false
-           "abc_"              false false false false false  true false false
-           "\"abc \"**"        false false false false false false  true false
-           "\"abc \"_"         false false false false false  true false false
+           "abc***"            false  true
+           "abc_"              false  true
+           "\"abc \"**"        false  true
+           "\"abc \"_"         false  true
            ; left yes, right yes
-;          "abc***def"
-;          "\"abc \"_\"def \""
+           "abc***def"          true  true
+           "\"abc \"_\"def \""  true  true
            ; left no, right no
-           "abc *** def"       false false false false false false false false
-           "a _ b"             false false false false false false false false))))
+           "abc *** def"       false false
+           "a _ b"             false false))))
 
 (deftest emphasis-test
   (defn match [s]
-    (re-find (re.inline/emphasis 1) s))
+    (re-find re.inline/emphasis s))
 
   (defn content [s]
-    (some->> (match s) emphasis :content))
+    (->> s re.inline/outermost-emphasis-tokens first emphasis :content))
+
+  (testing "tag"
+    (is (= (->> "*abc*" re.inline/outermost-emphasis-tokens first emphasis :tag)
+           :em)))
 
   (testing "opening with *"
     (testing "minimal"
@@ -191,7 +185,10 @@
                "*xyz* *abc*"
                "*xyz* qpr *abc*"
            "def *xyz* qpr *abc*"
-           "def *xyz* qpr *abc* 123")))
+           "def *xyz* qpr *abc* 123"))
+
+    (testing "dangle"
+      (is (= "abc" (content "**abc*")))))
 
   (testing "opening with _"
     (testing "minimal"
@@ -218,7 +215,10 @@
       (is (nil? (match "aa_\"bb\"_cc"))))
 
     (testing "left-flank, right-flank, preceded by punctuation"
-      (is (= "(bar)" (content "foo-_(bar)_")))))
+      (is (= "(bar)" (content "foo-_(bar)_"))))
+
+    (testing "dangle"
+      (is (= "abc" (content "__abc_")))))
 
   (testing "closing with *"
     (testing "closing and opening delimiter don't match"
@@ -239,7 +239,10 @@
       (is (= "(*xyz*)" (content "*(*xyz*)*"))))
 
     (testing "intraword"
-      (is (= "foo" (content "*foo*bar")))))
+      (is (= "foo" (content "*foo*bar"))))
+
+    (testing "dangle"
+      (is (= "abc" (content "*abc**")))))
 
   (testing "closing with _"
     (testing "preceded by whitespace"
@@ -262,14 +265,21 @@
     (testing "intraword"
       (are [s] (nil? (match s))
            "_foo_bar"
-           "foo_bar_baz"))))
+           "foo_bar_baz"))
+
+    (testing "dangle"
+      (is (= "abc" (content "_abc__"))))))
 
 (deftest strong-emphasis-test
   (defn match [s]
-    (re-find (re.inline/emphasis 2) s))
+    (re-find re.inline/emphasis s))
 
   (defn content [s]
-    (some->> (match s) strong-emphasis :content))
+    (->> s re.inline/outermost-emphasis-tokens first emphasis :content))
+
+  (testing "tag"
+    (is (= (->> "**abc**" re.inline/outermost-emphasis-tokens first emphasis :tag)
+           :strong)))
 
   (testing "opening with **"
     (testing "minimal"
@@ -285,7 +295,10 @@
       (is (= "bar" (content "foo**bar**"))))
 
     (testing "nested"
-      (is (= "(**xyz**)" (content "**(**xyz**)**")))))
+      (is (= "(**xyz**)" (content "**(**xyz**)**"))))
+
+    (testing "dangle"
+      (is (= "abc" (content "***abc**")))))
 
   (testing "opening with __"
     (testing "minimal"
@@ -308,7 +321,10 @@
            "5__6__78"))
 
     (testing "left-flank, right-flank, preceded by punctuation"
-      (is (= "(bar)" (content "foo-__(bar)__")))))
+      (is (= "(bar)" (content "foo-__(bar)__"))))
+
+    (testing "dangle"
+      (is (= "abc" (content "___abc__")))))
 
   (testing "closing with **"
     (testing "closing and opening delimiter don't match"
@@ -324,13 +340,14 @@
 
     (testing "preceded by punctuation, followed by whitespace"
       (are [s c] (= c (content s))
-           "*(**foo**)*" "foo"
-           "**Gomphocarpus (*Gomphocarpus physocarpus*, syn.\n*Asclepias physocarpa*)**"
-           "Gomphocarpus (*Gomphocarpus physocarpus*, syn.\n*Asclepias physocarpa*)"
+           "*(**foo**)*" "(**foo**)"
            "**foo \"*bar*\" foo**" "foo \"*bar*\" foo"))
 
     (testing "intraword"
-      (is (= "foo" (content "**foo**bar")))))
+      (is (= "foo" (content "**foo**bar"))))
+
+    (testing "dangle"
+      (is (= "abc" (content "**abc***")))))
 
   (testing "closing with __"
     (testing "preceded by whitespace"
@@ -343,7 +360,7 @@
 
     (testing "preceded by punctuation, followed by whitespace"
       (are [s c] (= c (content s))
-           "_(__foo__)_" "foo"
+           "_(__foo__)_" "(__foo__)"
            "__foo \"_bar_\" foo__" "foo \"_bar_\" foo"))
 
     (testing "intraword"
@@ -353,23 +370,26 @@
       (is (= "foo__bar__baz" (content "__foo__bar__baz__"))))
 
     (testing "left-flank, right-flank, followed by punctuation"
-      (is (= "(bar)" (content "__(bar)__."))))))
+      (is (= "(bar)" (content "__(bar)__."))))
+
+    (testing "dangle"
+      (is (= "abc" (content "__abc___"))))))
 
 (deftest inline-link-test
   (defn match [s]
     (re-find re.link/inline s))
 
   (defn text [s]
-    (some->> (match s) inline-link :text))
+    (some->> (match s) (hash-map :re/match) inline-link :text))
 
   (defn destination [s]
-    (some->> (match s) inline-link :destination))
+    (some->> (match s) (hash-map :re/match) inline-link :destination))
 
   (defn title [s]
-    (some->> (match s) inline-link :title))
+    (some->> (match s) (hash-map :re/match) inline-link :title))
 
   (defn tag [s]
-    (some->> (match s) inline-link :tag))
+    (some->> (match s) (hash-map :re/match) inline-link :tag))
 
   (testing "invalid input"
     (is (nil? (match "not-a-valid-inline-link"))))
@@ -685,10 +705,10 @@
     (re-find re.inline/autolink s))
 
   (defn destination [s]
-    (some->> (match s) autolink :destination))
+    (some->> (match s) (hash-map :re/match) autolink :destination))
 
   (defn text [s]
-    (some->> (match s) autolink :text))
+    (some->> (match s) (hash-map :re/match) autolink :text))
 
   (testing "URI"
     (testing "destination"
@@ -792,7 +812,7 @@
     (re-find re.html/tag s))
 
   (defn content [s]
-    (some->> (match s) html :content))
+    (some->> (match s) (hash-map :re/match) html :content))
 
   (testing "open tags"
     (testing "simple"
@@ -1004,7 +1024,7 @@
     (re-find re.inline/hard-line-break s))
 
   (defn content [s]
-    (some->> (match s) hard-line-break :content))
+    (some->> (match s) (hash-map :re/match) hard-line-break :content))
 
   (testing "standard"
     (are [s c] (= c (content s))
@@ -1027,7 +1047,7 @@
     (re-find re.inline/soft-line-break s))
 
   (defn content [s]
-    (some->> (match s) soft-line-break :content))
+    (some->> (match s) (hash-map :re/match) soft-line-break :content))
 
   (testing "preceded by spaces"
     (are [s] (nil? (match s))
@@ -1058,13 +1078,13 @@
     (reference-link (:definitions context)))
 
   (defn text [s context]
-    (some->> (match s context) ((matcher context)) :text))
+    (some->> (match s context) (hash-map :re/match) ((matcher context)) :text))
 
   (defn destination [s context]
-    (some->> (match s context) ((matcher context)) :destination))
+    (some->> (match s context) (hash-map :re/match) ((matcher context)) :destination))
 
   (defn title [s context]
-    (some->> (match s context) ((matcher context)) :title))
+    (some->> (match s context) (hash-map :re/match) ((matcher context)) :title))
 
   (defn context [label]
     {:definitions {label {:title "t"

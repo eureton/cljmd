@@ -9,32 +9,28 @@
             [commonmark.inline.token :as token]))
 
 (defn code-span
-  [[_ _ inner]]
+  [{[_ _ inner] :re/match}]
   {:content (-> inner
                 (string/replace #"(?:\r\n|\r|\n)" " ")
                 (string/replace #"(?:^ (.*[^ ].*) $)" "$1"))
    :tag :cs})
 
-(defn emphasis-matcher
-  [length tag]
-  (let [trim #(subs % length (- (count %) length))]
-    #(some->> %
-              trim
-              (hash-map :tag tag :content))))
-
-(def emphasis
-  (emphasis-matcher 1 :em))
-
-(def strong-emphasis
-  (emphasis-matcher 2 :strong))
-
-(def double-emphasis
-  (emphasis-matcher 3 :strong-in-em))
+(defn emphasis
+  [{:re/keys [match]}]
+  (let [length-left (->> match (re-find #"^[_*]*") count)
+        length-right (->> match (re-find #"[_*]*$") count)
+        min-length (min length-left length-right)]
+    {:tag (case min-length
+            1 :em
+            2 :strong
+            3 :strong-in-em)
+     :content (subs match min-length (- (count match) min-length))}))
 
 (defn inline-link
-  [[_ img? text
-    destination-wrapped destination-unwrapped _
-    single-quoted-title double-quoted-title parenthesized-title]]
+  [{[_ img? text
+     destination-wrapped destination-unwrapped _
+     single-quoted-title double-quoted-title
+     parenthesized-title] :re/match}]
   (let [destination (or destination-wrapped destination-unwrapped)
         title (or single-quoted-title
                   double-quoted-title
@@ -46,7 +42,7 @@
 
 (defn reference-link
   [definitions]
-  (fn [match]
+  (fn [{:re/keys [match]}]
     (let [label-count (count definitions)
           full-end (+ label-count 3)
           collapsed-end (+ full-end label-count 1)
@@ -69,28 +65,28 @@
                      :tag (if img? :img :a))))))
 
 (defn autolink
-  [[_ uri email]]
+  [{[_ uri email] :re/match}]
   {:tag :autolink
    :text (or uri email)
    :destination (cond email (str "mailto:" email)
                       uri (util/percent-encode-uri uri))})
 
 (defn hard-line-break
-  [content]
+  [info]
   {:tag :hbr
-   :content content})
+   :content (:re/match info)})
 
 (defn soft-line-break
-  [content]
+  [info]
   {:tag :sbr
-   :content content})
+   :content (:re/match info)})
 
 (defn html
-  [html]
+  [info]
   {:tag :html-inline
-   :content html})
+   :content (:re/match info)})
 
-(defn matches
+(defn matches-re
   "Returns a vector of hashes, each of which contains:
      * the RE match, i.e. the output of (re-find re s)
      * the start index (include) of re in s
@@ -106,9 +102,13 @@
                              :re/end (.end matcher)})
                (re-find matcher))))))
 
+(defn matches-fn
+  [f s]
+  (f s))
+
 (defn annotate
   [f info]
-  (-> (f (:re/match info))
+  (-> (f info)
       (merge (update info :re/match (ufn/to-fix vector? first)))))
 
 (defn sweeper
@@ -122,16 +122,14 @@
         [re.inline/autolink                     autolink]
         [re.link/inline                         inline-link]
         [(re.link/reference (keys definitions)) (reference-link definitions)]
-        [(re.inline/emphasis 1)                 emphasis]
-        [(re.inline/emphasis 2)                 strong-emphasis]
-        [(re.inline/emphasis 3)                 double-emphasis]
+        [re.inline/outermost-emphasis-tokens    emphasis]
         [re.inline/hard-line-break              hard-line-break]
         [re.inline/soft-line-break              soft-line-break]]
        (remove #(some nil? %))
-       (map (fn [[re f]]
+       (map (fn [[c f]]
               (fn [string]
                 (some->> string
-                         (matches re)
+                         ((if (fn? c) matches-fn matches-re) c)
                          (map #(annotate f %))))))
        (apply juxt)
        (comp #(remove nil? %) flatten)))
@@ -140,13 +138,14 @@
   "Integer representing the priorty of the tag. Greater is higher."
   {:sbr 0
    :hbr 1
-   :strong 2
-   :em 3
-   :img 4
-   :a 5
-   :autolink 6
-   :html-inline 6
-   :cs 6})
+   :em 2
+   :strong 3
+   :strong-in-em 4
+   :img 5
+   :a 6
+   :autolink 7
+   :html-inline 7
+   :cs 7})
 
 (defn superceded?
   "True if y has higher precedence than x, false otherwise."

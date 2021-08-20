@@ -12,6 +12,15 @@
   [x]
   (re-pattern (str "(?:" no-preceding-backslash x ")")))
 
+(defn between
+  "Matches the maximum amount of characters between from and to, both of which
+   are treated as REs. The from match, the intermediate characters match and the
+   to match are all captured in groups, in the respective order."
+  [from to]
+  (re-pattern (str "(" from ")"
+                   "((?:(?!" from ")(?!" to ").)*)"
+                   "(" to ")")))
+
 (defn blank-line
   "Returns a RE which matches lines consisting of zero to limit characters, each
    of which may be either a space or a tab."

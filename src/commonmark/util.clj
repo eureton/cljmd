@@ -73,20 +73,6 @@
   ([opener closer]
    (balanced-unescaped-re opener closer {})))
 
-(defn balanced-re
-  [l r]
-  (let [fill (str "(?:(?:.(?!" l "|" r "))*.|)")
-        pad #(->> %& (interpose fill) string/join)]
-    (->> [;[l l l l r r r r] [l l l r l r r r] [l l l r r l r r] [l l r l r l r r]
-          ;[l l l r r r] [l l r l r r]
-          [l l r r]
-          [l r]]
-         (map #(apply pad %))
-         (interpose "|")
-         string/join
-         (format "(?:%s)")
-         re-pattern)))
-
 (defn excluding-re
   "Returns a negative lookbehind RE which forbids match immediately prior to
    match the given regular expression."
