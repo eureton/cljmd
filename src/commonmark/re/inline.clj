@@ -1,6 +1,5 @@
 (ns commonmark.re.inline
   (:require [clojure.string :as string]
-            [clojure.set]
             [commonmark.util :as util]
             [commonmark.re.common :as re.common]))
 
@@ -111,15 +110,16 @@
             (and (= 1 (count inner))
                  (= string (first inner))))
       with-inner
-      (->> inner
-           (remove tokens)
-           ; TODO use the match info instead of string/replace
-           (map #(let [digest (str (hash %))]
-                   (->> (string/replace string % digest)
-                        (emphasis-tokens with-inner)
-                        (map (fn [x] (string/replace x digest %)))
-                        set)))
-           (apply clojure.set/union)))))
+      (let [uninspected-tokens (remove tokens inner)
+            zip (comp str hash)
+            unzip (reduce (fn [acc x] (assoc acc (zip x) x)) {} uninspected-tokens)
+            replace-rf (fn [f] #(string/replace %1 %2 (f %2)))]
+        (->> uninspected-tokens
+             ; TODO use the match info instead of string/replace
+             (reduce (replace-rf zip) string)
+             (emphasis-tokens with-inner)
+             (map #(reduce (replace-rf unzip) % (keys unzip)))
+             set)))))
   ([string]
    (emphasis-tokens #{} string)))
 

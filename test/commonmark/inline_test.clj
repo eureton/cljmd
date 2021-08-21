@@ -361,7 +361,8 @@
     (testing "preceded by punctuation, followed by whitespace"
       (are [s c] (= c (content s))
            "_(__foo__)_" "(__foo__)"
-           "__foo \"_bar_\" foo__" "foo \"_bar_\" foo"))
+           "__foo \"_bar_\" foo__" "foo \"_bar_\" foo"
+           "**(*abc* *xyz*)**" "(*abc* *xyz*)"))
 
     (testing "intraword"
       (is (nil? (match "__foo__bar"))))
