@@ -18,8 +18,9 @@
 
 (defn emphasis
   [{:re/keys [match]}]
-  (let [length-left (->> match (re-find #"^[_*]*") count)
-        length-right (->> match (re-find #"[_*]*$") count)
+  (let [run (str "[" (first match) "]*")
+        length-left (->> match (re-find (re-pattern (str "^" run))) count)
+        length-right (->> match (re-find (re-pattern (str run "$"))) count)
         min-length (min length-left length-right)]
     {:tag (case min-length
             1 :em
