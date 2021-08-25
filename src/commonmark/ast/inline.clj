@@ -73,17 +73,15 @@
 
 (defmethod inflate :deep-emphasis
   [input tokens]
-  (->> (inflate (assoc input :tag :default) tokens)
-       :children
-       (branch (case (:tag input)
-                 :strong-in-em               [{:tag :em} {:tag :strong}]
-                 :strong-in-strong           [{:tag :strong} {:tag :strong}]
-                 :strong-in-strong-in-em     [{:tag :em}
-                                              {:tag :strong}
-                                              {:tag :strong}]
-                 :strong-in-strong-in-strong [{:tag :strong}
-                                              {:tag :strong}
-                                              {:tag :strong}]))))
+  (let [tags (->> (case (:tag input)
+                    :strong-in-em               [:em :strong]
+                    :strong-in-strong           [:strong :strong]
+                    :strong-in-strong-in-em     [:em :strong :strong]
+                    :strong-in-strong-in-strong [:strong :strong :strong])
+                    (map #(hash-map :tag %)))]
+    (->> (inflate (assoc input :tag :default) tokens)
+         :children
+         (branch tags))))
 
 (defmethod inflate :default
   [{:keys [tag content] :re/keys [match]} tokens]
