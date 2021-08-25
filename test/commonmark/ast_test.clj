@@ -1386,7 +1386,31 @@
                      (node {:tag :txt :content ")"})])
               (node {:tag :txt :content " xyz "})
               (node {:tag :em}
-                    [(node {:tag :txt :content "pqr"})])]))))
+                    [(node {:tag :txt :content "pqr"})])])))
+
+    (testing "emphasis delimiter runs: multiples of 3"
+      (testing "sum is, parts aren't"
+        (are [s c] (= c (-> s from-string (get-in [:children 0 :children])))
+             "*abc**123**xyz*" [(node {:tag :em}
+                                      [(node {:tag :txt :content "abc"})
+                                       (node {:tag :strong}
+                                             [(node {:tag :txt :content "123"})])
+                                       (node {:tag :txt :content "xyz"})])]
+             "_abc__123__xyz_" [(node {:tag :em}
+                                      [(node {:tag :txt :content "abc__123__xyz"})])]))
+
+      (testing "sum is, parts are"
+        (are [s c] (= c (-> s from-string (get-in [:children 0 :children])))
+             "***abc***123***xyz***" [(node {:tag :em}
+                                            [(node {:tag :strong}
+                                                   [(node {:tag :txt :content "abc"})])])
+                                      (node {:tag :txt :content "123"})
+                                      (node {:tag :em}
+                                            [(node {:tag :strong}
+                                                   [(node {:tag :txt :content "xyz"})])])]
+             "___abc___123___xyz___" [(node {:tag :em}
+                                            [(node {:tag :strong}
+                                                   [(node {:tag :txt :content "abc___123___xyz"})])])]))))
 
   (testing "hard line break"
     (testing "spaces at beginning of next line"

@@ -137,3 +137,19 @@
         .toString
         (string/replace #"\P{ASCII}+" #(java.net.URLEncoder/encode % "UTF-8")))))
 
+(defn bounded-matches
+  "Returns a vector of hashes, each of which contains:
+     * the RE match, i.e. the output of (re-find re s)
+     * the start index (include) of re in s
+     * the end index (exclusive) of re in s"
+  [re s]
+  (let [matcher (re-matcher re s)]
+    (loop [result []
+           match (re-find matcher)]
+      (if (nil? match)
+        result
+        (recur (conj result {:re/match match
+                             :re/start (.start matcher)
+                             :re/end (.end matcher)})
+               (re-find matcher))))))
+

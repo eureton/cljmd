@@ -1,6 +1,7 @@
 (ns commonmark.inline
   (:require [clojure.string :as string]
             [flatland.useful.fn :as ufn]
+            [commonmark.emphasis :as emphasis]
             [commonmark.util :as util]
             [commonmark.re.inline :as re.inline]
             [commonmark.re.html :as re.html]
@@ -86,22 +87,6 @@
   {:tag :html-inline
    :content (:re/match info)})
 
-(defn matches-re
-  "Returns a vector of hashes, each of which contains:
-     * the RE match, i.e. the output of (re-find re s)
-     * the start index (include) of re in s
-     * the end index (exclusive) of re in s"
-  [re s]
-  (let [matcher (re-matcher re s)]
-    (loop [result []
-           match (re-find matcher)]
-      (if (nil? match)
-        result
-        (recur (conj result {:re/match match
-                             :re/start (.start matcher)
-                             :re/end (.end matcher)})
-               (re-find matcher))))))
-
 (defn matches-fn
   [f s]
   (f s))
@@ -122,14 +107,14 @@
         [re.inline/autolink                     autolink]
         [re.link/inline                         inline-link]
         [(re.link/reference (keys definitions)) (reference-link definitions)]
-        [re.inline/outermost-emphasis-tokens    emphasis]
+        [emphasis/outermost                     emphasis]
         [re.inline/hard-line-break              hard-line-break]
         [re.inline/soft-line-break              soft-line-break]]
        (remove #(some nil? %))
        (map (fn [[c f]]
               (fn [string]
                 (some->> string
-                         ((if (fn? c) matches-fn matches-re) c)
+                         ((if (fn? c) matches-fn util/bounded-matches) c)
                          (map #(annotate f %))))))
        (apply juxt)
        (comp #(remove nil? %) flatten)))
