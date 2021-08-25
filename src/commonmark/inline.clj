@@ -163,14 +163,15 @@
        distinct
        enforce-precedence))
 
-(defn expander
+(defn expander-fn
   "Returns a function which, when given a token, returns a vector consisting of
    that token followed by tokens of its inner content."
   [tokenizer]
-  (fn [{:as token :re/keys [match start]}]
+  (fn expand [{:as token :re/keys [match start]}]
     (let [content (token/inner token)]
       (->> (when content (tokenizer content))
            (map #(token/translate % (+ start (string/index-of match content))))
+           (mapcat expand)
            (concat [token])))))
 
 (defn tokenize
@@ -180,7 +181,7 @@
   ([string context]
    (let [tokenizer (sweeper context)]
      (->> (tokenizer string)
-          (mapcat (expander tokenizer))
+          (mapcat (expander-fn tokenizer))
           reconcile)))
   ([string]
    (tokenize string {})))

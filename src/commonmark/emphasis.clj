@@ -37,7 +37,7 @@
 
 (defn parse
   "Parses string into a sequence of tokens."
-  [string marker]
+  [marker string]
   (let [run (delimiter-run marker)
         texts (->> (string/split string run (count string))
                    (map #(hash-map :tags #{:text} :payload %)))
@@ -147,7 +147,7 @@
   "Sequence of outermost emphasis spans within string. Spans are represented by
    :match, :start and :end keys within a hash."
   [string]
-  (let [pairs-for (fn [marker] (comp arbitrate pairs #(parse % marker)))]
+  (let [pairs-for (fn [marker] (comp arbitrate pairs #(parse marker %)))]
     (->> string
          ((juxt (pairs-for :star) (pairs-for :lobar)))
          (apply clojure.set/union)
