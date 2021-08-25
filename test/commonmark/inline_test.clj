@@ -104,7 +104,7 @@
         r-star (re.inline/rfdr star)
         r-lobar (re.inline/rfdr lobar)
         match? (fn [s re] (->> s (re-find re) some?))]
-    (testing "left-flanking"
+    (testing "flanking"
       (are [s left? right?]
            (and (= left?  (or (match? s l-star)
                               (match? s l-lobar)))
@@ -122,6 +122,7 @@
            "abc_"              false  true
            "\"abc \"**"        false  true
            "\"abc \"_"         false  true
+           "\\**"              false  true
            ; left yes, right yes
            "abc***def"          true  true
            "\"abc \"_\"def \""  true  true

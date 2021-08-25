@@ -13,7 +13,7 @@
 
 (defn delimiter-run
   [char-class]
-  (re-pattern (str "(?<!" char-class ")"
+  (re-pattern (str "(?<!" (re.common/unescaped char-class) ")"
                    (re.common/unescaped char-class) "+"
                    "(?!" char-class ")")))
 
