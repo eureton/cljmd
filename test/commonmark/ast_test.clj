@@ -1190,6 +1190,31 @@
               (node {:tag :txt :content " xyz "})
               (branch [{:tag :em} {:tag :txt :content "pqr"}])])))
 
+    (testing "deeply nested emphasis"
+      (testing "delimiter run size: 3"
+        (are [s] (= (-> s from-string (get-in [:children 0 :children]))
+                    [(branch [{:tag :em} {:tag :strong} {:tag :txt :content "abc"}])])
+             "***abc***"
+             "___abc___"))
+
+      (testing "delimiter run size: 4"
+        (are [s] (= (-> s from-string (get-in [:children 0 :children]))
+                    [(branch [{:tag :strong} {:tag :strong} {:tag :txt :content "abc"}])])
+             "****abc****"
+             "____abc____"))
+
+      (testing "delimiter run size: 5"
+        (are [s] (= (-> s from-string (get-in [:children 0 :children]))
+                    [(branch [{:tag :em} {:tag :strong} {:tag :strong} {:tag :txt :content "abc"}])])
+             "*****abc*****"
+             "_____abc_____"))
+
+      (testing "delimiter run size: 6"
+        (are [s] (= (-> s from-string (get-in [:children 0 :children]))
+                    [(branch [{:tag :strong} {:tag :strong} {:tag :strong} {:tag :txt :content "abc"}])])
+             "******abc******"
+             "______abc______")))
+
     (testing "emphasis delimiter runs: multiples of 3"
       (testing "sum is, parts aren't"
         (are [s c] (= c (-> s from-string (get-in [:children 0 :children])))
