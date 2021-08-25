@@ -24,7 +24,10 @@
     {:tag (case min-length
             1 :em
             2 :strong
-            3 :strong-in-em)
+            3 :strong-in-em
+            4 :strong-in-strong
+            5 :strong-in-strong-in-em
+            6 :strong-in-strong-in-strong)
      :content (subs match min-length (- (count match) min-length))}))
 
 (defn inline-link
@@ -126,11 +129,14 @@
    :em 2
    :strong 3
    :strong-in-em 4
-   :img 5
-   :a 6
-   :autolink 7
-   :html-inline 7
-   :cs 7})
+   :strong-in-strong 5
+   :strong-in-strong-in-em 6
+   :strong-in-strong-in-strong 7
+   :img 8
+   :a 9
+   :autolink 10
+   :html-inline 10
+   :cs 10})
 
 (defn superceded?
   "True if y has higher precedence than x, false otherwise."

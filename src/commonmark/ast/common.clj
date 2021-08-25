@@ -3,7 +3,7 @@
             [clojure.string :as string]))
 
 (defn node
-  "Returns an AST node with the given data and children."
+  "AST node with the given data and children."
   ([data children]
    (cond-> {:data data}
      children (assoc :children children)))
@@ -23,6 +23,21 @@
   ([x y1 y2 y3 & ys]
    (update x :children (comp vec concat) (conj ys y3 y2 y1))))
 
+(defn branch
+  "Chain of single-child nodes starting with the root and proceeding to the
+   leaf. If the children value is provided, it will be used on the leaf node."
+  ([data children]
+   (let [data (reverse data)
+         root (node (first data) children)]
+     (loop [data (rest data)
+            root root]
+       (if (empty? data)
+         root
+         (recur (rest data)
+                (add (node (first data)) root))))))
+  ([data]
+   (branch data nil)))
+
 (defn update-children
   "If (apply f children args) evaluates to nil, :children is removed entirely.
    Otherwise, the result is associated with :children."
@@ -41,9 +56,17 @@
                   (derive :sbr         :inline)
                   (derive :html-inline :inline)
 
-                  (derive :em           :emphasis)
-                  (derive :strong       :emphasis)
-                  (derive :strong-in-em :emphasis)
+                  (derive :em                         :emphasis)
+                  (derive :strong                     :emphasis)
+                  (derive :strong-in-em               :emphasis)
+                  (derive :strong-in-strong           :emphasis)
+                  (derive :strong-in-strong-in-em     :emphasis)
+                  (derive :strong-in-strong-in-strong :emphasis)
+
+                  (derive :strong-in-em               :deep-emphasis)
+                  (derive :strong-in-strong           :deep-emphasis)
+                  (derive :strong-in-strong-in-em     :deep-emphasis)
+                  (derive :strong-in-strong-in-strong :deep-emphasis)
 
                   (derive :a      :link)
                   (derive :img    :link)

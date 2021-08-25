@@ -3,7 +3,7 @@
             [flatland.useful.fn :as ufn]
             [commonmark.inline :as inline]
             [commonmark.inline.token :as token]
-            [commonmark.ast.common :refer [node]]
+            [commonmark.ast.common :refer [node branch]]
             [commonmark.ast.predicate :as pred]))
 
 (def degenerate?
@@ -71,12 +71,19 @@
   (node {:tag :txt}
         (unpack input tokens)))
 
-(defmethod inflate :strong-in-em
+(defmethod inflate :deep-emphasis
   [input tokens]
-  (node {:tag :em}
-        [(node {:tag :strong}
-               (:children (inflate (assoc input :tag :default)
-                                   tokens)))]))
+  (->> (inflate (assoc input :tag :default) tokens)
+       :children
+       (branch (case (:tag input)
+                 :strong-in-em               [{:tag :em} {:tag :strong}]
+                 :strong-in-strong           [{:tag :strong} {:tag :strong}]
+                 :strong-in-strong-in-em     [{:tag :em}
+                                              {:tag :strong}
+                                              {:tag :strong}]
+                 :strong-in-strong-in-strong [{:tag :strong}
+                                              {:tag :strong}
+                                              {:tag :strong}]))))
 
 (defmethod inflate :default
   [{:keys [tag content] :re/keys [match]} tokens]
