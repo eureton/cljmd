@@ -2,12 +2,12 @@
   (:require [clojure.test :refer :all]
             [commonmark.emphasis :refer :all]))
 
-(deftest outermost-test
+(deftest from-string-test
   (defn matches [s]
-    (->> s outermost (map :re/match)))
+    (->> s from-string (map :re/match)))
 
   (defn no-match? [s]
-    (->> s outermost empty?))
+    (->> s from-string empty?))
 
   (testing "delimiter-agnostic"
     (testing "minimal"

@@ -111,7 +111,7 @@
         [re.inline/autolink                     autolink]
         [re.link/inline                         inline-link]
         [(re.link/reference (keys definitions)) (reference-link definitions)]
-        [emphasis/outermost                     emphasis]
+        [emphasis/from-string                   emphasis]
         [re.inline/hard-line-break              hard-line-break]
         [re.inline/soft-line-break              soft-line-break]]
        (remove #(some nil? %))
