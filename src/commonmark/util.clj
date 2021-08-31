@@ -133,7 +133,9 @@
                             (and path (decode path))
                             (and query (decode query))
                             (and fragment (decode fragment)))
-             (catch java.net.URISyntaxException _ (java.net.URI. uri)))
+             (catch java.net.URISyntaxException _
+                    (try (java.net.URI. uri)
+                         (catch java.net.URISyntaxException _ uri))))
         .toString
         (string/replace #"\P{ASCII}+" #(java.net.URLEncoder/encode % "UTF-8")))))
 
