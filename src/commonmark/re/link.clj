@@ -20,11 +20,8 @@
                    (util/balanced-unescaped-re \( \) {:intersect #"[^ \p{Cntrl}]"}))))
 
 (def destination
-  (re-pattern (str "(?:"
-                     "<(" wrapped-destination ")>"
-                     "|"
-                     "(" unwrapped-destination ")"
-                   ")")))
+  (util/or-re (str (unescaped \<) "(" wrapped-destination ")" (unescaped \>))
+              (str "(" unwrapped-destination ")")))
 
 (def title
   (let [escape #(string/escape (str %) {\( #"\(" \) #"\)"})
