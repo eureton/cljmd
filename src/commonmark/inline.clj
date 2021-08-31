@@ -152,10 +152,22 @@
              (and (= priority-x priority-y)
                   (> (:re/start x) (:re/start y)))))))
 
+(defn link-containing-link?
+  "True if x is a link containing link y, false otherwise."
+  [x y]
+  (let [priority-x (priority (:tag x))
+        priority-y (priority (:tag y))]
+    (and (= :a (:tag x))
+         (= :a (:tag y))
+         (token/within? y x))))
+
 (defn enforce-precedence
   "Removes tokens which conflict with tokens of higher priority."
   [tokens]
-  (reduce (fn [acc x] (remove #(superceded? % x) acc))
+  (reduce (fn [acc x]
+            (remove (some-fn #(superceded? % x)
+                             #(link-containing-link? % x))
+                    acc))
           tokens
           tokens))
 
