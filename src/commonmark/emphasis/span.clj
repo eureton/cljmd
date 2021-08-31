@@ -61,9 +61,20 @@
          (map (ufn/to-fix (bounds-match? lefts) #(update % :tags conj :left)))
          (map (ufn/to-fix (bounds-match? rights) #(update % :tags conj :right))))))
 
+(defn appease
+  "Retags :run spans as :text, if they cross a claimed span."
+  [claimed spans]
+  (let [; TODO: refactor this to use before? and after? functions
+        ;       from some generic namespace
+        claimed? (fn [x] (some #(not (or (< (:end x) (:re/start %))
+                                         (>= (:start x) (:re/end %))))
+                               claimed))
+        retag (comp #(conj % :text) #(disj % :run))]
+    (map (ufn/to-fix claimed? #(update % :tags retag)) spans)))
+
 (defn from-string
   "Parses string into a sequence of spans."
-  [string]
+  [string claimed]
   (let [run (->> [:star :lobar] (map delimiter-run) (apply util/or-re))
         texts (->> (string/split string run (count string))
                    (map #(hash-map :tags #{:text} :payload %)))
@@ -72,9 +83,9 @@
     (->> (interleave texts runs)
          (remove (comp empty? :payload))
          demarcate
+         (appease claimed)
          orientate
-         (remove (comp :text :tags))
-         )))
+         (remove (comp :text :tags)))))
 
 (defn pair?
   "True if spans x and y delimit emphasis, false otherwise."
@@ -155,16 +166,17 @@
 (defn outermost
   "Sequence of outermost emphasis spans within string. Spans are represented by
    :match, :start and :end keys within a hash."
-  [string]
-  (->> string
-       from-string
-       pairs
-       pair/arbitrate
-       (map #(snip string %))
-       (map (fn [token]
-              (let [start (string/index-of string token)]
-                {:re/match token
-                 :re/start start
-                 :re/end (+ start (count token))})))
-       (sort-by :re/start)))
+  ([string claimed]
+   (->> (from-string string claimed)
+        pairs
+        pair/arbitrate
+        (map #(snip string %))
+        (map (fn [token]
+               (let [start (string/index-of string token)]
+                 {:re/match token
+                  :re/start start
+                  :re/end (+ start (count token))})))
+        (sort-by :re/start)))
+  ([string]
+   (outermost string [])))
 

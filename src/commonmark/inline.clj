@@ -92,8 +92,8 @@
    :content (:re/match info)})
 
 (defn matches-fn
-  [f s]
-  (f s))
+  [claimed f s]
+  (f s claimed))
 
 (defn annotate
   [f info]
@@ -105,7 +105,7 @@
    Each token represents an inline markdown entity identified by the
    parser in the string. Does not descend into the inner content of the tokens
    it finds. Expects the context of the blockphase parser as parameter."
-  [{:keys [definitions] :or {definitions {}}}]
+  [{:keys [definitions] :or {definitions {}}} claimed]
   (->> [[re.inline/code-span                    code-span]
         [re.html/tag                            html]
         [re.inline/autolink                     autolink]
@@ -118,7 +118,9 @@
        (map (fn [[c f]]
               (fn [string]
                 (some->> string
-                         ((if (fn? c) matches-fn util/bounded-matches) c)
+                         ((if (fn? c)
+                            (partial matches-fn claimed)
+                            util/bounded-matches) c)
                          (map #(annotate f %))))))
        (apply juxt)
        (comp #(remove nil? %) flatten)))
@@ -180,10 +182,15 @@
    the inner content of entities. Expects the context of the blockphase parser
    as an optional parameter."
   ([string context]
-   (let [tokenizer (sweeper context)]
-     (->> (tokenizer string)
-          (mapcat (expander-fn tokenizer))
-          reconcile)))
+   (loop [before []]
+     (let [tokenizer (sweeper context before)
+           after (->> (tokenizer string)
+                      (mapcat (expander-fn tokenizer))
+                      (concat before)
+                      reconcile)]
+       (if (= after before)
+         after
+         (recur after)))))
   ([string]
    (tokenize string {})))
 
