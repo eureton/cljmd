@@ -126,6 +126,7 @@
   "Percent-encodes the path and query string, if any, of uri."
   [uri]
   (let [decode #(java.net.URLDecoder/decode % "UTF-8")
+        encode #(java.net.URLEncoder/encode % "UTF-8")
         uri-re #"^(([^:/?#]+):)?(//([^/?#]*))?([^?#]*)(\?([^#]*))?(#(.*))?"
         [_ _ scheme _ authority path _ query _ fragment] (re-find uri-re uri)]
     (-> (try (java.net.URI. scheme
@@ -137,7 +138,8 @@
                     (try (java.net.URI. uri)
                          (catch java.net.URISyntaxException _ uri))))
         .toString
-        (string/replace #"\P{ASCII}+" #(java.net.URLEncoder/encode % "UTF-8")))))
+        (string/replace #"\P{ASCII}+" encode)
+        (string/replace #"[\[\]]" encode))))
 
 (defn bounded-matches
   "Returns a vector of hashes, each of which contains:
