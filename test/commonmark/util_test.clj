@@ -46,7 +46,7 @@
   (testing "symbols"
     (are [in out] (= out (percent-encode-uri in))
          "http://abc.com:1234/x[y]z"                 "http://abc.com:1234/x%5By%5Dz"
-         "http://abc.com:1234/xyz?q=p[r]s"           "http://abc.com:1234/xyz?q=p[r]s"
+         "http://abc.com:1234/xyz?q=p[r]s"           "http://abc.com:1234/xyz?q=p%5Br%5Ds"
          "http://abc.com:1234/xyz?q=p{r}s"           "http://abc.com:1234/xyz?q=p%7Br%7Ds"
          "http://abc.com:1234/xyz?q=p{r}s&w=t{u}v"   "http://abc.com:1234/xyz?q=p%7Br%7Ds&w=t%7Bu%7Dv"
          "http://abc.com:1234/xyz?q=prs&w=tuv#1{2}3" "http://abc.com:1234/xyz?q=prs&w=tuv#1%7B2%7D3"))
