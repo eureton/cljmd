@@ -32,7 +32,7 @@
      :content (subs match min-length (- (count match) min-length))}))
 
 (defn inline-link
-  [{[_ img? text
+  [{[_ text
      destination-wrapped destination-unwrapped _
      single-quoted-title double-quoted-title
      parenthesized-title] :re/match}]
@@ -40,34 +40,40 @@
         title (or single-quoted-title
                   double-quoted-title
                   parenthesized-title)]
-    (cond-> {:text text
-             :tag (if img? :img :a)}
+    (cond-> {:tag :a :text text}
       destination (assoc :destination destination)
       title (assoc :title title))))
 
-(defn reference-link
+(def inline-image
+  (comp #(assoc % :tag :img) inline-link))
+
+(defn link-reference
   [definitions]
   (fn [{:re/keys [match]}]
     (let [label-count (count definitions)
-          full-end (+ label-count 3)
-          collapsed-end (+ full-end label-count 1)
-          shortcut-end (+ collapsed-end label-count 1)
+          full-end (+ label-count 2)
+          collapsed-end (+ full-end label-count)
+          shortcut-end (+ collapsed-end label-count)
           full (subvec match 1 full-end)
           collapsed (subvec match full-end collapsed-end)
           shortcut (subvec match collapsed-end shortcut-end)
           match? #(some some? %)
-          linear (juxt first second #(drop 2 %))
-          nil-text (juxt first (constantly nil) rest)
-          [img? text labels] (cond (match? full) (linear full)
-                                   (match? collapsed) (nil-text collapsed)
-                                   (match? shortcut) (nil-text shortcut))
+          linear (juxt first rest)
+          nil-text #(vector nil %)
+          [text labels] (cond (match? full) (linear full)
+                              (match? collapsed) (nil-text collapsed)
+                              (match? shortcut) (nil-text shortcut))
           label (some identity labels)]
       (some-> label
               util/normalize-link-label
               definitions
               (select-keys [:title :destination])
               (assoc :text (or text label)
-                     :tag (if img? :img :a))))))
+                     :tag :a)))))
+
+(defn image-reference
+  [definitions]
+  (comp #(assoc % :tag :img) (link-reference definitions)))
 
 (defn autolink
   [{[_ uri email] :re/match}]
@@ -106,24 +112,27 @@
    parser in the string. Does not descend into the inner content of the tokens
    it finds. Expects the context of the blockphase parser as parameter."
   [{:keys [definitions] :or {definitions {}}} claimed]
-  (->> [[re.inline/code-span                    code-span]
-        [re.html/tag                            html]
-        [re.inline/autolink                     autolink]
-        [re.link/inline                         inline-link]
-        [(re.link/reference (keys definitions)) (reference-link definitions)]
-        [emphasis/from-string                   emphasis]
-        [re.inline/hard-line-break              hard-line-break]
-        [re.inline/soft-line-break              soft-line-break]]
-       (remove #(some nil? %))
-       (map (fn [[c f]]
-              (fn [string]
-                (some->> string
-                         ((if (fn? c)
-                            (partial matches-fn claimed)
-                            util/bounded-matches) c)
-                         (map #(annotate f %))))))
-       (apply juxt)
-       (comp #(remove nil? %) flatten)))
+  (let [labels (keys definitions)]
+    (->> [[re.inline/code-span                code-span]
+          [re.html/tag                        html]
+          [re.inline/autolink                 autolink]
+          [re.link/inline                     inline-link]
+          [re.inline/inline-image             inline-image]
+          [(re.link/reference labels)         (link-reference definitions)]
+          [(re.inline/image-reference labels) (image-reference definitions)]
+          [emphasis/from-string               emphasis]
+          [re.inline/hard-line-break          hard-line-break]
+          [re.inline/soft-line-break          soft-line-break]]
+         (remove #(some nil? %))
+         (map (fn [[c f]]
+                (fn [string]
+                  (some->> string
+                           ((if (fn? c)
+                              (partial matches-fn claimed)
+                              util/bounded-matches) c)
+                           (map #(annotate f %))))))
+         (apply juxt)
+         (comp #(remove nil? %) flatten))))
 
 (def priority
   "Integer representing the priorty of the tag. Greater is higher."
@@ -136,10 +145,10 @@
    :strong-in-strong-in-em 6
    :strong-in-strong-in-strong 7
    :img 8
-   :a 9
-   :autolink 10
-   :html-inline 10
-   :cs 10})
+   :a 8
+   :autolink 9
+   :html-inline 9
+   :cs 9})
 
 (defn superceded?
   "True if y has higher precedence than x, false otherwise."
@@ -152,22 +161,10 @@
              (and (= priority-x priority-y)
                   (> (:re/start x) (:re/start y)))))))
 
-(defn link-containing-link?
-  "True if x is a link containing link y, false otherwise."
-  [x y]
-  (let [priority-x (priority (:tag x))
-        priority-y (priority (:tag y))]
-    (and (= :a (:tag x))
-         (= :a (:tag y))
-         (token/within? y x))))
-
 (defn enforce-precedence
   "Removes tokens which conflict with tokens of higher priority."
   [tokens]
-  (reduce (fn [acc x]
-            (remove (some-fn #(superceded? % x)
-                             #(link-containing-link? % x))
-                    acc))
+  (reduce (fn [acc x] (remove #(superceded? % x) acc))
           tokens
           tokens))
 

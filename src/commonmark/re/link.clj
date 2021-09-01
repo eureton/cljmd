@@ -5,11 +5,14 @@
             [commonmark.util :as util]))
 
 (def text
-  (re-pattern (str "(?s)"
-                   (unescaped #"\[") "("
-                     (util/balanced-unescaped-re \[ \])
-                     (util/excluding-re (blank-line))
-                   ")" #"\]")))
+  (re-pattern (str "(?!"
+                     #"\[.*?"
+                       "(?<!" (unescaped \!) ")"
+                       #"\[.*?\]\(.*?\)"
+                     #".*?\]"
+                   ")"
+                   "(?<!" (unescaped \!) ")"
+                   balanced-square-brackets)))
 
 (def wrapped-destination
   (re-pattern (str (util/but-unescaped-re \< \> {:exclude ["\r" "\n"]})
@@ -44,13 +47,11 @@
                            close ")"))))
 
 (def inline
-  (re-pattern (str no-preceding-backslash #"(!)?" text
+  (re-pattern (str text
                    #"\("
                      #"\s*"
                      destination "?"
-                     "(?:"
-                       #"\s+" "(" title ")"
-                     ")?"
+                     "(?:" #"\s+" "(" title ")" ")?"
                      #"\s*"
                    #"\)")))
 
@@ -65,18 +66,18 @@
 (defn full-reference
   [labels]
   (when (not-empty labels)
-    (re-pattern (str #"(?u)(?i)(!)?" text
+    (re-pattern (str #"(?u)(?i)" text
                      (apply util/or-re (map label-matcher labels))))))
 
 (defn collapsed-reference
   [labels]
-  (re-pattern (str #"(?u)(?i)(!)?"
+  (re-pattern (str "(?u)(?i)(?<!" (unescaped \!) ")"
                    (apply util/or-re (map label-matcher labels))
                    #"\[\]")))
 
 (defn shortcut-reference
   [labels]
-  (re-pattern (str #"(?u)(?i)(!)?"
+  (re-pattern (str "(?u)(?i)(?<!" (unescaped \!) ")"
                    (apply util/or-re (map label-matcher labels))
                    #"(?!\[\])"
                    "(?!" label ")")))

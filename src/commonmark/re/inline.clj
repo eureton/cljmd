@@ -2,19 +2,20 @@
   (:require [clojure.string :as string]
             [flatland.useful.fn :as ufn]
             [commonmark.util :as util]
-            [commonmark.re.common :as re.common]))
+            [commonmark.re.common :refer :all]
+            [commonmark.re.link :as link]))
 
 (def code-span
   (let [pre "(?<!`)"
         post "(?!`)"]
-    (re-pattern (str "(?s)" pre (re.common/unescaped "(`+)") post
+    (re-pattern (str "(?s)" pre (unescaped "(`+)") post
                      "(.*?)"
                      pre #"\1" post))))
 
 (defn delimiter-run
   [char-class]
-  (re-pattern (str "(?<!" (re.common/unescaped char-class) ")"
-                   (re.common/unescaped char-class) "+"
+  (re-pattern (str "(?<!" (unescaped char-class) ")"
+                   (unescaped char-class) "+"
                    "(?!" char-class ")")))
 
 (defn lfdr-nopunc
@@ -68,9 +69,9 @@
                      right))))
 
 (def autolink
-  (re-pattern (str (re.common/unescaped \<)
-                   (util/or-re (str "(" re.common/absolute-uri ")")
-                               (str "(" re.common/email-address ")"))
+  (re-pattern (str (unescaped \<)
+                   (util/or-re (str "(" absolute-uri ")")
+                               (str "(" email-address ")"))
                    ">")))
 
 (def hard-line-break
@@ -80,6 +81,44 @@
 
 (def soft-line-break
   (re-pattern (str #"(?<=.)(?<!(?:[ ]{2,}|\\))"
-                   re.common/line-ending
+                   line-ending
                    #"(?=.)")))
+
+(def image-description
+  (re-pattern (str (unescaped \!) balanced-square-brackets)))
+
+(def inline-image
+  (re-pattern (str image-description
+                   #"\("
+                     #"\s*"
+                     link/destination "?"
+                     "(?:" #"\s+" "(" link/title ")" ")?"
+                     #"\s*"
+                   #"\)")))
+
+(defn full-image-reference
+  [labels]
+  (when (not-empty labels)
+    (re-pattern (str #"(?u)(?i)" image-description
+                     (apply util/or-re (map link/label-matcher labels))))))
+
+(defn collapsed-image-reference
+  [labels]
+  (re-pattern (str #"(?u)(?i)!"
+                   (apply util/or-re (map link/label-matcher labels))
+                   #"\[\]")))
+
+(defn shortcut-image-reference
+  [labels]
+  (re-pattern (str #"(?u)(?i)!"
+                   (apply util/or-re (map link/label-matcher labels))
+                   #"(?!\[\])"
+                   "(?!" link/label ")")))
+
+(def image-reference
+  (ufn/to-fix not-empty (comp (ufn/ap util/or-re)
+                              (juxt full-image-reference
+                                    collapsed-image-reference
+                                    shortcut-image-reference))
+              nil))
 

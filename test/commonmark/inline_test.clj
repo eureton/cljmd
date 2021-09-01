@@ -201,10 +201,10 @@
 
     (testing "nested links"
       (testing "text"
-        (is (= "[in](in.com)" (text "[[in](in.com)](out.com)"))))
+        (is (= "in" (text "[[in](in.com)](out.com)"))))
 
       (testing "destination"
-        (is (= (destination "out.com"))))))
+        (is (= (destination "in.com"))))))
 
   (testing "destination"
     (testing "wrapped in <>"
@@ -430,30 +430,45 @@
         (is (= "http://example.com" (destination s))))
 
       (testing "title"
-        (is (= "The title" (title s))))))
+        (is (= "The title" (title s)))))))
 
-  (testing "image"
-    (testing "whitespace"
-      (let [s "My ![abc def](/xyz \"123\"   )"]
-        (testing "tag"
-          (is (= :img (tag s))))
+(deftest inline-image-test
+  (defn match [s]
+    (re-find re.inline/inline-image s))
 
-        (testing "text"
-          (is (= "abc def" (text s))))
+  (defn text [s]
+    (some->> (match s) (hash-map :re/match) inline-image :text))
 
-        (testing "destination"
-          (is (= "/xyz" (destination s))))
+  (defn destination [s]
+    (some->> (match s) (hash-map :re/match) inline-image :destination))
 
-        (testing "title"
-          (is (= "123" (title s))))))
+  (defn title [s]
+    (some->> (match s) (hash-map :re/match) inline-image :title))
 
-    (testing "description"
-      (testing "empty"
-        (is (= (text "![](xyz)") ""))))
+  (defn tag [s]
+    (some->> (match s) (hash-map :re/match) inline-image :tag))
 
-    (testing "destination"
-      (testing "<>-delimited"
-        (is (= "xyz" (destination "![abc](<xyz>)")))))))
+  (testing "whitespace"
+    (let [s "My ![abc def](/xyz \"123\"   )"]
+      (testing "tag"
+        (is (= :img (tag s))))
+
+      (testing "text"
+        (is (= "abc def" (text s))))
+
+      (testing "destination"
+        (is (= "/xyz" (destination s))))
+
+      (testing "title"
+        (is (= "123" (title s))))))
+
+  (testing "description"
+    (testing "empty"
+      (is (= (text "![](xyz)") ""))))
+
+  (testing "destination"
+    (testing "<>-delimited"
+      (is (= "xyz" (destination "![abc](<xyz>)"))))))
 
 (deftest autolink-test
   (defn match [s]
@@ -830,7 +845,7 @@
     (re-find (re.link/reference (keys (:definitions context))) s))
 
   (defn matcher [context]
-    (reference-link (:definitions context)))
+    (link-reference (:definitions context)))
 
   (defn text [s context]
     (some->> (match s context) (hash-map :re/match) ((matcher context)) :text))
