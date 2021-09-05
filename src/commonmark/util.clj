@@ -157,3 +157,13 @@
                              :re/end (.end matcher)})
                (re-find matcher))))))
 
+(defn graph
+  "Hashmap of items x and y in coll for which (pred x y) is true. The key is x
+   and the associated value is a sequence of all y."
+  [pred coll]
+  (->> coll
+       (map #(filter (partial pred %) coll))
+       (zipmap coll)
+       (remove (comp empty? val))
+       (into {})))
+

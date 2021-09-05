@@ -1,6 +1,9 @@
 (ns commonmark.re.common
   (:require [commonmark.util :as util]))
 
+(def unmatchable
+  #"(?=a)b")
+
 (def line-ending
   #"(?:\r\n|\n|\r(?!\n))")
 

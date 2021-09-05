@@ -130,345 +130,430 @@
            "abc *** def"       false false
            "a _ b"             false false))))
 
-(deftest inline-link-test
-  (defn match [s]
-    (re-find re.link/inline s))
+(deftest tokenize-test
+  (testing "inline link"
+    (defn match [s]
+      (->> s tokenize (filter (comp #{:a} :tag))))
 
-  (defn text [s]
-    (some->> (match s) (hash-map :re/match) inline-link :text))
+    (defn text [s]
+      (->> s match (keep :text) set))
 
-  (defn destination [s]
-    (some->> (match s) (hash-map :re/match) inline-link :destination))
+    (defn destination [s]
+      (->> s match (keep :destination) set))
 
-  (defn title [s]
-    (some->> (match s) (hash-map :re/match) inline-link :title))
+    (defn title [s]
+      (->> s match (keep :title) set))
 
-  (defn tag [s]
-    (some->> (match s) (hash-map :re/match) inline-link :tag))
+    (testing "invalid input"
+      (is (empty? (match "not-a-valid-inline-link"))))
 
-  (testing "invalid input"
-    (is (nil? (match "not-a-valid-inline-link"))))
+    (testing "omit destination"
+      (is (not-empty (match "[abc]()"))))
 
-  (testing "omit destination"
-    (is (some? (match "[abc]()"))))
+    (testing "omit title"
+      (testing "text"
+        (is (not-empty (text "[abc](xyz)"))))
 
-  (testing "omit title"
+      (testing "destination"
+        (is (not-empty (destination "[abc](xyz)"))))
+
+      (testing "title"
+        (is (empty? (title "[abc](xyz)")))))
+
     (testing "text"
-      (is (some? (text "[abc](xyz)"))))
+      (testing "backslash-escaped brackets"
+        (are [s] (= #{s} (text (str "[" s "](xyz)")))
+             "abc\\]123"
+             "abc\\[123"))
+
+      (testing "balanced brackets"
+        (are [s] (= #{s} (text (str "[" s "](xyz)")))
+             ""
+             "[]"
+             "[][]"
+             "[[]]"
+             "[[[]]]"
+             "[[][]]"
+             "[[]][]"
+             "[][][]"
+             "[abc]"
+             "[[abc]]"
+             "abc [123] pqr"
+             "[abc [123] pqr]"))
+
+      (testing "unbalanced brackets"
+        (are [s] (empty? (match s))
+             "[]]()"
+             "[[]]]()"
+             "[[[]]]]()"))
+
+      (testing "contains line breaks"
+        (testing "single"
+          (is (= #{"ab\ncd"} (text "[ab\ncd](xyz)"))))
+
+        (testing "multiple"
+          (is (= #{"ab\ncd\nef"} (text "[ab\ncd\nef](xyz)")))))
+
+      (testing "contains blank line"
+        (is (empty? (match "[ab\n\ncd](xyz)"))))
+
+      (testing "nested links"
+        (testing "text"
+          (is (= #{"in"} (text "[[in](in.com)](out.com)"))))
+
+        (testing "destination"
+          (is (= #{"in.com"} (destination "[[in](in.com)](out.com)"))))))
 
     (testing "destination"
-      (is (some? (destination "[abc](xyz)"))))
+      (testing "wrapped in <>"
+        (testing "minimal"
+          (is (= #{"xyz"} (destination "[abc](<xyz>)"))))
+
+        (testing "spaces"
+          (is (= #{"xyz 123 qpr"} (destination "[abc](<xyz 123 qpr>)"))))
+
+        (testing "line breaks"
+          (is (empty? (match "[abc](<123\nxyz>)"))))
+
+        (testing "parentheses"
+          (are [s d] (= #{d} (destination s))
+               "[abc](<123)xyz>)" "123)xyz"
+               "[abc](<123(xyz>)" "123(xyz"))
+
+        (testing "with title"
+          (are [t] (= #{"xyz"} (destination (str "[abc](<xyz> " t ")")))
+               "'123'"
+               "\"123\""))
+
+        (testing "escaped delimeters"
+          (are [s] (= #{s} (destination (str "[abc](<" s ">)")))
+               "123\\<xyz"
+               "123\\>xyz"
+               "123\\<qpr\\>xyz"))
+
+        (testing "unescaped delimeters"
+          (are [s] (empty? (match (str "[abc](<" s ">)")))
+               "123<xyz"
+               "123>xyz"
+               "123<qpr>xyz"))
+
+        (testing "improperly matched opening delimiters"
+          (are [s] (empty? (match s))
+               "[a] (<b)c"
+               "[a] (<b)c>"
+               "[a] (<b>c)")))
+
+      (testing "not wrapped in <>"
+        (testing "minimal"
+          (is (= #{"xyz"} (destination "[abc](xyz)"))))
+
+        (testing "begins with <"
+          (is (empty? (match "[abc](<xyz)"))))
+
+        (testing "contains <"
+          (is (= #{"x<yz"} (destination "[abc](x<yz)"))))
+
+        (testing "spaces"
+          (is (empty? (match "[abc](xyz 123)"))))
+
+        (testing "with title"
+          (are [t] (= #{"xyz"} (destination (str "[abc](xyz " t ")")))
+               "'123'"
+               "\"123\""))
+
+        (testing "control characters"
+          (are [s] (empty? (match (str "[abc](" s ")")))
+               "123\rxyz"
+               "123\nxyz"))
+
+        (testing "parentheses"
+          (testing "unescaped, unbalanced"
+            (are [s] (empty? (match (str "[abc](" s ")")))
+                 "123(xyz"
+                 "123()xyz("
+                 "123((qpr))xyz("))
+
+          (testing "unescaped, balanced"
+            (are [s] (= #{s} (destination (str "[abc](" s ")")))
+                 "()"
+                 "123()xyz"
+                 "123(!(qpr)!)xyz"))
+
+          (testing "escaped"
+            (are [s] (= #{s} (destination (str "[abc](" s ")")))
+                 "123\\(xyz"
+                 "123\\)xyz"
+                 "123\\)q\\(pr\\)xyz"))))
+
+      (testing "fragments and queries"
+        (are [d] (= #{d} (destination (str "[abc](" d ")")))
+             "#fragment"
+             "http://example.com#fragment"
+             "http://example.com?foo=3#frag")))
 
     (testing "title"
-      (is (nil? (title "[abc](xyz)")))))
+      (testing "'-delimited"
+        (testing "minimal"
+          (is (= #{"123"} (title "[abc](xyz '123')"))))
 
-  (testing "text"
-    (testing "backslash-escaped brackets"
-      (are [s] (= s (text (str "[" s "](xyz)")))
-           "abc\\]123"
-           "abc\\[123"))
+        (testing "double quotes"
+          (is (= #{"12 \"34\" 56"} (title "[abc](xyz '12 \"34\" 56')"))))
 
-    (testing "balanced brackets"
-      (are [s] (= s (text (str "[" s "](xyz)")))
-           ""
-           "[]"
-           "[][]"
-           "[[]]"
-           "[[[]]]"
-           "[[][]]"
-           "[[]][]"
-           "[][][]"
-           "[abc]"
-           "[[abc]]"
-           "abc [123] pqr"
-           "[abc [123] pqr]"))
+        (testing "escaped delimeters"
+          (are [t] (= #{t} (title (str "[abc](xyz '" t "')")))
+               "1\\'23"
+               "12\\'3"
+               "1\\'2\\'3"))
 
-    (testing "unbalanced brackets"
-      (are [s] (nil? (match s))
-           "[]]()"
-           "[[]]]()"
-           "[[[]]]]()"))
+        (testing "unescaped delimeters"
+          (are [t] (empty? (match (str "[abc](xyz '" t "')")))
+               "1'23"
+               "12'3"
+               "1'2'3"))
 
-    (testing "contains line breaks"
-      (testing "single"
-        (is (= "ab\ncd" (text "[ab\ncd](xyz)"))))
+        (testing "line breaks"
+          (testing "single"
+            (is (= #{"12\n34\n56"} (title "[abc](xyz '12\n34\n56')"))))
 
-      (testing "multiple"
-        (is (= "ab\ncd\nef" (text "[ab\ncd\nef](xyz)")))))
+          (testing "multiple"
+            (is (empty? (match "[abc](xyz '12\n\n34')"))))))
 
-    (testing "contains blank line"
-      (is (nil? (match "[ab\n\ncd](xyz)"))))
+      (testing "\"-delimited"
+        (testing "minimal"
+          (is (= #{"123"} (title "[abc](xyz \"123\")"))))
 
-    (testing "nested links"
-      (testing "text"
-        (is (= "in" (text "[[in](in.com)](out.com)"))))
+        (testing "single quotes"
+          (is (= #{"12 '34' 56"} (title "[abc](xyz \"12 '34' 56\")"))))
 
+        (testing "escaped delimeters"
+          (are [t] (= #{t} (title (str "[abc](xyz \"" t "\")")))
+               "1\\\"23"
+               "12\\\"3"
+               "1\\\"2\\\"3"))
+
+        (testing "unescaped delimeters"
+          (are [t] (empty? (match (str "[abc](xyz \"" t "\")")))
+               "1\"23"
+               "12\"3"
+               "1\"2\"3"))
+
+        (testing "line breaks"
+          (testing "single"
+            (is (= #{"12\n34\n56"} (title "[abc](xyz \"12\n34\n56\")"))))
+
+          (testing "multiple"
+            (is (empty? (match "[abc](xyz \"12\n\n34\")"))))))
+
+      (testing "()-delimited"
+        (testing "minimal"
+          (is (= #{"123"} (title (str "[abc](xyz (123))")))))
+
+        (testing "escaped delimeters"
+          (are [t] (= #{t} (title (str "[abc](xyz (" t "))")))
+               "1\\(23"
+               "12\\(3"
+               "1\\(2\\(3"
+               "1\\)23"
+               "12\\)3"
+               "1\\)2\\)3"
+               "1\\(2\\)3"
+               "1\\)2\\(3"))
+
+        (testing "unescaped delimeters"
+          (are [t] (empty? (match (str "[abc](xyz (" t "))")))
+               "1(23"
+               "12(3"
+               "1(2(3"
+               "1)23"
+               "12)3"
+               "1)2)3"
+               "1(2)3"
+               "1)2(3"))
+
+        (testing "line breaks"
+          (testing "single"
+            (is (= #{"12\n34\n56"} (title "[abc](xyz (12\n34\n56))"))))
+
+          (testing "multiple"
+            (is (empty? (match "[abc](xyz (12\n\n34))")))))
+
+        (testing "backslash escapes"
+          (is (= #{"be there in 5\\\""} (title "[abc](xyz \"be there in 5\\\"\")"))))
+
+        (testing "entity"
+          (is (= #{"be there in 5&quot;"} (title "[abc](xyz \"be there in 5&quot;\")"))))))
+
+    (testing "separating destination from title with non-unicode whitespace"
+      (are [c] (= #{(str "xyz" c "123")} (destination (str "[abc](xyz" c "123)")))
+           \u00A0
+           \u1680
+           \u2000
+           \u2001
+           \u2002
+           \u2003
+           \u2004
+           \u2005
+           \u2006
+           \u2007
+           \u2008
+           \u2009
+           \u200A
+           \u202F
+           \u205F
+           \u3000))
+
+    (testing "whitespace around destination and title"
       (testing "destination"
-        (is (= (destination "in.com"))))))
+        (is (= #{"xyz"} (destination "[abc]( \t\nxyz \t\n'12 34' \t\n)"))))
 
-  (testing "destination"
-    (testing "wrapped in <>"
-      (testing "minimal"
-        (is (= "xyz" (destination "[abc](<xyz>)"))))
+      (testing "title"
+        (is (= #{"12 34"} (title "[abc]( \t\nxyz \t\n'12 34' \t\n)")))))
 
-      (testing "spaces"
-        (is (= "xyz 123 qpr" (destination "[abc](<xyz 123 qpr>)"))))
+    (testing "whitespace between text and destination"
+      (are [s] (empty? (match (str "[abc]" s "(xyz)")))
+           \space
+           \newline
+           \tab
+           " \n\t"))
 
-      (testing "line breaks"
-        (is (nil? (match "[abc](<123\nxyz>)"))))
+    (testing "opening bracket is escaped"
+      (is (empty? (match (str "\\[abc](xyz)")))))
 
-      (testing "parentheses"
-        (are [s d] (= d (destination s))
-             "[abc](<123)xyz>)" "123)xyz"
-             "[abc](<123(xyz>)" "123(xyz"))
+    (testing "all in one"
+      (let [s "[p `code` *em*](http://example.com 'The title')"]
+        (testing "text"
+          (is (= #{"p `code` *em*"} (text s))))
 
-      (testing "with title"
-        (are [t] (= "xyz" (destination (str "[abc](<xyz> " t ")")))
-             "'123'"
-             "\"123\""))
+        (testing "destination"
+          (is (= #{"http://example.com"} (destination s))))
 
-      (testing "escaped delimeters"
-        (are [s] (= s (destination (str "[abc](<" s ">)")))
-             "123\\<xyz"
-             "123\\>xyz"
-             "123\\<qpr\\>xyz"))
+        (testing "title"
+          (is (= #{"The title"} (title s)))))))
 
-      (testing "unescaped delimeters"
-        (are [s] (nil? (match (str "[abc](<" s ">)")))
-             "123<xyz"
-             "123>xyz"
-             "123<qpr>xyz"))
+  (testing "inline image"
+    (defn match [s]
+      (->> s tokenize (filter (comp #{:img} :tag))))
 
-      (testing "improperly matched opening delimiters"
-        (are [s] (nil? (match s))
-             "[a] (<b)c"
-             "[a] (<b)c>"
-             "[a] (<b>c)")))
+    (defn text [s]
+      (->> s match (keep :text) set))
 
-    (testing "not wrapped in <>"
-      (testing "minimal"
-        (is (= "xyz" (destination "[abc](xyz)"))))
+    (defn destination [s]
+      (->> s match (keep :destination) set))
 
-      (testing "begins with <"
-        (is (nil? (match "[abc](<xyz)"))))
+    (defn title [s]
+      (->> s match (keep :title) set))
 
-      (testing "contains <"
-        (is (= "x<yz" (destination "[abc](x<yz)"))))
+    (testing "whitespace"
+      (let [s "My ![abc def](/xyz \"123\"   )"]
+        (testing "tag"
+          (is (not-empty (match s))))
 
-      (testing "spaces"
-        (is (nil? (match "[abc](xyz 123)"))))
+        (testing "text"
+          (is (= #{"abc def"} (text s))))
 
-      (testing "with title"
-        (are [t] (= "xyz" (destination (str "[abc](xyz " t ")")))
-             "'123'"
-             "\"123\""))
+        (testing "destination"
+          (is (= #{"/xyz"} (destination s))))
 
-      (testing "control characters"
-        (are [s] (nil? (match (str "[abc](" s ")")))
-             "123\rxyz"
-             "123\nxyz"))
+        (testing "title"
+          (is (= #{"123"} (title s))))))
 
-      (testing "parentheses"
-        (testing "unescaped, unbalanced"
-          (are [s] (nil? (match (str "[abc](" s ")")))
-               "123(xyz"
-               "123()xyz("
-               "123((qpr))xyz("))
+    (testing "description"
+      (testing "empty"
+        (is (= #{""} (text "![](xyz)")))))
 
-        (testing "unescaped, balanced"
-          (are [s] (= s (destination (str "[abc](" s ")")))
-               "()"
-               "123()xyz"
-               "123(!(qpr)!)xyz"))
-
-        (testing "escaped"
-          (are [s] (= s (destination (str "[abc](" s ")")))
-               "123\\(xyz"
-               "123\\)xyz"
-               "123\\)q\\(pr\\)xyz"))))
-
-    (testing "fragments and queries"
-      (are [d] (= d (destination (str "[abc](" d ")")))
-           "#fragment"
-           "http://example.com#fragment"
-           "http://example.com?foo=3#frag")))
-
-  (testing "title"
-    (testing "'-delimited"
-      (testing "minimal"
-        (is (= "123" (title "[abc](xyz '123')"))))
-
-      (testing "double quotes"
-        (is (= "12 \"34\" 56" (title "[abc](xyz '12 \"34\" 56')"))))
-
-      (testing "escaped delimeters"
-        (are [t] (= t (title (str "[abc](xyz '" t "')")))
-             "1\\'23"
-             "12\\'3"
-             "1\\'2\\'3"))
-
-      (testing "unescaped delimeters"
-        (are [t] (nil? (match (str "[abc](xyz '" t "')")))
-             "1'23"
-             "12'3"
-             "1'2'3"))
-
-      (testing "line breaks"
-        (testing "single"
-          (is (= "12\n34\n56" (title "[abc](xyz '12\n34\n56')"))))
-
-        (testing "multiple"
-          (is (nil? (match "[abc](xyz '12\n\n34')"))))))
-
-    (testing "\"-delimited"
-      (testing "minimal"
-        (is (= "123" (title "[abc](xyz \"123\")"))))
-
-      (testing "single quotes"
-        (is (= "12 '34' 56" (title "[abc](xyz \"12 '34' 56\")"))))
-
-      (testing "escaped delimeters"
-        (are [t] (= t (title (str "[abc](xyz \"" t "\")")))
-             "1\\\"23"
-             "12\\\"3"
-             "1\\\"2\\\"3"))
-
-      (testing "unescaped delimeters"
-        (are [t] (nil? (match (str "[abc](xyz \"" t "\")")))
-             "1\"23"
-             "12\"3"
-             "1\"2\"3"))
-
-      (testing "line breaks"
-        (testing "single"
-          (is (= "12\n34\n56" (title "[abc](xyz \"12\n34\n56\")"))))
-
-        (testing "multiple"
-          (is (nil? (match "[abc](xyz \"12\n\n34\")"))))))
-
-    (testing "()-delimited"
-      (testing "minimal"
-        (is (= "123" (title (str "[abc](xyz (123))")))))
-
-      (testing "escaped delimeters"
-        (are [t] (= t (title (str "[abc](xyz (" t "))")))
-             "1\\(23"
-             "12\\(3"
-             "1\\(2\\(3"
-             "1\\)23"
-             "12\\)3"
-             "1\\)2\\)3"
-             "1\\(2\\)3"
-             "1\\)2\\(3"))
-
-      (testing "unescaped delimeters"
-        (are [t] (nil? (match (str "[abc](xyz (" t "))")))
-             "1(23"
-             "12(3"
-             "1(2(3"
-             "1)23"
-             "12)3"
-             "1)2)3"
-             "1(2)3"
-             "1)2(3"))
-
-      (testing "line breaks"
-        (testing "single"
-          (is (= "12\n34\n56" (title "[abc](xyz (12\n34\n56))"))))
-
-        (testing "multiple"
-          (is (nil? (match "[abc](xyz (12\n\n34))")))))
-
-      (testing "backslash escapes"
-        (is (= "be there in 5\\\"" (title "[abc](xyz \"be there in 5\\\"\")"))))
-
-      (testing "entity"
-        (is (= "be there in 5&quot;" (title "[abc](xyz \"be there in 5&quot;\")"))))))
-
-  (testing "separating destination from title with non-unicode whitespace"
-    (are [c] (= (str "xyz" c "123") (destination (str "[abc](xyz" c "123)")))
-         \u00A0
-         \u1680
-         \u2000
-         \u2001
-         \u2002
-         \u2003
-         \u2004
-         \u2005
-         \u2006
-         \u2007
-         \u2008
-         \u2009
-         \u200A
-         \u202F
-         \u205F
-         \u3000))
-
-  (testing "whitespace around destination and title"
     (testing "destination"
-      (is (= "xyz" (destination "[abc]( \t\nxyz \t\n'12 34' \t\n)"))))
+      (testing "<>-delimited"
+        (is (= #{"xyz"} (destination "![abc](<xyz>)"))))))
 
-    (testing "title"
-      (is (= "12 34" (title "[abc]( \t\nxyz \t\n'12 34' \t\n)")))))
+  (testing "link reference"
+    (defn context [label]
+      {:definitions {label {:title "t"
+                            :destination "d"
+                            :label label}}})
 
-  (testing "whitespace between text and destination"
-    (are [s] (nil? (match (str "[abc]" s "(xyz)")))
-         \space
-         \newline
-         \tab
-         " \n\t"))
+    (defn match [label s]
+      (->> (tokenize s (context label)) (filter (comp #{:a} :tag))))
 
-  (testing "opening bracket is escaped"
-    (is (nil? (match (str "\\[abc](xyz)")))))
+    (defn text [label s]
+      (->> s (match label) (keep :text) set))
 
-  (testing "all in one"
-    (let [s "[p `code` *em*](http://example.com 'The title')"]
+    (defn destination [label s]
+      (->> s (match label) (keep :destination) set))
+
+    (defn title [label s]
+      (->> s (match label) (keep :title) set))
+
+    (testing "full"
       (testing "text"
-        (is (= "p `code` *em*" (text s))))
+        (testing "minimal"
+          (is (= #{"abc"} (text "xyz" "[abc][xyz]"))))
+
+        (testing "empty"
+          (is (= #{""} (text "xyz" "[][xyz]"))))
+
+        (testing "inline elements"
+          (is (= (text "xyz" "[*abc* `def` **ghi**][xyz]")
+                 #{"*abc* `def` **ghi**"})))
+
+        (testing "brackets"
+          (testing "backslash-escaped"
+            (is (= (text "xyz" "[a\\]b\\[c][xyz]")
+                   #{"a\\]b\\[c"})))
+
+          (testing "matched"
+            (is (= (text "xyz" "[1[2[3]4]5][xyz]")
+                   #{"1[2[3]4]5"})))))
 
       (testing "destination"
-        (is (= "http://example.com" (destination s))))
+        (testing "minimal"
+          (is (= #{"d"} (destination "xyz" "[abc][xyz]"))))
+
+        (testing "brackets"
+          (testing "backslash-escaped"
+            (is (not-empty (match "x\\]y\\[z" "[abc][x\\]y\\[z]"))))))
 
       (testing "title"
-        (is (= "The title" (title s)))))))
+        (testing "minimal"
+          (is (= #{"t"} (title "xyz" "[abc][xyz]")))))
 
-(deftest inline-image-test
-  (defn match [s]
-    (re-find re.inline/inline-image s))
+      (testing "label"
+        (testing "brackets"
+          (testing "backslash-escaped"
+            (is (not-empty (match "x\\]y\\[z" "[abc][x\\]y\\[z]")))))))
 
-  (defn text [s]
-    (some->> (match s) (hash-map :re/match) inline-image :text))
-
-  (defn destination [s]
-    (some->> (match s) (hash-map :re/match) inline-image :destination))
-
-  (defn title [s]
-    (some->> (match s) (hash-map :re/match) inline-image :title))
-
-  (defn tag [s]
-    (some->> (match s) (hash-map :re/match) inline-image :tag))
-
-  (testing "whitespace"
-    (let [s "My ![abc def](/xyz \"123\"   )"]
-      (testing "tag"
-        (is (= :img (tag s))))
+    (testing "collapsed"
+      (testing "minimal"
+        (is (not-empty (match "abc" "[abc][]"))))
 
       (testing "text"
-        (is (= "abc def" (text s))))
+        (is (= #{"abc"} (text "abc" "[abc][]"))))
 
       (testing "destination"
-        (is (= "/xyz" (destination s))))
+        (is (= #{"d"} (destination "abc" "[abc][]"))))
 
       (testing "title"
-        (is (= "123" (title s))))))
+        (is (= #{"t"} (title "abc" "[abc][]"))))
 
-  (testing "description"
-    (testing "empty"
-      (is (= (text "![](xyz)") ""))))
+      (testing "brackets"
+        (testing "backslash-escaped"
+          (is (not-empty (match "a\\]b\\[c" "[a\\]b\\[c][]"))))))
 
-  (testing "destination"
-    (testing "<>-delimited"
-      (is (= "xyz" (destination "![abc](<xyz>)"))))))
+    (testing "shortcut"
+      (testing "minimal"
+        (is (not-empty (match "abc" "[abc]"))))
+
+      (testing "text"
+        (is (= #{"abc"} (text "abc" "[abc]"))))
+
+      (testing "destination"
+        (is (= #{"d"} (destination "abc" "[abc]"))))
+
+      (testing "title"
+        (is (= #{"t"} (title "abc" "[abc]"))))
+
+      (testing "brackets"
+        (testing "backslash-escaped"
+          (is (not-empty (match "a\\]b\\[c" "[a\\]b\\[c]"))))))))
 
 (deftest autolink-test
   (defn match [s]
@@ -840,96 +925,4 @@
   (testing "by itself in a line"
     (is (nil? (match "\nabc")))))
 
-(deftest reference-link-test
-  (defn match [s context]
-    (re-find (re.link/reference (keys (:definitions context))) s))
-
-  (defn matcher [context]
-    (link-reference (:definitions context)))
-
-  (defn text [s context]
-    (some->> (match s context) (hash-map :re/match) ((matcher context)) :text))
-
-  (defn destination [s context]
-    (some->> (match s context) (hash-map :re/match) ((matcher context)) :destination))
-
-  (defn title [s context]
-    (some->> (match s context) (hash-map :re/match) ((matcher context)) :title))
-
-  (defn context [label]
-    {:definitions {label {:title "t"
-                          :destination "d"
-                          :label label}}})
-
-  (testing "full"
-    (testing "text"
-      (testing "minimal"
-        (is (= "abc" (text "[abc][xyz]" (context "xyz")))))
-
-      (testing "empty"
-        (is (= "" (text "[][xyz]" (context "xyz")))))
-
-      (testing "inline elements"
-        (is (= (text "[*abc* `def` **ghi**][xyz]" (context "xyz"))
-               "*abc* `def` **ghi**")))
-
-      (testing "brackets"
-        (testing "backslash-escaped"
-          (is (= (text "[a\\]b\\[c][xyz]" (context "xyz"))
-                 "a\\]b\\[c")))
-
-        (testing "matched"
-          (is (= (text "[1[2[3]4]5][xyz]" (context "xyz"))
-                 "1[2[3]4]5")))))
-
-    (testing "destination"
-      (testing "minimal"
-        (is (= "d" (destination "[abc][xyz]" (context "xyz")))))
-
-      (testing "brackets"
-        (testing "backslash-escaped"
-          (is (some? (match "[abc][x\\]y\\[z]" (context "x\\]y\\[z")))))))
-
-    (testing "title"
-      (testing "minimal"
-        (is (= "t" (title "[abc][xyz]" (context "xyz"))))))
-
-    (testing "label"
-      (testing "brackets"
-        (testing "backslash-escaped"
-          (is (some? (match "[abc][x\\]y\\[z]" (context "x\\]y\\[z"))))))))
-
-  (testing "collapsed"
-    (testing "minimal"
-      (is (some? (match "[abc][]" (context "abc")))))
-
-    (testing "text"
-      (is (= "abc" (text "[abc][]" (context "abc")))))
-
-    (testing "destination"
-      (is (= "d" (destination "[abc][]" (context "abc")))))
-
-    (testing "title"
-      (is (= "t" (title "[abc][]" (context "abc")))))
-
-    (testing "brackets"
-      (testing "backslash-escaped"
-        (is (some? (match "[a\\]b\\[c][]" (context "a\\]b\\[c")))))))
-
-  (testing "shortcut"
-    (testing "minimal"
-      (is (some? (match "[abc]" (context "abc")))))
-
-    (testing "text"
-      (is (= "abc" (text "[abc]" (context "abc")))))
-
-    (testing "destination"
-      (is (= "d" (destination "[abc]" (context "abc")))))
-
-    (testing "title"
-      (is (= "t" (title "[abc]" (context "abc")))))
-
-    (testing "brackets"
-      (testing "backslash-escaped"
-        (is (some? (match "[a\\]b\\[c]" (context "a\\]b\\[c"))))))))
 

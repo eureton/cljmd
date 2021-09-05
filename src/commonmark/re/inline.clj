@@ -98,27 +98,25 @@
 
 (defn full-image-reference
   [labels]
-  (when (not-empty labels)
+  (if (empty? labels)
+    unmatchable
     (re-pattern (str #"(?u)(?i)" image-description
                      (apply util/or-re (map link/label-matcher labels))))))
 
 (defn collapsed-image-reference
   [labels]
-  (re-pattern (str #"(?u)(?i)!"
-                   (apply util/or-re (map link/label-matcher labels))
-                   #"\[\]")))
+  (if (empty? labels)
+    unmatchable
+    (re-pattern (str #"(?u)(?i)!"
+                     (apply util/or-re (map link/label-matcher labels))
+                     #"\[\]"))))
 
 (defn shortcut-image-reference
   [labels]
-  (re-pattern (str #"(?u)(?i)!"
-                   (apply util/or-re (map link/label-matcher labels))
-                   #"(?!\[\])"
-                   "(?!" link/label ")")))
-
-(def image-reference
-  (ufn/to-fix not-empty (comp (ufn/ap util/or-re)
-                              (juxt full-image-reference
-                                    collapsed-image-reference
-                                    shortcut-image-reference))
-              nil))
+  (if (empty? labels)
+    unmatchable
+    (re-pattern (str #"(?u)(?i)!"
+                     (apply util/or-re (map link/label-matcher labels))
+                     #"(?!\[\])"
+                     "(?!" link/label ")"))))
 

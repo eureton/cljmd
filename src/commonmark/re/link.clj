@@ -5,13 +5,7 @@
             [commonmark.util :as util]))
 
 (def text
-  (re-pattern (str "(?!"
-                     #"\[.*?"
-                       "(?<!" (unescaped \!) ")"
-                       #"\[.*?\]\(.*?\)"
-                     #".*?\]"
-                   ")"
-                   "(?<!" (unescaped \!) ")"
+  (re-pattern (str "(?<!" (unescaped \!) ")"
                    balanced-square-brackets)))
 
 (def wrapped-destination
@@ -65,29 +59,27 @@
 
 (defn full-reference
   [labels]
-  (when (not-empty labels)
+  (if (empty? labels)
+    unmatchable
     (re-pattern (str #"(?u)(?i)" text
                      (apply util/or-re (map label-matcher labels))))))
 
 (defn collapsed-reference
   [labels]
-  (re-pattern (str "(?u)(?i)(?<!" (unescaped \!) ")"
-                   (apply util/or-re (map label-matcher labels))
-                   #"\[\]")))
+  (if (empty? labels)
+    unmatchable
+    (re-pattern (str "(?u)(?i)(?<!" (unescaped \!) ")"
+                     (apply util/or-re (map label-matcher labels))
+                     #"\[\]"))))
 
 (defn shortcut-reference
   [labels]
-  (re-pattern (str "(?u)(?i)(?<!" (unescaped \!) ")"
-                   (apply util/or-re (map label-matcher labels))
-                   #"(?!\[\])"
-                   "(?!" label ")")))
-
-(def reference
-  (ufn/to-fix not-empty (comp (ufn/ap util/or-re)
-                              (juxt full-reference
-                                    collapsed-reference
-                                    shortcut-reference))
-              nil))
+  (if (empty? labels)
+    unmatchable
+    (re-pattern (str "(?u)(?i)(?<!" (unescaped \!) ")"
+                     (apply util/or-re (map label-matcher labels))
+                     #"(?!\[\])"
+                     "(?!" label ")"))))
 
 (def reference-definition
   (re-pattern (str #"(?m)^ {0,3}" label ":"

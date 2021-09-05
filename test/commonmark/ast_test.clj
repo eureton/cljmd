@@ -1171,25 +1171,37 @@
              [(branch [{:tag :em} {:tag :txt :content "abc"}])])))
 
     (testing "deep nesting, broad nesting"
-      (is (= (-> "*a1 *b1 *c1* *c2* b2* *b3 *c3* *c4* b4* a2*"
-                 from-string
-                 (get-in [:children 0 :children]))
-             [(node {:tag :em}
-                    [(node {:tag :txt :content "a1 "})
-                     (node {:tag :em}
-                           [(node {:tag :txt :content "b1 "})
-                            (branch [{:tag :em} {:tag :txt :content "c1"}])
-                            (node {:tag :txt :content " "})
-                            (branch [{:tag :em} {:tag :txt :content "c2"}])
-                            (node {:tag :txt :content " b2"})])
-                     (node {:tag :txt :content " "})
-                     (node {:tag :em}
-                           [(node {:tag :txt :content "b3 "})
-                            (branch [{:tag :em} {:tag :txt :content "c3"}])
-                            (node {:tag :txt :content " "})
-                            (branch [{:tag :em} {:tag :txt :content "c4"}])
-                            (node {:tag :txt :content " b4"})])
-                     (node {:tag :txt :content " a2"})])])))
+      (testing "2 levels"
+        (is (= (-> "*a1 *b1* *b2* a2*"
+                   from-string
+                   (get-in [:children 0 :children]))
+               [(node {:tag :em}
+                      [(node {:tag :txt :content "a1 "})
+                       (branch [{:tag :em} {:tag :txt :content "b1"}])
+                       (node {:tag :txt :content " "})
+                       (branch [{:tag :em} {:tag :txt :content "b2"}])
+                       (node {:tag :txt :content " a2"})])])))
+
+      (testing "3 levels"
+        (is (= (-> "*a1 *b1 *c1* *c2* b2* *b3 *c3* *c4* b4* a2*"
+                   from-string
+                   (get-in [:children 0 :children]))
+               [(node {:tag :em}
+                      [(node {:tag :txt :content "a1 "})
+                       (node {:tag :em}
+                             [(node {:tag :txt :content "b1 "})
+                              (branch [{:tag :em} {:tag :txt :content "c1"}])
+                              (node {:tag :txt :content " "})
+                              (branch [{:tag :em} {:tag :txt :content "c2"}])
+                              (node {:tag :txt :content " b2"})])
+                       (node {:tag :txt :content " "})
+                       (node {:tag :em}
+                             [(node {:tag :txt :content "b3 "})
+                              (branch [{:tag :em} {:tag :txt :content "c3"}])
+                              (node {:tag :txt :content " "})
+                              (branch [{:tag :em} {:tag :txt :content "c4"}])
+                              (node {:tag :txt :content " b4"})])
+                       (node {:tag :txt :content " a2"})])]))))
 
     (testing "nested __-strong emphasis"
       (is (= (-> "__abc, __xyz__, pqr__"

@@ -32,9 +32,7 @@
 (defn within?
   "True if x lies within y, false otherwise."
   [x y]
-  (let [{:re/keys [match start]} y
-        {inner-start :re/start inner-end :re/end} x
-        content (or (inner y) match)
+  (let [{inner-start :re/start inner-end :re/end} x
         [outer-start outer-end] (inner-bounds y)]
     (and (>= inner-start outer-start)
          (<= inner-end outer-end))))
@@ -61,12 +59,8 @@
     * x begins after y and x ends after y
     * y begins after x and y ends after x"
   [x y]
-  (let [start-x (:re/start x)
-        start-y (:re/start y)
-        end-x (:re/end x)
-        end-y (:re/end y)]
-    (not (or (<= end-x start-y)
-             (<= end-y start-x)
-             (within? x y)
-             (within? y x)))))
+  (not (or (before? x y)
+           (before? y x)
+           (within? x y)
+           (within? y x))))
 
