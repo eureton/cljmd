@@ -64,7 +64,7 @@
 
 (defn textless-link-reference
   [definitions]
-  (fn [{:as whole :re/keys [match]}]
+  (fn [{:re/keys [match]}]
     (link-reference nil (some identity (drop 1 match)) definitions)))
 
 (defn full-image-reference
@@ -112,22 +112,25 @@
    parser in the string. Does not descend into the inner content of the tokens
    it finds. Expects the context of the blockphase parser as parameter."
   [{:keys [definitions] :or {definitions {}}} claimed]
-  (let [labels (keys definitions)]
-    ; TODO cleanup
-    (->> [[re.inline/code-span                  code-span]
-          [re.html/tag                          html]
-          [re.inline/autolink                   autolink]
-          [re.link/inline                       inline-link]
-          [re.inline/inline-image               inline-image]
-          [(re.link/full-reference labels)      (full-link-reference definitions)]
-          [(re.link/collapsed-reference labels) (textless-link-reference definitions)]
-          [(re.link/shortcut-reference labels)  (textless-link-reference definitions)]
-          [(re.inline/full-image-reference labels)   (full-image-reference definitions)]
-          [(re.inline/collapsed-image-reference labels)   (textless-image-reference definitions)]
-          [(re.inline/shortcut-image-reference labels)   (textless-image-reference definitions)]
-          [emphasis/from-string                 emphasis]
-          [re.inline/hard-line-break            hard-line-break]
-          [re.inline/soft-line-break            soft-line-break]]
+  (let [labels (keys definitions)
+        full-link-handler (full-link-reference definitions)
+        textless-link-handler (textless-link-reference definitions)
+        full-image-handler (full-image-reference definitions)
+        textless-image-handler (textless-image-reference definitions)]
+    (->> [[re.inline/code-span                          code-span]
+          [re.html/tag                                  html]
+          [re.inline/autolink                           autolink]
+          [re.link/inline                               inline-link]
+          [re.inline/inline-image                       inline-image]
+          [(re.link/full-reference labels)              full-link-handler]
+          [(re.link/collapsed-reference labels)         textless-link-handler]
+          [(re.link/shortcut-reference labels)          textless-link-handler]
+          [(re.inline/full-image-reference labels)      full-image-handler]
+          [(re.inline/collapsed-image-reference labels) textless-image-handler]
+          [(re.inline/shortcut-image-reference labels)  textless-image-handler]
+          [emphasis/from-string                         emphasis]
+          [re.inline/hard-line-break                    hard-line-break]
+          [re.inline/soft-line-break                    soft-line-break]]
          (remove #(some nil? %))
          (map (fn [[c f]]
                 (fn [string]
