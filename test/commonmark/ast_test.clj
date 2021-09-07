@@ -972,11 +972,34 @@
                        (get-in [:children 0 :children 0 :data]))
                    {:tag :a :destination "xyz" :title "123"})))
 
-          (testing "Unicode"
-            (is (= (-> "[abc][ÄÖÕ]\n\n[äöõ]: xyz '123'"
-                       from-string
-                       (get-in [:children 0 :children 0 :data]))
-                   {:tag :a :destination "xyz" :title "123"})))
+          (testing "Unicode case folding"
+            (testing "simple"
+              (is (= (-> "[abc][ÄÖÕ]\n\n[äöõ]: xyz '123'"
+                         from-string
+                         (get-in [:children 0 :children 0 :data]))
+                     {:tag :a :destination "xyz" :title "123"})))
+
+            (testing "full"
+              (are [lref ldef] (= (-> (str "[abc][" lref "]\n\n[" ldef "]: xyz '123'")
+                              from-string
+                              (get-in [:children 0 :children 0 :data]))
+                          {:tag :a :destination "xyz" :title "123"})
+                   "müß"  "müß"
+                   "müss" "müß"
+                   "MÜẞ"  "müß"
+                   "MÜSS" "müß"
+                   "müß"  "müss"
+                   "müss" "müss"
+                   "MÜẞ"  "müss"
+                   "MÜSS" "müss"
+                   "müß"  "MÜẞ"
+                   "müss" "MÜẞ"
+                   "MÜẞ"  "MÜẞ"
+                   "MÜSS" "MÜẞ"
+                   "müß"  "MÜSS"
+                   "müss" "MÜSS"
+                   "MÜẞ"  "MÜSS"
+                   "MÜSS" "MÜSS")))
 
           (testing "whitespace"
             (is (= (-> "[abc][q \t\r\n p \t\r\n r]\n\n[q p r]: xyz '123'"

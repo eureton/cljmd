@@ -1,6 +1,7 @@
 (ns commonmark.util
   (:require [clojure.string :as string]
-            [flatland.useful.fn :as ufn]))
+            [flatland.useful.fn :as ufn]
+            [commonmark.unicode :as unicode]))
 
 (defn cluster
   "Groups items in coll for which (pred acc x) returns true, where acc is the
@@ -116,11 +117,9 @@
        (format "(?:%s)")
        re-pattern))
 
-(defn normalize-link-label
-  [label]
-  (-> label
-      (string/replace #"\s+" " ")
-      string/lower-case))
+(def normalize-link-label
+  (comp unicode/fold
+        #(string/replace % #"\s+" " ")))
 
 (defn percent-encode-uri
   "Percent-encodes the path and query string, if any, of uri."

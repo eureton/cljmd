@@ -8,19 +8,27 @@
             [commonmark.ast.block :as block]
             [commonmark.ast.postprocessing :as postp]
             [commonmark.re.common :as re.common]
-            [commonmark.ast.predicate :as pred]))
+            [commonmark.ast.predicate :as pred]
+            [commonmark.unicode :as unicode]))
 
 (defn blockphase-context
   "Returns the context of the block phase of the parsing process."
   [ast]
-  {:definitions (tree/reduce (fn [acc {:as x :keys [tag label]}]
-                               (cond-> acc
-                                 (= :adef tag) (update (string/lower-case label)
-                                                       #(or %1 %2)
-                                                       x)))
+  (let [labels (comp (ufn/ap conj)
+                     (juxt unicode/unfold unicode/fold)
+                     :label)
+        put (fn [acc x]
+              (let [payload (select-keys x [:destination :title])]
+                (reduce (fn [acc label]
+                          (update acc label #(or %1 %2) payload))
+                        acc
+                        (labels x))))]
+    {:definitions (tree/reduce (fn [acc x]
+                                 (cond-> acc
+                                   (= :adef (:tag x)) (put x)))
                                {}
                                ast
-                               :depth-first)})
+                               :depth-first)}))
 
 (defn expand-inline
   "Matches link references with link definitions and completes the former with
