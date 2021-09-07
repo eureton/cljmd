@@ -103,8 +103,8 @@
 
 (defn annotate
   [f info]
-  (-> (f info)
-      (merge (update info :re/match (ufn/to-fix vector? first)))))
+  (some-> (f info)
+          (merge (update info :re/match (ufn/to-fix vector? first)))))
 
 (defn sweeper
   "A function which, when called on a string, returns a sequence of tokens.

@@ -117,9 +117,13 @@
        (format "(?:%s)")
        re-pattern))
 
+(defn collapse-whitespace
+  "Replace consecutive whitespace characters with a single space."
+  [string]
+  (string/replace string #"\s+" " "))
+
 (def normalize-link-label
-  (comp unicode/fold
-        #(string/replace % #"\s+" " ")))
+  (comp unicode/fold collapse-whitespace))
 
 (defn percent-encode-uri
   "Percent-encodes the path and query string, if any, of uri."

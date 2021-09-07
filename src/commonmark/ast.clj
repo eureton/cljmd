@@ -9,7 +9,8 @@
             [commonmark.ast.postprocessing :as postp]
             [commonmark.re.common :as re.common]
             [commonmark.ast.predicate :as pred]
-            [commonmark.unicode :as unicode]))
+            [commonmark.unicode :as unicode]
+            [commonmark.util :as util]))
 
 (defn blockphase-context
   "Returns the context of the block phase of the parsing process."
@@ -20,7 +21,10 @@
         put (fn [acc x]
               (let [payload (select-keys x [:destination :title])]
                 (reduce (fn [acc label]
-                          (update acc label #(or %1 %2) payload))
+                          (update acc
+                                  (util/collapse-whitespace label)
+                                  #(or %1 %2)
+                                  payload))
                         acc
                         (labels x))))]
     {:definitions (tree/reduce (fn [acc x]
