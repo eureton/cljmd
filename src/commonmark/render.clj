@@ -39,7 +39,7 @@
 
 (def render-uri
   "Prepares a URI for rendering as HTML."
-  (comp util/percent-encode-uri unescape-entities))
+  (comp escape-html util/percent-encode-uri unescape-entities))
 
 (def render-text
   "Prepares HTML text for rendering."
@@ -227,7 +227,7 @@
 (defmethod html :a
   [{:as n {:keys [destination title]} :data}]
   (str (apply open-tag (cond-> ["a" "href" (render-uri destination)]
-                     title (conj "title" (render-text title))))
+                         title (conj "title" (render-text title))))
        (inner n)
        (close-tag "a")))
 
