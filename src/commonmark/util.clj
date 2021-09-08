@@ -22,9 +22,23 @@
   4)
 
 (defn expand-tab
-  "Expands tab characters to 4 spaces."
-  [s]
-  (string/replace s "\t" (string/join (repeat tabstop \space))))
+  "Expands a maximum of :limit tab characters to the :tabstop value. If :limit
+   is not provided, expands all."
+  ([s {:keys [tabstop limit]
+       :or {tabstop tabstop}}]
+   (let [re #"( *)\t"
+         f (fn [[_ spaces]]
+             (let [length (- tabstop (mod (count spaces) tabstop))]
+               (str spaces (string/join (repeat length \space)))))]
+     (if (nil? limit)
+       (string/replace s re f)
+       (loop [n limit
+              s s]
+         (if (zero? n)
+           s
+           (recur (dec n) (string/replace-first s re f)))))))
+  ([s]
+   (expand-tab s {})))
 
 (defn coalesce
   "Clusters items in coll with pred, then reduces over them with rf."
@@ -34,14 +48,17 @@
        (map #(reduce rf %))))
 
 (defn trim-leading-whitespace
-  "Removes whitespace from the beginning of string s. In case of spaces, max n
-   are removed. In case of tabs, max (quot n 4) are removed."
+  "Removes whitespace from the beginning of string s. Tabs are expanded as
+   needed before processing."
   [s n]
-  (let [max-tabs (quot n 4)
-        max-of #(re-pattern (str "^" %2 "{1," %1 "}"))]
-    (cond-> s
-      (>= max-tabs 1) (string/replace (max-of max-tabs \tab)   "")
-      (>= n        1) (string/replace (max-of n        \space) ""))))
+  (let [expand #(loop [s %]
+;                 (prn "++++++" s)
+                  (if (re-find (re-pattern (str "^ {0," (max 0 (dec n)) "}\t")) s)
+                    (recur (expand-tab s {:limit 1}))
+                    s))
+        trim #(string/replace % (re-pattern (str "^ {1," n "}")) "")]
+;   (prn "_________" (expand s))
+    (ufn/fix s (>= n 1) (comp trim expand))))
 
 (def re-delimiter-escape-hash
   (->> "()[]{}\""

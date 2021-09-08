@@ -64,3 +64,100 @@
          "http://abc.com:1234/xyz?q=prs&w=%3C%20%3E"
          "http://abc.com:1234/xyz?q=prs&w=tuv#%3C%20%3E")))
 
+(deftest expand-tab-test
+  (testing "basic"
+    (are [s] (= "    " (expand-tab s))
+         "\t"
+         " \t"
+         "  \t"
+         "   \t"))
+
+  (testing "space backlog"
+    (are [s] (= "        " (expand-tab s))
+         "    \t"
+         "     \t"
+         "      \t"))
+
+  (testing "muliple tabs"
+    (is (= "        " (expand-tab " \t  \t"))))
+
+  (testing "no tabs"
+    (are [s] (= s (expand-tab s))
+         "abc"
+         " abc "
+         "   abc  "))
+
+  (testing "options"
+    (testing ":tabstop"
+      (testing "3"
+        (are [s] (= "   " (expand-tab s {:tabstop 3}))
+             "\t"
+             " \t"
+             "  \t")))
+
+    (testing ":limit"
+      (testing "0"
+        (are [s] (= s (expand-tab s {:limit 0}))
+             "\tabc"
+             " \tabc"
+             "\t\tabc"))
+
+      (testing "1"
+        (are [s r] (= r (expand-tab s {:limit 1}))
+             "\tabc"       "    abc"
+             " \tabc"      "    abc"
+             "\t\tabc"     "    \tabc"
+             " \t\tabc"    "    \tabc"
+             "\t \tabc"    "     \tabc"
+             "\t\tabc\t"   "    \tabc\t"
+             " \t\tabc\t"  "    \tabc\t"
+             "\t \tabc\t"  "     \tabc\t")))))
+
+(deftest trim-leading-whitespace-test
+  (testing "spaces"
+    (are [n r] (= r (trim-leading-whitespace "  abc" n))
+         0 "  abc"
+         1 " abc"
+         2 "abc"
+         3 "abc"))
+
+  (testing "tabs"
+    (are [n r] (= r (trim-leading-whitespace "\t\tabc" n))
+         0 "\t\tabc"
+         1 "   \tabc"
+         2 "  \tabc"
+         3 " \tabc"
+         4 "\tabc"
+         5 "   abc"
+         6 "  abc"
+         7 " abc"
+         8 "abc"
+         9 "abc"))
+
+  (testing "first spaces, then tabs"
+    (are [n r] (= r (trim-leading-whitespace "  \t\tabc" n))
+          0 "  \t\tabc"
+          1 " \t\tabc"
+          2 "\t\tabc"
+          3 " \tabc"
+          4 "\tabc"
+          5 "   abc"
+          6 "  abc"
+          7 " abc"
+          8 "abc"
+          9 "abc"))
+
+  (testing "first tabs, then spaces"
+    (are [n r] (= r (trim-leading-whitespace "\t\t  abc" n))
+           0 "\t\t  abc"
+           1 "   \t  abc"
+           2 "  \t  abc"
+           3 " \t  abc"
+           4 "\t  abc"
+           5 "     abc"
+           6 "    abc"
+           7 "   abc"
+           8 "  abc"
+           9 " abc"
+          10 "abc")))
+

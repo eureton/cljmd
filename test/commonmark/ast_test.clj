@@ -395,10 +395,7 @@
              "\t "     " "
              "\t  "    "  "
              "\t\t"    "\t"
-             "\t \t"   " \t"
-             " \t"     " "
-             "  \t"    "  "
-             "   \t"   "   ")))
+             "\t \t"   " \t")))
 
     (testing "preceded by paragraph"
       (is (= (-> "abc\n    xyz" from-string :children)

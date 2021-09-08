@@ -65,14 +65,11 @@
 
 (defmethod from-blockrun-entry :icblk
   [[tag lines]]
-  (let [munch #(-> %
-                   (string/replace #"^ {0,3}\t" "    ")
-                   (util/trim-leading-whitespace 4))
-        join (ufn/to-fix not-empty (comp #(str % "\r\n")
+  (let [join (ufn/to-fix not-empty (comp #(str % "\r\n")
                                          #(string/join "\r\n" %))
                                    "")]
     (->> lines
-         (map munch)
+         (map #(util/trim-leading-whitespace % 4))
          join
          (hash-map :tag tag :content)
          common/node)))

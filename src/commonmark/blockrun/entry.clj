@@ -21,11 +21,11 @@
   (let [origin (first lines)
         pad (block/list-item-pad origin)
         indented? #(block/indented-for-list-item? % origin)
-        unindent #(util/trim-leading-whitespace % (count pad))]
+        unindent #(block/unindent % (count pad))]
     (->> lines
          rest
          (map (ufn/to-fix indented? unindent))
-         (concat [(:content (block/list-item-lead-line origin))])
+         (cons (->> origin block/list-item-lead-line :content))
          (string/join "\r\n"))))
 
 (defmethod content :bq

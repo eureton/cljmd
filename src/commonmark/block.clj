@@ -26,8 +26,9 @@
 
 (defn indented-chunk-line
   [line]
-  (when-some [[_ content] (re-find re.block/indented-chunk-line line)]
+  (when-some [[_ indent content] (re-find re.block/indented-chunk-line line)]
     {:tag :icblk
+     :indent indent
      :content content}))
 
 (defn opening-code-fence
@@ -256,4 +257,14 @@
   [current previous]
   (or (->> current tagger :tag (= :bq))
       (paragraph-continuation-text? current previous)))
+
+(defn unindent
+  "Decreases indentation of line by n columns."
+  [line n]
+  (let [trim #(util/trim-leading-whitespace % n)
+        icblk? #(-> % trim indented-chunk-line)]
+    (if (icblk? line)
+      (let [{:keys [content indent]} (indented-chunk-line line)]
+        (->> content trim (str indent)))
+      (trim line))))
 
