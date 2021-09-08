@@ -66,7 +66,7 @@
 (defmethod from-blockrun-entry :icblk
   [[tag lines]]
   (let [munch #(-> %
-                   (string/replace #"(?<=^ {0,3})\t" "    ")
+                   (string/replace #"^ {0,3}\t" "    ")
                    (util/trim-leading-whitespace 4))
         join (ufn/to-fix not-empty (comp #(str % "\r\n")
                                          #(string/join "\r\n" %))
