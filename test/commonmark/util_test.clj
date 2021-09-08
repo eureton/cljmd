@@ -66,34 +66,29 @@
 
 (deftest expand-tab-test
   (testing "basic"
-    (are [s] (= "    " (expand-tab s))
-         "\t"
-         " \t"
-         "  \t"
-         "   \t"))
-
-  (testing "space backlog"
-    (are [s] (= "        " (expand-tab s))
-         "    \t"
-         "     \t"
-         "      \t"))
+    (are [s r] (= r (expand-tab s))
+         "\t"    "    "
+         "x\t"   "x   "
+         "xy\t"  "xy  "
+         "xyz\t" "xyz "))
 
   (testing "muliple tabs"
-    (is (= "        " (expand-tab " \t  \t"))))
+    (is (= "x   yz  " (expand-tab "x\tyz\t"))))
 
   (testing "no tabs"
     (are [s] (= s (expand-tab s))
          "abc"
          " abc "
-         "   abc  "))
+         "   abc xyz "))
 
   (testing "options"
     (testing ":tabstop"
       (testing "3"
-        (are [s] (= "   " (expand-tab s {:tabstop 3}))
-             "\t"
-             " \t"
-             "  \t")))
+        (are [s r] (= r (expand-tab s {:tabstop 3}))
+             "\t"    "   "
+             "x\t"   "x  "
+             "xy\t"  "xy "
+             "xyz\t" "xyz   ")))
 
     (testing ":limit"
       (testing "0"
@@ -105,9 +100,9 @@
       (testing "1"
         (are [s r] (= r (expand-tab s {:limit 1}))
              "\tabc"       "    abc"
-             " \tabc"      "    abc"
+             "x\tabc"      "x   abc"
              "\t\tabc"     "    \tabc"
-             " \t\tabc"    "    \tabc"
+             "x\t\tabc"    "x   \tabc"
              "\t \tabc"    "     \tabc"
              "\t\tabc\t"   "    \tabc\t"
              " \t\tabc\t"  "    \tabc\t"

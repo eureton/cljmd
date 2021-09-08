@@ -73,9 +73,10 @@
 (defn blockquote-line
   [line]
   (some->> line
+           util/expand-tab
            (re-find re.block/blockquote-line)
            (drop 1)
-           (concat [:bq])
+           (cons :bq)
            (zipmap [:tag :indent :space :content])))
 
 (defn html-block-begin

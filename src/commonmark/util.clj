@@ -26,10 +26,10 @@
    is not provided, expands all."
   ([s {:keys [tabstop limit]
        :or {tabstop tabstop}}]
-   (let [re #"( *)\t"
-         f (fn [[_ spaces]]
-             (let [length (- tabstop (mod (count spaces) tabstop))]
-               (str spaces (string/join (repeat length \space)))))]
+   (let [re #"(.*?)\t"
+         f (fn [[_ previous]]
+             (let [length (- tabstop (mod (count previous) tabstop))]
+               (str previous (string/join (repeat length \space)))))]
      (if (nil? limit)
        (string/replace s re f)
        (loop [n limit
@@ -52,12 +52,10 @@
    needed before processing."
   [s n]
   (let [expand #(loop [s %]
-;                 (prn "++++++" s)
                   (if (re-find (re-pattern (str "^ {0," (max 0 (dec n)) "}\t")) s)
                     (recur (expand-tab s {:limit 1}))
                     s))
         trim #(string/replace % (re-pattern (str "^ {1," n "}")) "")]
-;   (prn "_________" (expand s))
     (ufn/fix s (>= n 1) (comp trim expand))))
 
 (def re-delimiter-escape-hash

@@ -40,7 +40,7 @@
   #"( {0,3})>( ?)")
 
 (def blockquote-line
-  (re-pattern (str "^" blockquote-marker #"(\p{Print}*)$")))
+  (re-pattern (str "^" blockquote-marker #"(.*)$")))
 
 (def html-block-variant-1-tag
   #"(?:(?i)script|pre|style|textarea)")
