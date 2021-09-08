@@ -107,7 +107,8 @@
   [labels]
   (if (empty? labels)
     unmatchable
-    (re-pattern (str #"(?u)(?i)!"
+    (re-pattern (str #"(?u)(?i)"
+                     (unescaped \!)
                      (apply util/or-re (map link/label-matcher labels))
                      #"\[\]"))))
 
@@ -115,7 +116,8 @@
   [labels]
   (if (empty? labels)
     unmatchable
-    (re-pattern (str #"(?u)(?i)!"
+    (re-pattern (str #"(?u)(?i)"
+                     (unescaped \!)
                      (apply util/or-re (map link/label-matcher labels))
                      #"(?!\[\])"
                      "(?!" link/label ")"))))
