@@ -77,7 +77,7 @@
 (def hard-line-break
   (let [end #"(?:\r\n|\n|\r(?!\n)|$)"]
     (util/or-re (str #"(?<=\p{Print})  " end)
-                (str #"\\" end))))
+                (str (unescaped #"\\") end))))
 
 (def soft-line-break
   (re-pattern (str #"(?<=.)(?<!(?:[ ]{2,}|\\))"
