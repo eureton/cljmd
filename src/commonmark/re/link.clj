@@ -54,7 +54,7 @@
   (as-> string v
         (string/replace v #"([-\[\]{}()*+?.\\^$|#])" "\\\\$1")
         (string/replace v #"\s+" "\\\\s+")
-        (str #"\[" "(" v ")" #"\]")
+        (str (unescaped #"\[") "(" v ")" #"\]")
         (re-pattern v)))
 
 (defn full-reference
