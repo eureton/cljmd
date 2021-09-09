@@ -1,7 +1,9 @@
 (ns commonmark.blockrun.entry
   (:require [clojure.string :as string]
+            [flatland.useful.fn :as ufn]
             [commonmark.block :as block]
-            [commonmark.re.link :as re.link]))
+            [commonmark.re.link :as re.link]
+            [commonmark.util :as util]))
 
 (def origin
   "Returns the first line."
@@ -16,11 +18,14 @@
 
 (defmethod content :li
   [[_ lines]]
-  (let [origin (first lines)]
+  (let [origin (first lines)
+        pad (block/list-item-pad origin)
+        indented? #(block/indented-for-list-item? % origin)
+        unindent #(block/unindent % (count pad))]
     (->> lines
          rest
-         (map #(block/list-item-content % origin))
-         (concat [(:content (block/list-item-lead-line origin))])
+         (map (ufn/to-fix indented? unindent))
+         (cons (->> origin block/list-item-lead-line :content))
          (string/join "\r\n"))))
 
 (defmethod content :bq
@@ -50,6 +55,11 @@
 (defmulti promote
   "Hook for changing the tag of an entry after the blockrun has been compiled."
   first)
+
+(defmethod promote :stxh
+  [x]
+  (cond-> x
+    (-> x second count (= 1)) (assoc 0 :p)))
 
 (defmethod promote :html-block-unpaired
   [x]

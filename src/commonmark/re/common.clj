@@ -1,4 +1,8 @@
-(ns commonmark.re.common)
+(ns commonmark.re.common
+  (:require [commonmark.util :as util]))
+
+(def unmatchable
+  #"(?=a)b")
 
 (def line-ending
   #"(?:\r\n|\n|\r(?!\n))")
@@ -42,4 +46,13 @@
                      #"\.[a-zA-Z0-9]"
                      "(?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?"
                    ")*")))
+
+(def balanced-square-brackets
+  (re-pattern (str "(?s)"
+                   (unescaped #"\[")
+                     "("
+                       (util/balanced-unescaped-re \[ \])
+                       (util/excluding-re (blank-line))
+                     ")"
+                   #"\]")))
 

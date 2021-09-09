@@ -106,19 +106,22 @@
 
 (defmethod add [:li :_]
   [x y]
-  (let [list-item-lines (->> x last second)
-        origin (first list-item-lines)
-        lines (->> y first second)
-        previous-lines (concat [(last list-item-lines)] lines)
-        n (->> (map vector lines previous-lines)
-               (take-while #(apply block/belongs-to-list-item? (conj % origin)))
+  (let [x-lines (->> x last second)
+        y-lines (mapcat second y)
+        belongs? (fn [[index current]]
+                   (block/belongs-to-list-item? current
+                                                (->> y-lines
+                                                     (take index)
+                                                     (concat x-lines))))
+        n (->> (map-indexed vector y-lines)
+               (take-while belongs?)
                count)]
-    (fuse-split x y n)))
+    (fuse-split x [[:_ y-lines]] n)))
 
 (defmethod add [:bq :_]
   [x y]
   (if (block/belongs-to-blockquote? (->> y first entry/origin)
-                                    (->> x last second reverse))
+                                    (->> x last second))
     (fuse-left x y)
     (concat x y)))
 
@@ -134,18 +137,17 @@
 
 (defmethod add [:p :li]
   [x y]
-  (let [lead-line (->> y first entry/origin)
-        blank-lead? (->> lead-line
-                         (re-find re.block/list-item-blank-lead-line)
-                         some?)
-        ordered-from-not-one? (->> lead-line
-                                   block/list-item-lead-line
-                                   :marker
-                                   ast.list/start
-                                   ((every-pred some? #(not= % "1"))))]
-    (cond blank-lead?           (fuse-split (retag x :last :stxh) y 1)
-          ordered-from-not-one? (fuse-split x y 1)
-          :else                 (concat x y))))
+  (let [{:keys [marker content]} (->> y first entry/origin block/list-item-lead-line)
+        stxh? (and (nil? content)
+                   (= marker "-"))
+        p? (or (and (nil? content)
+                    (not= marker "-"))
+               (->> marker
+                    ast.list/start
+                    ((every-pred some? #(not= % "1")))))]
+    (cond stxh? (fuse-split (retag x :last :stxh) y 1)
+          p?    (fuse-split x y 1)
+          :else (concat x y))))
 
 (defmethod add [:p :stxh]
   [x y]
@@ -164,14 +166,6 @@
            (some (comp #(= % #{7}) :variant)))
     (fuse-left x y)
     (concat x y)))
-
-(defmethod add [:blank :icblk]
-  [x y]
-  (fuse-right x y))
-
-(defmethod add [:icblk :blank]
-  [x y]
-  (fuse-left x y))
 
 (defmethod add [:html-block-unpaired :html-block-unpaired]
   [x y]
@@ -192,10 +186,12 @@
 (defmethod add [:html-block-unpaired :blank]
   [x y]
   (let [origin-x (->> x last entry/origin)
-        origin-y (->> y first entry/origin)]
-    (if (block/html-block-pair? origin-x origin-y)
-      (concat (retag x :last :html-block) y)
-      (concat x y))))
+        origin-y (->> y first entry/origin)
+        pair? (block/html-block-pair? origin-x origin-y)
+        x-opens? (some? (block/html-block-begin origin-x))]
+    (cond pair?    (concat (retag x :last :html-block) y)
+          x-opens? (fuse-left x y)
+          :else    (concat x y))))
 
 (defmethod add [:html-block-unpaired :_]
   [x y]
@@ -205,6 +201,10 @@
                          (rest y))
           y-tbr?    (fuse-split (retag x :last :stxh) y 1)
           :else     (concat x y))))
+
+(defmethod add [:atxh :atxh]
+  [x y]
+  (concat x y))
 
 (defmethod add :default
   ([] zero)
@@ -236,13 +236,51 @@
            (reduce concat)))))
 
 (defn coalesce
-  "Merges adjacent entries of the same type."
-  [blockrun]
+  "Tests blockrun entries in pairs and concatenates those for which all of the
+   following apply:
+    1. are adjacent
+    2. bear the same tag
+    3. (pred t) returns logical true, where t is the tag of the entries"
+  [pred blockrun]
   (util/coalesce #(let [tag (first %2)]
-                    (and (= (first %1) tag)
-                         (nil? (#{:tbr :adef :li} tag))))
+                    (and (= tag (-> %1 peek peek first))
+                         (pred tag)))
                  #(update %1 1 (comp vec concat) (second %2))
                  blockrun))
+
+(defn merge-indented-chunks
+  "Merges entries of indented code which are separated by blanks."
+  [blockrun]
+  (let [merge? (comp #(= % [:icblk :blank :icblk])
+                     #(map (comp first second) %))
+        indexed (->> blockrun
+                     (coalesce #{:blank :icblk})
+                     (map-indexed vector))
+        mergee-indices (->> indexed
+                            (partition 3 1)
+                            (filter merge?)
+                            (map #(map first (rest %)))
+                            flatten
+                            set)]
+    (reduce (fn [acc [i x]]
+              (if (contains? mergee-indices i)
+                (apply update acc (dec (count acc)) update 1 conj (second x))
+                (conj acc x)))
+            []
+            indexed)))
+
+(defn extract-trailing-blanks
+  "Breaks blank lines off from the tail end of :li entries into a separate
+   :blank entity."
+  [blockrun]
+  (let [split (fn [[_ lines]]
+                (let [blanks (->> lines reverse (take-while block/blank-line))]
+                  (cond-> [[:li (vec (drop-last (count blanks) lines))]]
+                    (not-empty blanks) (conj [:blank (vec blanks)]))))]
+    (->> blockrun
+         (mapcat (ufn/to-fix (comp #{:li} first) split
+                                                 vector))
+         vec)))
 
 (defn extract-link-reference-definitions
   "Searches blockrun for link reference definitions and extracts them into
@@ -250,17 +288,21 @@
    are tagged :adef. The entries which the definitions came from are split and
    each of the parts bears the tag of its originator."
   [blockrun]
-  (let [split? #(= :p (first %))
-        split #(let [batch (entry/link-reference-definition-batch %)
+  (let [split? (comp #{:p :stxh} first)
+        split #(let [[tag lines] %
+                     batch (entry/link-reference-definition-batch %)
                      items (->> batch
                                 (string/join "\r\n")
                                 (re-seq re.link/reference-definition)
                                 (map (comp string/split-lines first)))
-                     remainder (vec (drop (count batch) (second %)))]
+                     remainder (->> lines (drop (count batch)) vec)]
                  (concat
                    (map vector (repeat :adef) items)
-                   (if (not-empty remainder) [[:p remainder]] [])))]
+                   (if (not-empty remainder)
+                     [(entry/promote [tag remainder])]
+                     [])))]
     (->> blockrun
+         (coalesce #{:p})
          (mapcat (ufn/to-fix split? split vector))
          vec)))
 
@@ -268,9 +310,11 @@
   "Hook for performing transformations after the blockrun has been compiled."
   [blockrun]
   (->> blockrun
+       merge-indented-chunks
        (map entry/promote)
        extract-link-reference-definitions
-       coalesce))
+       extract-trailing-blanks
+       (coalesce (comp nil? #{:tbr :adef :li :atxh :stxh}))))
 
 (defn from-string
   "Parses the given input into a list of blockrun entries. Each of these entries

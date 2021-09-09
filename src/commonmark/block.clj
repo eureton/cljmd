@@ -26,8 +26,9 @@
 
 (defn indented-chunk-line
   [line]
-  (when-some [[_ content] (re-find re.block/indented-chunk-line line)]
+  (when-some [[_ indent content] (re-find re.block/indented-chunk-line line)]
     {:tag :icblk
+     :indent indent
      :content content}))
 
 (defn opening-code-fence
@@ -50,9 +51,9 @@
 
 (defn paragraph-line
   [line]
-  (when-some [[_ content break] (re-find re.block/paragraph-line line)]
+  (when-some [content (re-find re.block/paragraph-line line)]
     {:tag :p
-     :content (str content break)}))
+     :content content}))
 
 (defn blank-line
   [line]
@@ -62,19 +63,21 @@
 (defn list-item-lead-line
   [line]
   (some->> line
+           util/expand-tab
            ((some-fn #(re-find re.block/list-item-basic-lead-line %)
                      #(re-find re.block/list-item-indented-code-lead-line %)
                      #(re-find re.block/list-item-blank-lead-line %)))
            (drop 1)
-           (concat [:li])
+           (cons :li)
            (zipmap [:tag :indent :marker :space :content])))
 
 (defn blockquote-line
   [line]
   (some->> line
+           util/expand-tab
            (re-find re.block/blockquote-line)
            (drop 1)
-           (concat [:bq])
+           (cons :bq)
            (zipmap [:tag :indent :space :content])))
 
 (defn html-block-begin
@@ -160,14 +163,6 @@
               html-block
               paragraph-line) line)))
 
-(defn list-item-content
-  "Returns the current line with as much leading whitespace trimmed, as
-   corresponds to the indentation, marker and spacing of the origin line."
-  [current origin]
-  (when-some [{:keys [indent marker space]
-               :or {space " "}} (list-item-lead-line origin)]
-    (util/trim-leading-spaces current (count (str indent marker space)))))
-
 (defn fenced-code-block-pair?
   "True if lines x and y are matching code block fences, false otherwise."
   [x y]
@@ -179,48 +174,99 @@
               (map :fence)
               (apply string/includes?)))))
 
-(defn lazy-continuation-line?
-  "Returns non-nil if current is a lazy continuation line of previous."
-  [current previous]
-  (let [{:keys [tag content]
-         :or {content ""}} (tagger previous)]
-    (and (= :p (:tag (tagger current)))
-         (or (= :p tag)
-             (and (= :li tag)
-                  (= :p (:tag (tagger content))))))))
+(defn strip-containers
+  "Recursively extracts content from list item and blockquote lines until only
+   leaf content remains."
+  [line]
+  (loop [x line]
+    (if-some [{:keys [content]} ((some-fn blockquote-line list-item-lead-line)
+                                 x)]
+      (recur content)
+      x)))
+
+(defn level-1-setext-underline?
+  "True if line is a setext underline producing a <h1>, false otherwise."
+  [line]
+  (= 1 (:level (setext-heading line))))
 
 (defn paragraph-continuation-text?
+  "True if all of the following apply:
+     1. current is paragraph continuation text
+     2. previous is a collection of lines preceding current
+     3. previous comprise a paragraph
+   False otherwise.
+   The paragraph may be nested in an arbitrarily deep series of containers."
   [current previous]
-  (let [current-tag (->> current tagger :tag)
-        head (first previous)
-        tail (rest previous)
-        {previous-tag :tag :keys [content]} (tagger head)]
-    (boolean
-      (and (#{:p :icblk} current-tag)
-           (or (= :p previous-tag)
-               (and (= :icblk previous-tag)
-                    (paragraph-continuation-text? head tail))
-               (and (#{:li :bq} previous-tag)
-                    (paragraph-continuation-text? current
-                                                  (concat [content] tail))))))))
+  (let [tail-tag? #(contains? #{:p :icblk} %)
+        current-ok? (or (level-1-setext-underline? current)
+                        (-> current tagger :tag tail-tag?))
+        head (last previous)
+        previous-tag (-> head strip-containers tagger :tag)]
+    (case (count previous)
+      0 false
+      1 (and current-ok? (= :p previous-tag))
+      (and current-ok?
+           (or (tail-tag? previous-tag)
+               (paragraph-continuation-text? head (butlast previous)))))))
+
+(defn list-item-pad
+  "A string consisting of as many spaces as the sum of the number of characters
+   included in the:
+      * indentation
+      * marker
+      * spacing between marker and content
+   of origin, assuming origin is the first line of a line item. Expands tabs.
+   Nil if the assumption doesn't hold."
+  [origin]
+  (let [{:keys [indent marker space]
+         :or {space " "}} (list-item-lead-line origin)]
+    (-> (str indent marker space)
+        util/expand-tab
+        count
+        (repeat " ")
+        string/join)))
+
+(defn indented-for-list-item?
+  "Assuming origin is the first line a list item:
+   True if line belongs to the list item, false otherwise.
+   Nil if the assumption doesn't hold."
+  [line origin]
+  (let [starts-with? (comp (ufn/ap string/starts-with?)
+                           #(map util/expand-tab %)
+                           vector)]
+    (starts-with? line (list-item-pad origin))))
 
 (defn belongs-to-list-item?
   "True if current belongs to LI, assuming:
      1. current is the line in question
-     2. previous is the line preceding current
-     3. LI is a list item, whose first line is origin
+     2. previous is a vector of lines already belonging to LI
    False otherwise."
-  [current previous origin]
-  (when-some [{:keys [indent marker space]
-               :or {space " "}} (list-item-lead-line origin)]
-    (let [prefix (-> (str indent marker space) count (repeat " ") string/join)
-          previous (list-item-content previous origin)]
-      (or (string/starts-with? current prefix)
-          (lazy-continuation-line? current previous)
-          (some? (blank-line current))))))
+  [current previous]
+  (when-some [origin (first previous)]
+    (when-some [{:keys [content]} (list-item-lead-line origin)]
+      (let [blank? (blank-line current)
+            intermediate (rest previous)]
+        (if blank?
+          (or (some? content)
+              (every? blank-line intermediate))
+          (and (or (indented-for-list-item? current origin)
+                   (paragraph-continuation-text? current previous))
+               (or (some? content)
+                   (empty? intermediate)
+                   (not-every? blank-line intermediate))))))))
 
 (defn belongs-to-blockquote?
   [current previous]
   (or (->> current tagger :tag (= :bq))
       (paragraph-continuation-text? current previous)))
+
+(defn unindent
+  "Decreases indentation of line by n columns."
+  [line n]
+  (let [trim #(util/trim-leading-whitespace % n)
+        icblk? #(-> % trim indented-chunk-line)]
+    (if (icblk? line)
+      (let [{:keys [content indent]} (indented-chunk-line line)]
+        (->> content trim (str indent)))
+      (trim line))))
 

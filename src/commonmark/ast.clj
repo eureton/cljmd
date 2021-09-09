@@ -4,27 +4,35 @@
             [flatland.useful.fn :as ufn]
             [treeduce.core :as tree]
             [commonmark.blockrun :as blockrun]
-            [commonmark.ast.common :refer [update-children]]
             [commonmark.ast.node :as node]
             [commonmark.ast.block :as block]
-            [commonmark.ast.postprocessing :as postp]))
-
-(defn remove-link-reference-definitions
-  "Removes nodes tagged with :adef."
-  [ast]
-  (tree/map (fn [node]
-              (update-children node #(remove (comp #{:adef} :tag :data) %)))
-            ast))
+            [commonmark.ast.postprocessing :as postp]
+            [commonmark.re.common :as re.common]
+            [commonmark.ast.predicate :as pred]
+            [commonmark.unicode :as unicode]
+            [commonmark.util :as util]))
 
 (defn blockphase-context
   "Returns the context of the block phase of the parsing process."
   [ast]
-  {:definitions (tree/reduce (fn [acc {:as x :keys [tag label]}]
-                               (cond-> acc
-                                 (= :adef tag) (update label #(or %1 %2) x)))
+  (let [labels (comp (ufn/ap conj)
+                     (juxt unicode/unfold unicode/fold)
+                     :label)
+        put (fn [acc x]
+              (let [payload (select-keys x [:destination :title])]
+                (reduce (fn [acc label]
+                          (update acc
+                                  (util/collapse-whitespace label)
+                                  #(or %1 %2)
+                                  payload))
+                        acc
+                        (labels x))))]
+    {:definitions (tree/reduce (fn [acc x]
+                                 (cond-> acc
+                                   (= :adef (:tag x)) (put x)))
                                {}
                                ast
-                               :depth-first)})
+                               :depth-first)}))
 
 (defn expand-inline
   "Matches link references with link definitions and completes the former with
@@ -32,18 +40,25 @@
    nodes with the source text as content."
   [ast]
   (let [contextful-expand #(node/expand-inline % (blockphase-context ast))]
-    (tree/map (ufn/to-fix node/has-inline? contextful-expand)
+    (tree/map (ufn/to-fix pred/has-inline? contextful-expand)
               ast)))
+
+(defn normalize
+  "Bring untrusted input to a standard format."
+  [string]
+  (string/replace string
+                  (re-pattern (str re.common/line-ending #"\z"))
+                  ""))
 
 (defn from-string
   "Parses markdown AST from string."
   [string]
   (reduce #(%2 %1)
           (->> string
+               normalize
                blockrun/from-string
                blockrun/postprocess
                block/from-blockrun
-               expand-inline
-               remove-link-reference-definitions)
+               expand-inline)
           postp/queue))
 

@@ -218,7 +218,7 @@
              [[:icblk ["    xyz" "    abc"]]])))
 
     (testing "chunks separated by blanks"
-      (are [s ls] (= (from-string s)
+      (are [s ls] (= (postprocess (from-string s))
                      [[:icblk ls]])
            "    1\n\n    2"          ["    1" "" "    2"]
            "    1\n\n\n    2"        ["    1" "" "" "    2"]
@@ -347,13 +347,22 @@
              "-\nabc"
              "-\n abc"))
 
-      (testing "blanks"
+      (testing "all blanks"
         (are [s n] (= (from-string s)
-                      [[:li (concat ["-" "  abc"] (repeat n "") ["  xyz"])]])
-             "-\n  abc\n\n  xyz"       1
-             "-\n  abc\n\n\n  xyz"     2
-             "-\n  abc\n\n\n\n  xyz"   3
-             "-\n  abc\n\n\n\n\n  xyz" 4))
+                      [[:li (concat ["-"] (repeat n ""))]])
+             "-\n\n"       2
+             "-\n\n\n"     3
+             "-\n\n\n\n"   4
+             "-\n\n\n\n\n" 5))
+
+      (testing "intermediate blanks"
+        (are [s n] (= (from-string s)
+                      [[:li (concat ["-"] (repeat n ""))]
+                       [:p ["  abc"]]])
+             "-\n\n  abc"       1
+             "-\n\n\n  abc"     2
+             "-\n\n\n\n  abc"   3
+             "-\n\n\n\n\n  abc" 4))
 
       (testing "indentation"
         (are [s] (= (from-string s)

@@ -282,123 +282,66 @@
          "```" "~~~"
          "~~~"  "```")))
 
-(deftest lazy-continuation-line?-test
-  (testing "paragraph"
-    (are [c p r] (= r (lazy-continuation-line? c p))
-         "xyz" "foo"   true
-         "xyz" "- foo" true
-         "xyz" "# foo" false
-         "xyz" "-"     false
-         "xyz" ""      false))
-
-  (testing "blank"
-    (are [c p] (false? (lazy-continuation-line? c p))
-         ""    "foo"
-         ""    "- foo"
-         ""    "# foo"
-         ""    "-"
-         ""    ""))
-
-  (testing "non-blank, non-paragraph"
-    (are [c p] (false? (lazy-continuation-line? c p))
-         "# !" "foo"
-         "# !" "- foo"
-         "# !" "# foo"
-         "# !" "-"
-         "# !" "")))
-
 (deftest belongs-to-list-item?-test
   (testing "adequate leading whitespace"
-    (are [l p] (belongs-to-list-item? l p " 1. abc")
-         "    xyz" " 1. abc"
-         "    xyz" "    opqr"
-         "    xyz" "    # opqr"
-         "    xyz" ""))
+    (are [l p] (belongs-to-list-item? l p)
+         "    xyz" [" 1. abc"]
+         "    xyz" [" 1. abc" "    opqr"]
+         "    xyz" [" 1. abc" "    # opqr"]
+         "    xyz" [" 1. abc" ""]))
 
-  (testing "origin not a line item => nil"
-    (are [l p] (nil? (belongs-to-list-item? l p "abc"))
-         "  xyz" "- abc"
-         "  xyz" "  abc"
-         "  xyz" "  # abc"
-         "  xyz" ""))
+  (testing "previous is nil"
+    (is (nil? (belongs-to-list-item? "abc" nil))))
 
-  (testing "inadequate leading whitespace"
-    (are [l p r] (= r (belongs-to-list-item? l p " 1. abc"))
-         " xyz" "pqr"       true
-         " xyz" "    pqr"   true
-         " xyz" "    # pqr" false
-         ""     "    pqr"   true
-         "xyz"  "        !" false
-         " xyz" ""          false))
+  (testing "previous is empty"
+    (is (nil? (belongs-to-list-item? "abc" []))))
+
+  (testing "origin not a line item"
+    (are [l p] (nil? (belongs-to-list-item? l p))
+         "  xyz" ["abc" "- abc"]
+         "  xyz" ["abc" "  abc"]
+         "  xyz" ["abc" "  # abc"]
+         "  xyz" ["abc" ""]))
 
   (testing "lazy continuation line after blank origin"
-    (are [l r] (= r (belongs-to-list-item? l "-" "-"))
-         "  xyz" true
-         " xyz"  false
-         "xyz"   false)))
+    (testing "sufficiently indented"
+      (are [l p] (belongs-to-list-item? l p)
+           "  xyz"  ["-"]
+           "   xyz" ["-"]))
+
+    (testing "insufficiently indented"
+      (are [l p] (not (belongs-to-list-item? l p))
+           " xyz" ["-"]
+           "xyz"  ["-"]))))
 
 (deftest paragraph-continuation-text?-test
-  (testing "degenerate case => false"
+  (testing "degenerate"
     (is (false? (paragraph-continuation-text? "abc" []))))
 
-  (testing "previous is indented code block"
-    (testing "from paragraph"
-      (are [c p] (paragraph-continuation-text? c p)
-           "abc" ["xyz"]
-           "abc" ["    xyz" "qpr"]
-           "abc" ["    xyz" "    qpr" "123"]))
+  (testing ":p -> :p"
+    (is (paragraph-continuation-text? "xyz" ["> abc"])))
 
-    (testing "from indented code block"
-      (are [c p] (paragraph-continuation-text? c p)
-           "    abc" ["xyz"]
-           "    abc" ["    xyz" "qpr"]
-           "    abc" ["    xyz" "    qpr" "123"])))
+  (testing ":icblk -> :p"
+    (is (paragraph-continuation-text? "    xyz" ["> abc"])))
 
-  (testing "previous is block-quoted indented code block"
-    (testing "from paragraph"
-      (are [c p] (paragraph-continuation-text? c p)
-           "abc" ["xyz"]
-           "abc" [">     xyz" "qpr"]
-           "abc" [">     xyz" ">     qpr" "123"]))
+  (testing ":p -> :p -> :p"
+    (is (paragraph-continuation-text? "123" ["> abc" "> xyz"])))
 
-    (testing "from indented code block"
-      (are [c p] (paragraph-continuation-text? c p)
-           "    abc" ["xyz"]
-           "    abc" [">     xyz" "qpr"]
-           "    abc" [">     xyz" ">     qpr" "123"])))
+  (testing ":p -> :icblk -> :p"
+    (is (paragraph-continuation-text? "123" ["> abc" ">     xyz"])))
 
-  (testing "both quoted and non-quoted indented code blocks"
-    (is (paragraph-continuation-text? "abc" ["    qpr" ">     xyz" "    123" "> top"])))
+  (testing ":icblk -> :p -> :p"
+    (is (paragraph-continuation-text? "    123" ["> abc" "> xyz"])))
 
-  (testing "no previous line contains paragraph => false"
-    (testing "previous is indented code block"
-      (testing "from paragraph"
-        (are [c p] (false? (paragraph-continuation-text? c p))
-             "abc" ["    xyz"]
-             "abc" ["    xyz" "    qpr"]
-             "abc" ["    xyz" "    qpr" "    123"]))
+  (testing ":icblk -> :icblk -> :p"
+    (is (paragraph-continuation-text? "    123" ["> abc" ">     xyz"])))
 
-      (testing "from indented code block"
-        (are [c p] (false? (paragraph-continuation-text? c p))
-             "    abc" ["    xyz"]
-             "    abc" ["    xyz" "    qpr"]
-             "    abc" ["    xyz" "    qpr" "    123"])))
+  (testing "setext in blockquote"
+    (testing "underline inside"
+      (is (paragraph-continuation-text? "xyz" ["> abc" "==="]))))
 
-    (testing "previous is block-quoted indented code block"
-      (testing "from paragraph"
-        (are [c p] (false? (paragraph-continuation-text? c p))
-             "abc" ["    xyz"]
-             "abc" [">     xyz" "    qpr"]
-             "abc" [">     xyz" ">     qpr" "    123"]))
-
-      (testing "from indented code block"
-        (are [c p] (false? (paragraph-continuation-text? c p))
-             "    abc" ["    xyz"]
-             "    abc" [">     xyz" "    qpr"]
-             "    abc" [">     xyz" ">     qpr" "    123"])))
-
-    (testing "both quoted and non-quoted indented code blocks"
-      (is (false? (paragraph-continuation-text? "abc" ["    qpr" ">     xyz" "    123" ">     top"]))))))
+    (testing "underline outside"
+      (is (false? (paragraph-continuation-text? "xyz" ["> abc" "> ==="])))))
 
 (deftest html-block-begin-test
   (testing "pun nil"

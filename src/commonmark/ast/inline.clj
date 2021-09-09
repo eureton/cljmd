@@ -3,13 +3,21 @@
             [flatland.useful.fn :as ufn]
             [commonmark.inline :as inline]
             [commonmark.inline.token :as token]
-            [commonmark.ast.common :refer [node ontology]]))
+            [commonmark.ast.common :refer [node branch]]
+            [commonmark.ast.predicate :as pred]))
 
 (def degenerate?
   "Returns true if the AST node is degenerate, false otherwise.
    A degenerate node is a non-leaf text node."
   (every-pred (comp some? :children)
-              (comp #{:txt} :tag :data)))
+              pred/txt?))
+
+(def hierarchy (-> (deref commonmark.ast.common/ontology)
+                   (derive :html-inline :leaf)
+                   (derive :cs          :leaf)
+                   (derive :hbr         :leaf)
+                   (derive :sbr         :leaf)
+                   atom))
 
 (defmulti inflate
   "Recursively replaces inline markdown entities with the AST to which they
@@ -18,7 +26,7 @@
     (cond
       (string? input) :string
       (map? input) (:tag input)))
-  :hierarchy ontology)
+  :hierarchy hierarchy)
 
 (defn unpack
   "Transforms string into a vector of ASTs, each of which corresponds to an
@@ -54,7 +62,7 @@
   [input _]
   (node (select-keys input [:tag :destination :text])))
 
-(defmethod inflate :verbatim
+(defmethod inflate :leaf
   [input _]
   (node (select-keys input [:tag :content])))
 
@@ -63,12 +71,17 @@
   (node {:tag :txt}
         (unpack input tokens)))
 
-(defmethod inflate :strong-in-em
+(defmethod inflate :deep-emphasis
   [input tokens]
-  (node {:tag :em}
-        [(node {:tag :strong}
-               (:children (inflate (assoc input :tag :default)
-                                   tokens)))]))
+  (let [tags (->> (case (:tag input)
+                    :strong-in-em               [:em :strong]
+                    :strong-in-strong           [:strong :strong]
+                    :strong-in-strong-in-em     [:em :strong :strong]
+                    :strong-in-strong-in-strong [:strong :strong :strong])
+                    (map #(hash-map :tag %)))]
+    (->> (inflate (assoc input :tag :default) tokens)
+         :children
+         (branch tags))))
 
 (defmethod inflate :default
   [{:keys [tag content] :re/keys [match]} tokens]

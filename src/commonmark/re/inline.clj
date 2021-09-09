@@ -1,117 +1,124 @@
 (ns commonmark.re.inline
   (:require [clojure.string :as string]
+            [flatland.useful.fn :as ufn]
             [commonmark.util :as util]
-            [commonmark.re.common :as re.common]))
+            [commonmark.re.common :refer :all]
+            [commonmark.re.link :as link]))
 
 (def code-span
-  (let [backtick "((?<!`)`+(?!`))"
-        spaced #"[ \n](.*?[^ ].*?)[ \n]"
-        non-spaced #"(.*?[^`])"
-        same-backtick #"\1(?!`)"]
-    (re-pattern (str "(?s)" (re.common/unescaped backtick)
-                     "(?:" spaced "|" non-spaced ")"
-                     same-backtick))))
+  (let [pre "(?<!`)"
+        post "(?!`)"]
+    (re-pattern (str "(?s)" pre (unescaped "(`+)") post
+                     "(.*?)"
+                     pre #"\1" post))))
 
-(defn emphasis-delimeter
-  [character length]
-  (let [escaped (string/escape (str character) {\* "\\*"})]
-    (re-pattern (str "(?<!" escaped ")"
-                     (re.common/unescaped escaped) "{" length "}"
-                     "(?!" escaped ")"))))
+(defn delimiter-run
+  [char-class]
+  (re-pattern (str "(?<!" (unescaped char-class) ")"
+                   (unescaped char-class) "+"
+                   "(?!" char-class ")")))
 
 (defn lfdr-nopunc
-  [delimeter]
-  (re-pattern (str delimeter
+  [delimiter]
+  (re-pattern (str delimiter
                    #"(?!\p{IsWhite_Space}|$)"
                    #"(?!\p{IsPunctuation})")))
 
 (defn lfdr-punc
-  [delimeter]
+  [delimiter]
   (re-pattern (str #"(?<=^|\p{IsWhite_Space}|\p{IsPunctuation})"
-                   delimeter
+                   delimiter
                    #"(?!\p{IsWhite_Space}|$)"
                    #"(?=\p{IsPunctuation})")))
 
-(defn lfdr
-  [delimeter]
-  (re-pattern (str "(?:"
-                     (lfdr-nopunc delimeter) "|" (lfdr-punc delimeter)
-                   ")")))
+(def lfdr
+  (comp (ufn/ap util/or-re) (juxt lfdr-nopunc lfdr-punc)))
 
 (defn rfdr-punc
-  [delimeter]
+  [delimiter]
   (re-pattern (str #"(?<=\p{IsPunctuation})"
                    #"(?<!^|\p{IsWhite_Space})"
-                   delimeter
+                   delimiter
                    #"(?=\p{IsWhite_Space}|\p{IsPunctuation}|$)")))
 
 (defn rfdr-nopunc
-  [delimeter]
+  [delimiter]
   (re-pattern (str #"(?<!\p{IsPunctuation})"
                    #"(?<!^|\p{IsWhite_Space})"
-                   delimeter)))
+                   delimiter)))
 
-(defn rfdr
-  [delimeter]
-  (re-pattern (str "(?:"
-                     (rfdr-nopunc delimeter) "|" (rfdr-punc delimeter)
-                   ")")))
-
-(defn star-emphasis
-  [delimeter]
-  (let [open (lfdr delimeter)
-        close (rfdr delimeter)]
-    (util/balanced-re open close)))
+(def rfdr
+  (comp (ufn/ap util/or-re) (juxt rfdr-nopunc rfdr-punc)))
 
 (defn lobar-open-emphasis
-  [delimeter]
-  (let [left (lfdr delimeter)
-        right (rfdr delimeter)
-        punctuated-right (rfdr-punc delimeter)]
-    (re-pattern (str "(?:"
-                       "(?=" left ")" "(?!" right ")"
-                       "|"
-                       "(?=" left ")" "(?=" punctuated-right ")"
-                     ")" left))))
+  [delimiter]
+  (let [left (lfdr delimiter)
+        right (rfdr delimiter)
+        punctuated-right (rfdr-punc delimiter)]
+    (re-pattern (str (util/or-re (str "(?=" left ")" "(?!" right ")")
+                                 (str "(?=" left ")" "(?=" punctuated-right ")"))
+                     left))))
 
 (defn lobar-close-emphasis
-  [delimeter]
-  (let [left (lfdr delimeter)
-        punctuated-left (lfdr-punc delimeter)
-        right (rfdr delimeter)]
-    (re-pattern (str "(?:"
-                       "(?=" right ")" "(?!" left ")"
-                       "|"
-                       "(?=" right ")" "(?=" punctuated-left ")"
-                     ")" right))))
-
-(defn lobar-emphasis
-  [delimeter]
-  (let [open (lobar-open-emphasis delimeter)
-        close (lobar-close-emphasis delimeter)]
-    (util/balanced-re open close)))
-
-(defn emphasis
-  [length]
-  (re-pattern (str "(?s)(?:"
-                     (star-emphasis (emphasis-delimeter \* length)) "|"
-                     (lobar-emphasis (emphasis-delimeter \_ length))
-                   ")")))
+  [delimiter]
+  (let [left (lfdr delimiter)
+        punctuated-left (lfdr-punc delimiter)
+        right (rfdr delimiter)]
+    (re-pattern (str (util/or-re (str "(?=" right ")" "(?!" left ")")
+                                 (str "(?=" right ")" "(?=" punctuated-left ")"))
+                     right))))
 
 (def autolink
-  (re-pattern (str (re.common/unescaped \<)
-                   (util/or-re (str "(" re.common/absolute-uri ")")
-                               (str "(" re.common/email-address ")"))
+  (re-pattern (str (unescaped \<)
+                   (util/or-re (str "(" absolute-uri ")")
+                               (str "(" email-address ")"))
                    ">")))
 
 (def hard-line-break
   (let [end #"(?:\r\n|\n|\r(?!\n)|$)"]
-    (re-pattern (str "(?:" #"(?<=\p{Print})  " end "|"
-                           #"\\" end
-                     ")"))))
+    (util/or-re (str #"(?<=\p{Print})  " end)
+                (str (unescaped #"\\") end))))
 
 (def soft-line-break
   (re-pattern (str #"(?<=.)(?<!(?:[ ]{2,}|\\))"
-                   re.common/line-ending
+                   line-ending
                    #"(?=.)")))
+
+(def image-description
+  (re-pattern (str (unescaped \!) balanced-square-brackets)))
+
+(def inline-image
+  (re-pattern (str image-description
+                   #"\("
+                     #"\s*"
+                     link/destination "?"
+                     "(?:" #"\s+" "(" link/title ")" ")?"
+                     #"\s*"
+                   #"\)")))
+
+(defn full-image-reference
+  [labels]
+  (if (empty? labels)
+    unmatchable
+    (re-pattern (str #"(?u)(?i)" image-description
+                     (apply util/or-re (map link/label-matcher labels))))))
+
+(defn collapsed-image-reference
+  [labels]
+  (if (empty? labels)
+    unmatchable
+    (re-pattern (str #"(?u)(?i)"
+                     (unescaped \!)
+                     (apply util/or-re (map link/label-matcher labels))
+                     #"\[\]"))))
+
+(defn shortcut-image-reference
+  [labels]
+  (if (empty? labels)
+    unmatchable
+    (re-pattern (str #"(?u)(?i)"
+                     (unescaped \!)
+                     (apply util/or-re (map link/label-matcher labels))
+                     #"(?!\[\])"
+                     "(?!" link/label ")"))))
 

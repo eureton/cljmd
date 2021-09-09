@@ -1,11 +1,10 @@
 (ns commonmark.re.block
   (:require [clojure.string :as string]
             [commonmark.re.html :as re.html]
-            [commonmark.re.common :as re.common]
-            [commonmark.re.inline :as re.inline]))
+            [commonmark.re.common :as re.common]))
 
 (def atx-heading
-  #"^ {0,3}(#{1,6})(?:$|\s+(\p{Print}*?)\s*)(?:\s#+\s*)?$")
+  #"^ {0,3}(#{1,6})(?:$|\s+(\p{Print}*?)\s*(?:(?<=\s)#+)?\s*$)")
 
 (def setext-heading-underline
   #"^ {0,3}(=+|-+)\s*$")
@@ -14,18 +13,16 @@
   #"^ {0,3}(?:(?:-[ |\t]*){3,}|(?:_[ |\t]*){3,}|(?:[*][ |\t]*){3,})\s*$")
 
 (def indented-chunk-line
-  #"^(?:\t| {4})(.*\S.*)$")
+  #"^( {0,3}\t| {4})(.*\S.*)$")
 
 (def opening-code-fence
-  #"^( {0,3})((`{3,})\s*([^`]*?)|(~{3,})\s*(\p{Print}*?))\s*$")
+  #"^( {0,3})((`{3,})\s*([^`\s]*[^`]*)|(~{3,})\s*(\S*).*)$")
 
 (def closing-code-fence
   #"^( {0,3})(`{3,}|~{3,}) *$")
 
 (def paragraph-line
-  (re-pattern (str #"^\s*(.*?)\s*?"
-                   "(" re.inline/hard-line-break ")?"
-                   "$")))
+  #"^ {0,3}\S.*$")
 
 (def list-item-marker
   #"( {0,3})([-+*]|\d{1,9}[.)])")
@@ -43,7 +40,7 @@
   #"( {0,3})>( ?)")
 
 (def blockquote-line
-  (re-pattern (str "^" blockquote-marker #"(\p{Print}*)$")))
+  (re-pattern (str "^" blockquote-marker #"(.*)$")))
 
 (def html-block-variant-1-tag
   #"(?:(?i)script|pre|style|textarea)")

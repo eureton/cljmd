@@ -6,6 +6,7 @@
             [commonmark.inline :as inline]
             [commonmark.blockrun :as blockrun]
             [commonmark.blockrun.entry :as blockrun.entry]
+            [commonmark.blockrun.setext :as blockrun.setext]
             [commonmark.util :as util]))
 
 (defmulti from-blockrun-entry
@@ -22,22 +23,31 @@
 
 (defn from-container-blockrun-entry
   [entry]
-  (->> entry
-       blockrun.entry/content
-       blockrun/from-string
-       blockrun/postprocess
-       (mapv from-blockrun-entry)
-       (common/node {:tag (first entry)})))
+  (let [index-map (blockrun.setext/make-map entry)]
+    (->> entry
+         (blockrun.setext/redact index-map)
+         blockrun.entry/content
+         blockrun/from-string
+         (blockrun.setext/insert index-map)
+         blockrun/postprocess
+         (mapv from-blockrun-entry)
+         (common/node {:tag (first entry)}))))
 
 (defmethod from-blockrun-entry :leaf
   [[tag lines]]
-  (let [parsers {:p block/paragraph-line}
-        parsed (parsers tag #(hash-map :content %))]
-    (->> lines
-         (map (comp :content parsed))
-         (string/join "\r\n")
-         (hash-map :tag tag :content)
-         common/node)))
+  (->> lines
+       (string/join "\r\n")
+       (hash-map :tag tag :content)
+       common/node))
+
+(defmethod from-blockrun-entry :p
+  [[_ lines]]
+  (->> lines
+       (map string/triml)
+       (string/join "\r\n")
+       string/trim
+       (hash-map :tag :p :content)
+       common/node))
 
 (defmethod from-blockrun-entry :bq
   [entry]
@@ -50,25 +60,17 @@
                     first
                     block/list-item-lead-line
                     :marker)
-        raw (from-container-blockrun-entry entry)
-        loose? (->> raw :children (some (comp #{:blank} :tag :data)))]
-    (update raw :data merge {:marker marker
-                             :tight? (not loose?)})))
+        raw (from-container-blockrun-entry entry)]
+    (assoc-in raw [:data :marker] marker)))
 
 (defmethod from-blockrun-entry :icblk
   [[tag lines]]
-  (let [munch #(-> %
-                   (string/replace #"(?<=^ {0,3})\t" "    ")
-                   (util/trim-leading-spaces 4))]
+  (let [join (ufn/to-fix not-empty (comp #(str % "\r\n")
+                                         #(string/join "\r\n" %))
+                                   "")]
     (->> lines
-         (split-with clojure.string/blank?)
-         second
-         reverse
-         (split-with clojure.string/blank?)
-         second
-         reverse
-         (map munch)
-         (string/join "\r\n")
+         (map #(util/trim-leading-whitespace % 4))
+         join
          (hash-map :tag tag :content)
          common/node)))
 
@@ -93,23 +95,31 @@
 (defmethod from-blockrun-entry :ofcblk
   [[tag lines]]
   (let [opener (->> lines first block/opening-code-fence)
-        info (:info opener)]
-    (->> (subvec lines 1 (-> lines count dec (max 1)))
-         (map #(util/trim-leading-spaces % (-> opener :indent count)))
-         (string/join "\r\n")
+        info (:info opener)
+        munch #(util/trim-leading-whitespace % (-> opener :indent count))
+        join (ufn/to-fix not-empty (comp #(str % "\r\n")
+                                         #(string/join "\r\n" %))
+                                   "")
+        closed? (->> lines peek block/closing-code-fence some?)
+        end-index (cond-> (count lines)
+                    closed? dec)]
+    (->> (subvec lines 1 (max end-index 1))
+         (map munch)
+         join
          (hash-map :tag tag :content)
          (merge (cond-> {}
                   (not (string/blank? info)) (assoc :info info)))
          common/node)))
 
 (defmethod from-blockrun-entry :blank
-  [[_ _]]
-  (common/node {:tag :blank}))
+  [[_ lines]]
+  (common/node {:tag :blank
+                :count (count lines)}))
 
 (defmethod from-blockrun-entry :adef
   [[_ lines]]
   (->> lines
-       (string/join " ")
+       (string/join "\r\n")
        block/link-reference-definition
        common/node))
 

@@ -141,7 +141,9 @@
                           :children)
                       t)
              "`[ab`c][xyz]" [(code "[ab")
-                             (txt "c][xyz]")]
+                             (txt "c]")
+                             (node {:tag :a :destination "123"}
+                                   [(txt "xyz")])]
              "[ab`c][xy`z]" [(txt "[ab")
                              (code "c][xy")
                              (txt "z]")]
@@ -201,7 +203,9 @@
              "<http://123.com/[abc>][xyz]" [(node {:tag :autolink
                                                    :destination "http://123.com/%5Babc"
                                                    :text "http://123.com/[abc"})
-                                                (txt "][xyz]")]
+                                                (txt "]")
+                                                (node {:tag :a :destination "123"}
+                                                      [(txt "xyz")])]
              "[xyz<http://123.com/][]>"    [(txt "[xyz")
                                             (node {:tag :autolink
                                                    :destination "http://123.com/%5D%5B%5D"
