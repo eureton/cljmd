@@ -22,6 +22,8 @@
 
 (def fcblk? (comp #{:ofcblk} tag))
 
+(def link? (comp #{:a :img} tag))
+
 (def autolink? (comp #{:autolink} tag))
 
 (def list? (comp #{:list} tag))

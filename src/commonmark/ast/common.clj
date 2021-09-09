@@ -46,6 +46,14 @@
     (cond-> result
       (empty? (:children result)) (dissoc :children))))
 
+(defn fix
+  "Applies f to the fields entries in node."
+  [node f & fields]
+  (reduce #(cond-> %1
+             ((:data %1) %2) (update-in [:data %2] f))
+          node
+          fields))
+
 (def ontology (-> (make-hierarchy)
                   (derive :a           :inline)
                   (derive :img         :inline)

@@ -3,7 +3,8 @@
             [clojure.core.incubator :refer [dissoc-in]]
             [flatland.useful.fn :as ufn]
             [treeduce.core :as tree]
-            [commonmark.ast.common :refer [node update-children]]
+            [commonmark.html :as html]
+            [commonmark.ast.common :refer [node update-children fix]]
             [commonmark.ast.predicate :as pred]
             [commonmark.ast.list :as ast.list]
             [commonmark.ast.list.item :as ast.list.item]
@@ -91,19 +92,22 @@
   [string]
   (string/replace string #"\\(\p{Punct})" "$1"))
 
-(defn backslash-fix
-  "Clean up backslash escapes from fields which require doing so."
+(defn html-entity-fix
+  "Replaces HTML entities where necessary."
   [ast]
-  (let [fix (fn [node & fields]
-              (reduce #(cond-> %1
-                         ((:data %1) %2) (update-in [:data %2] unescape))
-                      node
-                      fields))
-        link? (comp #{:a :img} :tag :data)]
-    (tree/map (ufn/to-fix pred/txt? #(fix % :content)
-                          link? #(fix % :destination :title)
-                          pred/fcblk? #(fix % :info))
-              ast)))
+  (tree/map (ufn/to-fix pred/txt? #(fix % html/unescape-entities :content)
+                        pred/link? #(fix % html/unescape-entities :destination
+                                                                  :title)
+                        pred/fcblk? #(fix % html/unescape-entities :info))
+            ast))
+
+(defn backslash-fix
+  "Cleans up backslash escapes where necessary."
+  [ast]
+  (tree/map (ufn/to-fix pred/txt? #(fix % unescape :content)
+                        pred/link? #(fix % unescape :destination :title)
+                        pred/fcblk? #(fix % unescape :info))
+            ast))
 
 (defn autolink-fix
   "Unfold :autolink into :a with a :txt child."
@@ -178,6 +182,7 @@
   [hbr-fix
    empty-p-fix
    empty-block-fix
+   html-entity-fix
    backslash-fix
    autolink-fix
    coalesce-txt

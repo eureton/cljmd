@@ -1525,7 +1525,7 @@
                          (node {:tag :cs :content "abc"})]
            "- abc"      [(node {:tag :txt :content "\\- abc"})]
            "# abc"      [(node {:tag :txt :content "\\# abc"})]
-           "&ouml;"     [(node {:tag :txt :content "\\&ouml;"})]))
+           "&ouml;"     [(node {:tag :txt :content "\\ö"})]))
 
     (testing "ordered list"
       (is (= (-> "1\\. abc" from-string :children)

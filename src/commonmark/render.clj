@@ -1,32 +1,12 @@
 (ns commonmark.render
   (:require [clojure.string :as string]
-            [clojure.java.io :as java.io]
-            [cheshire.core :as cheshire]
             [flatland.useful.fn :as ufn]
             [treeduce.core :as tree]
+            [commonmark.re.common :refer [unescaped]]
             [commonmark.ast :as ast]
             [commonmark.ast.common :refer [ontology]]
             [commonmark.util :as util]
             [commonmark.ast.predicate :as pred]))
-
-(def entity-map
-  "Authoritative HTML entity map, as sourced from html.spec.whatwg.org"
-  (-> "entities.json" java.io/resource java.io/reader cheshire/parse-stream))
-
-(defn unescape-entities
-  "Replaces HTML entities with the corresponding character."
-  [s]
-  (let [from-decnum (comp str char (ufn/to-fix zero? 0xFFFD))]
-    (-> s
-        (string/replace #"&#(\d{1,7});" #(-> %
-                                             second
-                                             Integer/parseInt
-                                             from-decnum))
-        (string/replace #"&#[xX](\p{XDigit}{1,6});" #(-> %
-                                                         second
-                                                         (Integer/parseInt 16)
-                                                         from-decnum))
-        (string/replace #"&\p{Print}+?;" #(get-in entity-map [% "characters"] %)))))
 
 (defn escape-html
   "Replaces HTML special characters with HTML entities."
@@ -39,11 +19,7 @@
 
 (def render-uri
   "Prepares a URI for rendering as HTML."
-  (comp escape-html util/percent-encode-uri unescape-entities))
-
-(def render-text
-  "Prepares HTML text for rendering."
-  (comp escape-html unescape-entities))
+  (comp escape-html util/percent-encode-uri))
 
 (defn attributes
   ""
@@ -115,11 +91,10 @@
 
 (defmethod open :code-block
   [{:as n {:keys [info]} :data}]
-  (let [render (comp unescape-entities #(str "language-" %))]
-    (str "\n"
-         (open-tag "pre")
-         (apply open-tag (cond-> ["code"]
-                           info (conj "class" (render info)))))))
+  (str "\n"
+       (open-tag "pre")
+       (apply open-tag (cond-> ["code"]
+                         info (conj "class" (str "language-" info))))))
 
 (defmethod open :li
   [{{:keys [tight?]} :data}]
@@ -140,7 +115,7 @@
                          n
                          :depth-first)]
     (apply open-tag (cond-> ["img" "src" (render-uri destination) "alt" alt]
-                      title (conj "title" (render-text title))))))
+                      title (conj "title" (escape-html title))))))
 
 (defmethod open :block
   [n]
@@ -197,7 +172,7 @@
         verbatim? (comp #(isa? (deref hierarchy) % :verbatim) :tag :data)]
     (ufn/to-fix (complement pred/leaf?) (comp string/join #(map html %) :children)
                 (every-pred content verbatim?) content
-                content (comp render-text content)
+                content (comp escape-html content)
                 "")))
 
 (def full
@@ -227,7 +202,7 @@
 (defmethod html :a
   [{:as n {:keys [destination title]} :data}]
   (str (apply open-tag (cond-> ["a" "href" (render-uri destination)]
-                         title (conj "title" (render-text title))))
+                         title (conj "title" (escape-html title))))
        (inner n)
        (close-tag "a")))
 
