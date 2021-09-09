@@ -132,11 +132,16 @@
 
 (prefer-method close :code-block :block)
 
+(def close-delimiter
+  "Long, random string for demarcating closing boundaries of block elements."
+  (java.util.UUID/randomUUID))
+
 (defmethod close :code-block
   [_]
   (str (close-tag "code")
        (close-tag "pre")
-       "\n"))
+       "\n"
+       close-delimiter))
 
 (defmethod close :li
   [n]
@@ -154,7 +159,7 @@
 
 (defmethod close :block
   [n]
-  (str (close-tag (tag n)) "\n"))
+  (str (close-tag (tag n)) "\n" close-delimiter))
 
 (defmethod close :default
   [n]
@@ -241,10 +246,15 @@
         #(string/replace % "\r\n" "\n")
         #(string/replace % "<br />" "<br />\n")))
 
+(defn groom
+  "Removes rendering artifacts from the HTML."
+  [html]
+  (let [newl-chain (re-pattern (str "(?:\n" close-delimiter ")+\n?"))]
+    (-> html
+        (string/replace #"^[\n]+" "")
+        (string/replace newl-chain "\n"))))
+
 (def from-string
   "Transforms Commonmark into HTML."
-  (let [trim #(-> %
-                  (string/replace #"^[\r\n]+" "")
-                  (string/replace #"[\n]+" "\n"))]
-    (comp normalize trim html ast/from-string)))
+  (comp groom normalize html ast/from-string))
 
