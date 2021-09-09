@@ -63,11 +63,12 @@
 (defn list-item-lead-line
   [line]
   (some->> line
+           util/expand-tab
            ((some-fn #(re-find re.block/list-item-basic-lead-line %)
                      #(re-find re.block/list-item-indented-code-lead-line %)
                      #(re-find re.block/list-item-blank-lead-line %)))
            (drop 1)
-           (concat [:li])
+           (cons :li)
            (zipmap [:tag :indent :marker :space :content])))
 
 (defn blockquote-line
