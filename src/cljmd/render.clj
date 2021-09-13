@@ -1,7 +1,7 @@
 (ns cljmd.render
   (:require [clojure.string :as string]
             [flatland.useful.fn :as ufn]
-            [treeduce.core :as tree]
+            [squirrel.core :as tree]
             [cljmd.re.common :refer [unescaped]]
             [cljmd.ast :as ast]
             [cljmd.ast.common :refer [ontology]]

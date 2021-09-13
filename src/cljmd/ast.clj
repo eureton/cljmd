@@ -2,7 +2,7 @@
   (:require [clojure.string :as string]
             [clojure.core.incubator :refer [dissoc-in]]
             [flatland.useful.fn :as ufn]
-            [treeduce.core :as tree]
+            [squirrel.core :as tree]
             [cljmd.blockrun :as blockrun]
             [cljmd.ast.node :as node]
             [cljmd.ast.block :as block]
