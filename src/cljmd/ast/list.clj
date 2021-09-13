@@ -1,9 +1,8 @@
 (ns cljmd.ast.list
-  (:require [flatland.useful.fn :as ufn]
-            [cljmd.ast.common :refer [node add]]
+  (:require [squirrel.node :refer [node add]]
+            [flatland.useful.fn :as ufn]
             [cljmd.ast.predicate :as pred]
             [cljmd.ast.list.item :as item]))
-
 
 (defn delimiter
   "Classifies as either \"paren\" or \"period\" if ordered, nil otherwise."

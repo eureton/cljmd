@@ -1,27 +1,7 @@
 (ns cljmd.ast.common
   (:require [clojure.pprint :as pp]
-            [clojure.string :as string]))
-
-(defn node
-  "AST node with the given data and children."
-  ([data children]
-   (cond-> {:data data}
-     children (assoc :children children)))
-  ([data]
-   (node data nil)))
-
-(defn add
-  "Makes y the last child of x. If x has no children, y becomes the first child
-   of x."
-  ([x] x)
-  ([x y]
-   (update x :children (comp vec conj) y))
-  ([x y1 y2]
-   (update x :children (comp vec conj) y2 y1))
-  ([x y1 y2 y3]
-   (update x :children (comp vec conj) y3 y2 y1))
-  ([x y1 y2 y3 & ys]
-   (update x :children (comp vec concat) (conj ys y3 y2 y1))))
+            [clojure.string :as string]
+            [squirrel.node :refer [add node]]))
 
 (defn branch
   "Chain of single-child nodes starting with the root and proceeding to the
@@ -37,14 +17,6 @@
                 (add (node (first data)) root))))))
   ([data]
    (branch data nil)))
-
-(defn update-children
-  "If (apply f children args) evaluates to nil, :children is removed entirely.
-   Otherwise, the result is associated with :children."
-  [node f & args]
-  (let [result (apply update node :children f args)]
-    (cond-> result
-      (empty? (:children result)) (dissoc :children))))
 
 (defn fix
   "Applies f to the fields entries in node."

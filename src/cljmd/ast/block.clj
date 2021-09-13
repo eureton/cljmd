@@ -1,5 +1,6 @@
 (ns cljmd.ast.block
   (:require [clojure.string :as string]
+            [squirrel.node :refer [node]]
             [flatland.useful.fn :as ufn]
             [cljmd.ast.common :as common]
             [cljmd.block :as block]
@@ -18,8 +19,8 @@
 (defn from-blockrun
   "Parses markdown AST from blockrun."
   [blockrun]
-  (common/node {:tag :doc}
-               (mapv from-blockrun-entry blockrun)))
+  (node {:tag :doc}
+        (mapv from-blockrun-entry blockrun)))
 
 (defn from-container-blockrun-entry
   [entry]
@@ -31,14 +32,14 @@
          (blockrun.setext/insert index-map)
          blockrun/postprocess
          (mapv from-blockrun-entry)
-         (common/node {:tag (first entry)}))))
+         (node {:tag (first entry)}))))
 
 (defmethod from-blockrun-entry :leaf
   [[tag lines]]
   (->> lines
        (string/join "\r\n")
        (hash-map :tag tag :content)
-       common/node))
+       node))
 
 (defmethod from-blockrun-entry :p
   [[_ lines]]
@@ -47,7 +48,7 @@
        (string/join "\r\n")
        string/trim
        (hash-map :tag :p :content)
-       common/node))
+       node))
 
 (defmethod from-blockrun-entry :bq
   [entry]
@@ -72,14 +73,14 @@
          (map #(util/trim-leading-whitespace % 4))
          join
          (hash-map :tag tag :content)
-         common/node)))
+         node)))
 
 (defmethod from-blockrun-entry :atxh
   [[tag [line _]]]
   (-> line
       block/atx-heading
       (select-keys [:tag :level :content])
-      common/node))
+      node))
 
 (defmethod from-blockrun-entry :stxh
   [[tag lines]]
@@ -90,7 +91,7 @@
        (hash-map :tag tag
                  :level (-> lines peek block/setext-heading :level)
                  :content)
-       common/node))
+       node))
 
 (defmethod from-blockrun-entry :ofcblk
   [[tag lines]]
@@ -109,17 +110,17 @@
          (hash-map :tag tag :content)
          (merge (cond-> {}
                   (not (string/blank? info)) (assoc :info info)))
-         common/node)))
+         node)))
 
 (defmethod from-blockrun-entry :blank
   [[_ lines]]
-  (common/node {:tag :blank
-                :count (count lines)}))
+  (node {:tag :blank
+         :count (count lines)}))
 
 (defmethod from-blockrun-entry :adef
   [[_ lines]]
   (->> lines
        (string/join "\r\n")
        block/link-reference-definition
-       common/node))
+       node))
 
