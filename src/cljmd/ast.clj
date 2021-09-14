@@ -2,7 +2,7 @@
   (:require [clojure.string :as string]
             [clojure.core.incubator :refer [dissoc-in]]
             [flatland.useful.fn :as ufn]
-            [squirrel.core :as squirrel]
+            [squirrel.tree :as tree]
             [cljmd.blockrun :as blockrun]
             [cljmd.ast.node :as node]
             [cljmd.ast.block :as block]
@@ -27,12 +27,12 @@
                                   payload))
                         acc
                         (labels x))))]
-    {:definitions (squirrel/reduce (fn [acc x]
-                                     (cond-> acc
-                                       (= :adef (:tag x)) (put x)))
-                                   {}
-                                   ast
-                                   :depth-first)}))
+    {:definitions (tree/reduce (fn [acc x]
+                                 (cond-> acc
+                                   (= :adef (:tag x)) (put x)))
+                               {}
+                               ast
+                               :depth-first)}))
 
 (defn expand-inline
   "Matches link references with link definitions and completes the former with
@@ -40,8 +40,8 @@
    nodes with the source text as content."
   [ast]
   (let [contextful-expand #(node/expand-inline % (blockphase-context ast))]
-    (squirrel/map (ufn/to-fix pred/has-inline? contextful-expand)
-                  ast)))
+    (tree/map (ufn/to-fix pred/has-inline? contextful-expand)
+              ast)))
 
 (defn normalize
   "Bring untrusted input to a standard format."

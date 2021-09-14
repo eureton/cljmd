@@ -1,7 +1,7 @@
 (ns cljmd.render
   (:require [clojure.string :as string]
             [flatland.useful.fn :as ufn]
-            [squirrel.core :as squirrel]
+            [squirrel.tree :as tree]
             [cljmd.re.common :refer [unescaped]]
             [cljmd.ast :as ast]
             [cljmd.ast.common :refer [ontology]]
@@ -108,12 +108,12 @@
 
 (defmethod open :img
   [{:as n {:keys [destination title]} :data}]
-  (let [alt (squirrel/reduce (fn [acc {:as x :keys [content]}]
-                               (cond-> acc
-                                 content (str content)))
-                             ""
-                             n
-                             :depth-first)]
+  (let [alt (tree/reduce (fn [acc {:as x :keys [content]}]
+                           (cond-> acc
+                             content (str content)))
+                         ""
+                         n
+                         :depth-first)]
     (apply open-tag (cond-> ["img" "src" (render-uri destination) "alt" alt]
                       title (conj "title" (escape-html title))))))
 

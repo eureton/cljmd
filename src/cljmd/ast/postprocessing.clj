@@ -1,6 +1,6 @@
 (ns cljmd.ast.postprocessing
   (:require [clojure.string :as string]
-            [squirrel.core :as tree]
+            [squirrel.tree :as tree]
             [squirrel.node :refer [update-children node]]
             [flatland.useful.fn :as ufn]
             [cljmd.html :as html]
