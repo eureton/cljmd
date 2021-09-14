@@ -64,8 +64,7 @@
 (defn empty-p-fix
   "Removes empty :p entities from the AST."
   [ast]
-  (tree/map #(update-children % (partial remove empty-paragraph?))
-            ast))
+  (tree/remove empty-paragraph? ast))
 
 (def empty-block?
   "True if all of the following apply to the parameter:
@@ -83,9 +82,7 @@
 (defn blank-fix
   "Removes :blank entities from the AST."
   [ast]
-  (tree/map #(update-children % (comp vec
-                                      (partial remove pred/blank?)))
-            ast))
+  (tree/remove pred/blank? ast))
 
 (defn unescape
   "Cleans up backslash escapes."
@@ -155,9 +152,7 @@
 (defn remove-link-reference-definitions
   "Removes nodes tagged with :adef."
   [ast]
-  (tree/map (fn [node]
-              (update-children node #(remove pred/adef? %)))
-            ast))
+  (tree/remove pred/adef? ast))
 
 (defn trim-txt
   "Strips both tabs and spaces from the end of the content of :txt nodes if:
