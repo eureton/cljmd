@@ -50,6 +50,13 @@ cljmd.core=> (ppp)
 </doc>
 ```
 
+Get HTML:
+
+``` clojure
+cljmd.core=> (cljmd.render/from-string "[_awesome_ stuff](http://example.com)")
+"<p><a href=\"http://example.com\"><em>awesome</em> stuff</a></p>\n"
+```
+
 ## License
 
 [MIT License](https://github.com/eureton/squirrel/blob/master/LICENSE)
