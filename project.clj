@@ -1,4 +1,4 @@
-(defproject cljmd "0.1.0"
+(defproject org.clojars.eureton/cljmd "0.1.0"
   :description "Clojure implementation of CommonMark"
   :url "https://github.com/eureton/cljmd"
   :license {:name "MIT"
