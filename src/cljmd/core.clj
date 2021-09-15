@@ -9,3 +9,9 @@
             [cljmd.blockrun]
             [cljmd.render]))
 
+(defmacro ppp
+  "A convenience macro that pretty prints the last thing output. This is
+   exactly equivalent to (pprint *1)."
+  []
+  `(cljmd.ast.common/pprint *1))
+
