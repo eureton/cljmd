@@ -1,9 +1,10 @@
 (ns cljmd.ast.inline
   (:require [clojure.string :as string]
+            [squirrel.node :refer [node]]
             [flatland.useful.fn :as ufn]
             [cljmd.inline :as inline]
             [cljmd.inline.token :as token]
-            [cljmd.ast.common :refer [node branch]]
+            [cljmd.ast.common :refer [branch]]
             [cljmd.ast.predicate :as pred]))
 
 (def degenerate?

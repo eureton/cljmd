@@ -1,10 +1,10 @@
 (ns cljmd.ast.postprocessing
   (:require [clojure.string :as string]
-            [clojure.core.incubator :refer [dissoc-in]]
+            [squirrel.tree :as tree]
+            [squirrel.node :refer [update-children node]]
             [flatland.useful.fn :as ufn]
-            [treeduce.core :as tree]
             [cljmd.html :as html]
-            [cljmd.ast.common :refer [node update-children fix]]
+            [cljmd.ast.common :refer [fix]]
             [cljmd.ast.predicate :as pred]
             [cljmd.ast.list :as ast.list]
             [cljmd.ast.list.item :as ast.list.item]
@@ -64,8 +64,7 @@
 (defn empty-p-fix
   "Removes empty :p entities from the AST."
   [ast]
-  (tree/map #(update-children % (partial remove empty-paragraph?))
-            ast))
+  (tree/remove empty-paragraph? ast))
 
 (def empty-block?
   "True if all of the following apply to the parameter:
@@ -83,9 +82,7 @@
 (defn blank-fix
   "Removes :blank entities from the AST."
   [ast]
-  (tree/map #(update-children % (comp vec
-                                      (partial remove pred/blank?)))
-            ast))
+  (tree/remove pred/blank? ast))
 
 (defn unescape
   "Cleans up backslash escapes."
@@ -112,11 +109,12 @@
 (defn autolink-fix
   "Unfold :autolink into :a with a :txt child."
   [ast]
-  (let [unfold #(-> %
-                    (assoc-in [:data :tag] :a)
-                    (assoc :children [(node {:tag :txt
-                                             :content (-> % :data :text)})])
-                    (dissoc-in [:data :text]))]
+  (let [unfold #(node (-> %
+                          :data
+                          (select-keys [:destination :title])
+                          (assoc :tag :a))
+                      [(node {:tag :txt
+                              :content (-> % :data :text)})])]
     (tree/map (ufn/to-fix pred/autolink? unfold)
               ast)))
 
@@ -135,7 +133,8 @@
 (defn group-list-items
   "Groups adjacent matching :li nodes into :list nodes."
   [ast]
-  (let [to-cluster? (fn [acc x]
+  (let [not-list? (complement pred/list?)
+        to-cluster? (fn [acc x]
                       (let [x-tag (-> x :data :tag)
                             last-li (->> acc peek (filter pred/li?) first)]
                         (or (= :blank x-tag)
@@ -147,16 +146,13 @@
         grouper #(->> %
                       (util/cluster to-cluster?)
                       (mapcat (ufn/to-fix is-cluster? to-list)))]
-    (tree/map (ufn/to-fix (complement pred/list?)
-                          #(update % :children grouper))
+    (tree/map (ufn/to-fix not-list? #(update % :children grouper))
               ast)))
 
 (defn remove-link-reference-definitions
   "Removes nodes tagged with :adef."
   [ast]
-  (tree/map (fn [node]
-              (update-children node #(remove pred/adef? %)))
-            ast))
+  (tree/remove pred/adef? ast))
 
 (defn trim-txt
   "Strips both tabs and spaces from the end of the content of :txt nodes if:

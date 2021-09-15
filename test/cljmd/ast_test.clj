@@ -1,8 +1,9 @@
 (ns cljmd.ast-test
   (:require [clojure.test :refer :all]
             [clojure.string :as string]
+            [squirrel.node :refer [node]]
             [cljmd.ast :refer :all]
-            [cljmd.ast.common :refer [node branch]]))
+            [cljmd.ast.common :refer [branch]]))
 
 (deftest from-string-test
   (testing "minimal"

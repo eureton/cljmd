@@ -1,7 +1,7 @@
 (ns cljmd.ast.inline-test
   (:require [clojure.test :refer :all]
-            [cljmd.ast.inline :refer :all]
-            [cljmd.ast.common :refer [node]]))
+            [squirrel.node :refer [node]]
+            [cljmd.ast.inline :refer :all]))
 
 (deftest from-string-test
   (defn txt [c]
