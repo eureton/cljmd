@@ -73,6 +73,9 @@
                [["xyz" "abc" "123" "==="]]))))))
 
 (deftest from-string-test
+  (testing "pun nil"
+    (is (nil? (from-string nil))))
+
   (testing "setext heading"
     (testing "minimal"
       (are [s ul] (= (from-string s)

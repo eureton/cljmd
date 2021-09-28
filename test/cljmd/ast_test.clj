@@ -6,6 +6,9 @@
             [cljmd.ast.common :refer [branch]]))
 
 (deftest from-string-test
+  (testing "pun nil"
+    (is (nil? (from-string nil))))
+
   (testing "minimal"
     (is (= (-> "abc" from-string :children)
            [(branch [{:tag :p} {:tag :txt :content "abc"}])])))
