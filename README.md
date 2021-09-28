@@ -59,4 +59,4 @@ cljmd.core=> (cljmd.render/from-string "[_awesome_ stuff](http://example.com)")
 
 ## License
 
-[MIT License](https://github.com/eureton/squirrel/blob/master/LICENSE)
+[MIT License](https://github.com/eureton/cljmd/blob/master/LICENSE)
