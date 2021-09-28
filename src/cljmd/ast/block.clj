@@ -19,8 +19,10 @@
 (defn from-blockrun
   "Parses markdown AST from blockrun."
   [blockrun]
-  (node {:tag :doc}
-        (mapv from-blockrun-entry blockrun)))
+  (when blockrun
+    (->> blockrun
+         (mapv from-blockrun-entry)
+         (node {:tag :doc}))))
 
 (defn from-container-blockrun-entry
   [entry]
