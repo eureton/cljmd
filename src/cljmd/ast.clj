@@ -44,7 +44,7 @@
               ast)))
 
 (defn normalize
-  "Bring untrusted input to a standard format."
+  "Brings untrusted input to a standard format."
   [string]
   (string/replace string
                   (re-pattern (str re.common/line-ending #"\z"))
@@ -53,12 +53,13 @@
 (defn from-string
   "Parses markdown AST from string."
   [string]
-  (reduce #(%2 %1)
-          (->> string
-               normalize
-               blockrun/from-string
-               blockrun/postprocess
-               block/from-blockrun
-               expand-inline)
-          postp/queue))
+  (when string
+    (reduce #(%2 %1)
+            (->> string
+                 normalize
+                 blockrun/from-string
+                 blockrun/postprocess
+                 block/from-blockrun
+                 expand-inline)
+            postp/queue)))
 

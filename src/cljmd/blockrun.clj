@@ -320,8 +320,9 @@
   "Parses the given input into a list of blockrun entries. Each of these entries
    represents a top-level block."
   [string]
-  (->> string
-       tokenize
-       (map from-line)
-       (reduce add)))
+  (when string
+    (->> string
+         tokenize
+         (map from-line)
+         (reduce add))))
 
