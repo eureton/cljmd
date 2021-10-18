@@ -2,6 +2,7 @@
   (:require [clojure.string :as string]
             [flatland.useful.fn :as ufn]
             [squirrel.tree :as tree]
+            [squirrel.node :as node]
             [cljmd.re.common :refer [unescaped]]
             [cljmd.ast :as ast]
             [cljmd.ast.common :refer [ontology]]
@@ -146,7 +147,7 @@
 (defmethod close :li
   [n]
   (let [{:keys [children] {:keys [tight?]} :data} n
-        break? (and children
+        break? (and (node/not-leaf? n)
                     (or (not tight?)
                         (pred/block? (last children))))]
     (str (when break? "\n")
@@ -175,7 +176,7 @@
   "Inner HTML of the given AST node."
   (let [content (comp :content :data)
         verbatim? (comp #(isa? (deref hierarchy) % :verbatim) :tag :data)]
-    (ufn/to-fix (complement pred/leaf?) (comp string/join #(map html %) :children)
+    (ufn/to-fix node/not-leaf? (comp string/join #(map html %) :children)
                 (every-pred content verbatim?) content
                 content (comp escape-html content)
                 "")))
@@ -234,8 +235,8 @@
          (apply open-tag (cond-> [tag]
                            start (conj "start" start)))
          (inner (cond-> n
-                  true (update :children #(mapv mark %))
-                  tight? (update :children #(mapv tighten %))))
+                  true (update :children #(map mark %))
+                  tight? (update :children #(map tighten %))))
          "\n"
          (close-tag tag))))
 

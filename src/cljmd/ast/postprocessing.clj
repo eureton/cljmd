@@ -1,7 +1,7 @@
 (ns cljmd.ast.postprocessing
   (:require [clojure.string :as string]
             [squirrel.tree :as tree]
-            [squirrel.node :refer [update-children node]]
+            [squirrel.node :as node :refer [update-children node]]
             [flatland.useful.fn :as ufn]
             [cljmd.html :as html]
             [cljmd.ast.common :refer [fix]]
@@ -18,7 +18,7 @@
               (comp (every-pred (comp #{:hbr} :tag)
                                 (comp pred :content))
                     :data
-                    peek
+                    last
                     :children)))
 
 (def block-with-space-hbr-end?
@@ -34,9 +34,9 @@
 (defn hbr-fix
   "Deals with :hbr entities at the end of blocks."
   [ast]
-  (let [pop-hbr #(update-children % pop)
-        push-bslash #(update % :children conj (node {:tag :txt
-                                                     :content "\\"}))]
+  (let [pop-hbr #(update-children % drop-last)
+        push-bslash #(update-children % concat [(node {:tag :txt
+                                                       :content "\\"})])]
     (tree/map (ufn/to-fix block-with-space-hbr-end? pop-hbr
                           block-with-backslash-hbr-end? (comp push-bslash
                                                               pop-hbr))
@@ -48,9 +48,9 @@
               (comp empty? :content :data)))
 
 (def empty-children?
-  "True if the node * either has no children or all its children are empty text
+  "True if the node either has no children or all its children are empty text
    nodes, false otherwise."
-  (some-fn (comp nil? :children)
+  (some-fn node/leaf?
            (comp empty? #(remove empty-text? %) :children)))
 
 (def empty-paragraph?
@@ -58,8 +58,7 @@
      * is a paragraph
      * either has no children or all its children are empty text nodes
    Returns false otherwise."
-  (every-pred pred/p?
-              empty-children?))
+  (every-pred pred/p? empty-children?))
 
 (defn empty-p-fix
   "Removes empty :p entities from the AST."
@@ -126,8 +125,7 @@
                       (-> x :data :tag (= :txt))))
         merger #(update-in %1 [:data :content] str (-> %2 :data :content))]
     (tree/map (fn [node]
-                (update node :children (comp vec
-                                             #(util/coalesce merge? merger %))))
+                (update node :children #(util/coalesce merge? merger %)))
               ast)))
 
 (defn group-list-items

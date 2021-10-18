@@ -2,6 +2,7 @@
   (:refer-clojure :exclude [list?])
   (:require [clojure.pprint :as pp]
             [clojure.string :as string]
+            [squirrel.node :as node]
             [cljmd.ast.common :refer [ontology]]))
 
 (def tag (comp :tag :data))
@@ -30,11 +31,6 @@
 
 (def heading? (comp #{:atxh :stxh} tag))
 
-(defn leaf?
-  "True if node has no children, false otherwise."
-  [node]
-  (not (contains? node :children)))
-
 (defn block?
   "True if node represents a block element, false otherwise."
   [node]
@@ -45,6 +41,6 @@
    false otherwise."
   (let [leaf-tags #{:txt :tbr :hbr :sbr :html-inline :cs :blank :html-block
                     :icblk :ofcblk}]
-    (every-pred leaf?
+    (every-pred node/leaf?
                 (comp not leaf-tags tag))))
 

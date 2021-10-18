@@ -21,26 +21,26 @@
 
   (testing "minimal"
     (testing "text"
-      (is (= (-> "xyz" from-string (get-in [:children 0]))
+      (is (= (-> "xyz" from-string :children first)
              (txt "xyz"))))
 
     (testing "code span"
-      (is (= (-> "`xyz`" from-string (get-in [:children 0]))
+      (is (= (-> "`xyz`" from-string :children first)
              (code "xyz"))))
 
     (testing "emphasis"
-      (are [s] (= (-> s from-string (get-in [:children 0]))
+      (are [s] (= (-> s from-string :children first)
                   (em "xyz"))
            "*xyz*"
            "_xyz_"))
 
     (testing "link"
-      (is (= (-> "[xyz](abc)" from-string (get-in [:children 0]))
+      (is (= (-> "[xyz](abc)" from-string :children first)
                   (node {:tag :a :destination "abc"}
                         [(txt "xyz")]))))
 
     (testing "image"
-      (is (= (-> "![xyz](abc)" from-string (get-in [:children 0]))
+      (is (= (-> "![xyz](abc)" from-string :children first)
                   (node {:tag :img :destination "abc"}
                         [(txt "xyz")])))))
 
@@ -49,19 +49,19 @@
                         [(node {:tag :txt :content "("})
                          (em "xyz")
                          (node {:tag :txt :content ")"})])]
-      (are [s] (= (-> s from-string (get-in [:children 0]))
+      (are [s] (= (-> s from-string :children first)
                   em-tree)
            "_(_xyz_)_"
            "*(*xyz*)*")))
 
   (testing "strong emphasis directly in emphasis"
-    (is (= (-> "***abc***" from-string (get-in [:children 0]))
+    (is (= (-> "***abc***" from-string :children first)
            (node {:tag :em}
                  [(node {:tag :strong}
                         [(txt "abc")])]))))
 
   (testing "inlines within link text"
-    (is (= (-> "[`xyz` 123 *abc*](qpr)" from-string (get-in [:children 0]))
+    (is (= (-> "[`xyz` 123 *abc*](qpr)" from-string :children first)
                 (node {:tag :a
                        :destination "qpr"}
                       [(code "xyz")
@@ -69,15 +69,16 @@
                        (em "abc")]))))
 
   (testing "link within image"
-    (is (= (-> "![[txt](txt.com)](img.com)" from-string (get-in [:children 0]))
+    (is (= (-> "![[txt](txt.com)](img.com)" from-string :children first)
                 (node {:tag :img :destination "img.com"}
-                     [(node {:tag :a :destination "txt.com"}
-                            [(txt "txt")])]))))
+                      [(node {:tag :a :destination "txt.com"}
+                             [(txt "txt")])]))))
 
   (testing "inlines within image description"
     (is (= (-> "![`xyz` [*emphasis* on `code`](txt.com) *abc*](img.com)"
                from-string
-               (get-in [:children 0]))
+               :children
+               first)
                 (node {:tag :img :destination "img.com"}
                      [(code "xyz")
                       (txt " ")

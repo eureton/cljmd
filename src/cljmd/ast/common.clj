@@ -16,7 +16,7 @@
          (recur (rest data)
                 (add (node (first data)) root))))))
   ([data]
-   (branch data nil)))
+   (branch data [])))
 
 (defn fix
   "Applies f to the fields entries in node."
@@ -123,7 +123,7 @@
     (pprint-content node)))
 
 (defmethod dispatch :block
-  [{:as node :keys [data children]}]
+  [node]
   (pprint-entity-wrap node
     (pprint-multiple node)))
 

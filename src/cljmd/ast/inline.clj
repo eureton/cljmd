@@ -1,6 +1,6 @@
 (ns cljmd.ast.inline
   (:require [clojure.string :as string]
-            [squirrel.node :refer [node]]
+            [squirrel.node :as node :refer [node]]
             [flatland.useful.fn :as ufn]
             [cljmd.inline :as inline]
             [cljmd.inline.token :as token]
@@ -10,8 +10,7 @@
 (def degenerate?
   "Returns true if the AST node is degenerate, false otherwise.
    A degenerate node is a non-leaf text node."
-  (every-pred (comp some? :children)
-              pred/txt?))
+  (every-pred pred/txt? node/not-leaf?))
 
 (def hierarchy (-> (deref cljmd.ast.common/ontology)
                    (derive :html-inline :leaf)
@@ -47,8 +46,7 @@
                                       (map #(token/translate % (- end))))]]
          (remove (comp empty? first))
          (map (ufn/ap inflate))
-         (mapcat (ufn/to-fix degenerate? :children vector))
-         vec)
+         (mapcat (ufn/to-fix degenerate? :children list)))
     (when string
       [(node {:tag :txt
               :content string})])))
